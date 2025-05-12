@@ -103,27 +103,27 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
     // Normalize to [-1, 1] range
     const normalizedValue = clampedValue / maxAbsValue;
 
-    // Neutral zone threshold - values close to zero will be gray
-    const neutralThreshold = 0.1;
-
-    if (normalizedValue < -neutralThreshold) {
-      // Negative values: extremely light red
-      const intensity = Math.min(1, -normalizedValue * 0.3); // Extremely light intensity
+    // Use a continuous color gradient from red (negative) to gray (zero) to blue (positive)
+    if (normalizedValue < 0) {
+      // Negative values: pink/red, using exponential intensity to emphasize values closer to zero
+      // Apply a power transformation to dramatically increase intensity for smaller values
+      const intensity = Math.pow(Math.min(1, -normalizedValue), 0.35) * 1.2;
       return {
-        backgroundColor: `rgb(${Math.round(240 + 15 * intensity)}, ${Math.round(220 * (1 - intensity))}, ${Math.round(220 * (1 - intensity))})`,
-        textColor: 'black'
+        backgroundColor: `rgb(${Math.round(240 + 15 * intensity)}, ${Math.round(240 - 100 * intensity)}, ${Math.round(240 - 100 * intensity)})`,
+        textColor: 'black' // Always black text
       };
-    } else if (normalizedValue > neutralThreshold) {
-      // Positive values: extremely light blue
-      const intensity = Math.min(1, normalizedValue * 0.3); // Extremely light intensity
+    } else if (normalizedValue > 0) {
+      // Positive values: blue, using exponential intensity to emphasize values closer to zero
+      // Apply a power transformation to dramatically increase intensity for smaller values
+      const intensity = Math.pow(Math.min(1, normalizedValue), 0.35) * 1.2;
       return {
-        backgroundColor: `rgb(${Math.round(220 * (1 - intensity))}, ${Math.round(220 * (1 - intensity))}, ${Math.round(240 + 15 * intensity)})`,
-        textColor: 'black'
+        backgroundColor: `rgb(${Math.round(240 - 100 * intensity)}, ${Math.round(240 - 100 * intensity)}, ${Math.round(240 + 15 * intensity)})`,
+        textColor: 'black' // Always black text
       };
     } else {
-      // Values close to zero: extremely light gray
+      // Exactly zero: light gray
       return {
-        backgroundColor: '#e0e0e0',
+        backgroundColor: 'rgb(240, 240, 240)',
         textColor: 'black'
       };
     }
