@@ -1,75 +1,106 @@
 import React, { useState } from 'react';
 import './App.css';
-import Layer from './components/Layer';
-import { TransformerData, LayerData, TokenData, Attention } from './types';
-
-// Sample data for demonstration
-const sampleTokens: TokenData[] = [
-  { id: 1, text: "The" },
-  { id: 2, text: "quick" },
-  { id: 3, text: "brown" },
-  { id: 4, text: "fox" },
-  { id: 5, text: "jumps" },
-  { id: 6, text: "over" },
-  { id: 7, text: "the" },
-  { id: 8, text: "lazy" },
-  { id: 9, text: "dog" },
-];
-
-const sampleAttentions: Attention[] = [
-  { from: 1, to: 7, weight: 0.8 },
-  { from: 2, to: 4, weight: 0.6 },
-  { from: 3, to: 4, weight: 0.9 },
-  { from: 4, to: 9, weight: 0.7 },
-  { from: 5, to: 6, weight: 0.5 },
-  { from: 8, to: 9, weight: 0.95 },
-];
-
-const sampleLayers: LayerData[] = [
-  {
-    id: 1,
-    name: "Layer 1 - Self Attention",
-    tokens: sampleTokens,
-    attentions: sampleAttentions,
-  },
-  {
-    id: 2,
-    name: "Layer 2 - Self Attention",
-    tokens: sampleTokens,
-    attentions: sampleAttentions.map(a => ({
-      ...a,
-      weight: a.weight * 0.8 // Different weights for layer 2
-    })),
-  }
-];
-
-const sampleData: TransformerData = {
-  layers: sampleLayers,
-  sourceTokens: sampleTokens,
-  targetTokens: sampleTokens,
-};
+import AttentionHead from './components/AttentionHead';
+import FeedForward from './components/FeedForward';
+import {
+  generateSampleEmbeddings,
+  generateSampleAttentionWeights,
+  generateSampleMLPWeights
+} from './utils/matrixOperations';
 
 function App() {
-  const [transformerData] = useState<TransformerData>(sampleData);
+  // Configuration for the demo
+  const numTokens = 4; // Number of tokens in the sequence
+  const embeddingDim = 8; // Dimension of token embeddings
+  const attentionHeadDim = 6; // Dimension of attention head
+  const mlpHiddenDim = 12; // Dimension of MLP hidden layer
+
+  // Sample data generation
+  const [embeddings] = useState(() => 
+    generateSampleEmbeddings(numTokens, embeddingDim)
+  );
+  
+  const [attentionWeights] = useState(() => 
+    generateSampleAttentionWeights(embeddingDim, attentionHeadDim)
+  );
+  
+  const [mlpWeights] = useState(() => 
+    generateSampleMLPWeights(embeddingDim, mlpHiddenDim)
+  );
+
+  // Token labels
+  const tokenLabels = ["The", "cat", "sat", "down"];
   
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-blue-600 text-white p-4 shadow-md">
         <div className="container mx-auto">
           <h1 className="text-3xl font-bold">Transformer Visualization</h1>
-          <p className="text-blue-100">Interactive visualization of transformer model attention</p>
+          <p className="text-blue-100">
+            Interactive visualization of transformer attention mechanism and feed-forward network
+          </p>
         </div>
       </header>
       
-      <main className="container mx-auto p-4 relative">
+      <main className="container mx-auto p-4 pb-12">
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-2xl font-bold mb-4">Sample Transformer Model</h2>
+          <h2 className="text-2xl font-bold mb-4">Transformer Components</h2>
           
-          <div className="space-y-8">
-            {transformerData.layers.map(layer => (
-              <Layer key={layer.id} layer={layer} />
-            ))}
+          <div className="mb-8">
+            <h3 className="text-xl font-semibold mb-4 border-b pb-2">
+              Part 1: Self-Attention Mechanism
+            </h3>
+            <p className="text-gray-700 mb-6">
+              The self-attention mechanism allows each token to gather information from all other tokens
+              in the sequence, weighting their relevance. This is how transformers capture long-range dependencies.
+            </p>
+            
+            <AttentionHead
+              embeddings={embeddings}
+              weightQ={attentionWeights.weightQ}
+              weightK={attentionWeights.weightK}
+              weightV={attentionWeights.weightV}
+              tokenLabels={tokenLabels}
+              showSteps={true}
+            />
           </div>
+          
+          <div className="mt-12">
+            <h3 className="text-xl font-semibold mb-4 border-b pb-2">
+              Part 2: Feed-Forward Network (MLP)
+            </h3>
+            <p className="text-gray-700 mb-6">
+              After the attention mechanism, each token representation passes through a 
+              feed-forward neural network. This MLP is applied independently to each token position.
+            </p>
+            
+            <FeedForward
+              inputs={embeddings} // In a real transformer, this would be the output from the attention layer
+              W1={mlpWeights.W1}
+              b1={mlpWeights.b1}
+              W2={mlpWeights.W2}
+              b2={mlpWeights.b2}
+              tokenLabels={tokenLabels}
+              showSteps={true}
+            />
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <h2 className="text-2xl font-bold mb-4">About This Visualization</h2>
+          <p className="text-gray-700 mb-4">
+            This interactive visualization demonstrates the core components of a transformer architecture:
+            the self-attention mechanism and the feed-forward network. 
+          </p>
+          <p className="text-gray-700 mb-4">
+            Transformers work by first using attention to gather context from the entire sequence,
+            then processing that context through a feed-forward neural network at each position.
+            This sequence of operations is typically repeated in multiple layers.
+          </p>
+          <p className="text-gray-700">
+            The colors in the matrices represent values: blue for positive, red for negative, and white for near-zero.
+            Brighter colors indicate stronger values.
+          </p>
         </div>
       </main>
       
