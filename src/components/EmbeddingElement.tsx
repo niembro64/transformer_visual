@@ -116,31 +116,31 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
   }, [value, precision]);
 
   // Determine styling based on size
-  // Use consistent size regardless of the size prop
+  // Use consistent size regardless of the size prop - zoomed out to about 60%
   const sizeStyles = useMemo(() => {
-    const baseClasses = 'rounded-lg font-mono flex flex-col justify-center items-center';
+    const baseClasses = 'rounded-md font-mono flex flex-col justify-center items-center';
 
-    // Use a single, smaller size for all elements
+    // Use a single, much smaller size for all elements
     return {
-      container: `${baseClasses} py-1 px-1`,
-      coefficient: 'text-[0.65rem]',  // Extra small text
-      exponent: 'text-[0.65rem] mt-0',  // Same size, no margin between parts
-      minWidth: '3.2rem',
-      height: '2.8rem',
-      width: '3.2rem'  // Smaller fixed width for all elements
+      container: `${baseClasses} py-0.5 px-0.5`,
+      coefficient: 'text-[0.45rem]',  // Ultra small text
+      exponent: 'text-[0.45rem] mt-0',  // Same size, no margin between parts
+      minWidth: '1.9rem',
+      height: '1.7rem',
+      width: '1.9rem'  // Smaller fixed width for all elements (approximately 60% of original)
     };
   }, []);
 
   return (
     <div className="relative">
       <div
-        className={`${sizeStyles.container} ${selectable ? 'cursor-pointer' : ''} ${isSelected ? 'border-4 border-fuchsia-500' : 'border-4 border-transparent'}`}
+        className={`${sizeStyles.container} ${selectable ? 'cursor-pointer' : ''} ${isSelected ? 'border-2 border-fuchsia-500' : 'border-2 border-transparent'}`}
         style={{
           backgroundColor,
           color: textColor,
           width: sizeStyles.width,
           height: sizeStyles.height,
-          boxShadow: isSelected ? '0 0 6px rgba(217, 70, 239, 0.6)' : '0 1px 1px rgba(0, 0, 0, 0.05)'
+          boxShadow: isSelected ? '0 0 4px rgba(217, 70, 239, 0.6)' : '0 1px 1px rgba(0, 0, 0, 0.05)'
         }}
         onClick={selectable ? onClick : undefined}
       >
@@ -154,10 +154,10 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
 
       {/* Floating slider overlay that appears below the element when selected */}
       {isSelected && onValueChange && (
-        <div className="absolute left-1/2 transform -translate-x-1/2 mt-1 z-10 bg-white rounded-md shadow-lg p-2 w-24 animate-fadeIn"
+        <div className="absolute left-1/2 transform -translate-x-1/2 mt-0.5 z-10 bg-white rounded-md shadow-lg p-1.5 w-20 animate-fadeIn"
              style={{ top: '100%' }}>
           {valueLabel && (
-            <div className="text-xs font-semibold text-gray-700 mb-1 text-center">
+            <div className="text-[0.6rem] font-semibold text-gray-700 mb-0.5 text-center">
               {valueLabel}
             </div>
           )}
@@ -168,9 +168,9 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
             step={0.01}
             value={value}
             onChange={(e) => onValueChange(parseFloat(e.target.value))}
-            className="w-full h-2 bg-gray-200 rounded-lg cursor-pointer"
+            className="w-full h-1.5 bg-gray-200 rounded-lg cursor-pointer"
           />
-          <div className="flex justify-between text-xs text-gray-500 mt-1">
+          <div className="flex justify-between text-[0.55rem] text-gray-500 mt-0.5">
             <span>{-maxAbsValue.toFixed(1)}</span>
             <span>{maxAbsValue.toFixed(1)}</span>
           </div>

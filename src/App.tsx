@@ -96,11 +96,11 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <main className="w-full p-1">
-        <div className="bg-white rounded p-1 mb-1">
+      <main className="w-full p-0.5">
+        <div className="bg-white rounded p-0.5 mb-0.5">
 
-          <div className="mb-1">
-            <h3 className="text-base font-semibold mb-1 border-b pb-1">
+          <div className="mb-0.5">
+            <h3 className="text-sm font-semibold mb-0.5 border-b pb-0.5">
               Self-Attention
             </h3>
             {/* Value Adjuster will be shown in the EmbeddingElement component */}
@@ -119,8 +119,8 @@ function App() {
             />
           </div>
           
-          <div className="mt-1">
-            <h3 className="text-base font-semibold mb-1 border-b pb-1">
+          <div className="mt-0.5">
+            <h3 className="text-sm font-semibold mb-0.5 border-b pb-0.5">
               Feed-Forward Network
             </h3>
 
@@ -135,8 +135,8 @@ function App() {
                 showSteps={true}
               />
             ) : (
-              <div className="p-1 bg-gray-100 rounded">
-                <p className="text-gray-600 italic text-xs">
+              <div className="p-0.5 bg-gray-100 rounded">
+                <p className="text-gray-600 italic text-[0.6rem]">
                   Waiting for attention computation...
                 </p>
               </div>
@@ -144,7 +144,7 @@ function App() {
           </div>
         </div>
         
-        <div className="bg-white rounded p-1 text-xs">
+        <div className="bg-white rounded p-0.5 text-[0.6rem]">
           <p className="text-gray-700">
             Blue: positive, Pink: negative. Click a value to edit (magenta border).
           </p>

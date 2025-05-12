@@ -70,26 +70,26 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
   const showRowLabels = rowLabels && rowLabels.length === rows;
   const showColumnLabels = columnLabels && columnLabels.length === cols;
 
-  // Use consistent smaller cell sizes with minimal spacing
-  const cellWidth = 3.2; // Matches element width exactly
-  const cellHeight = 2.8; // Matches element height exactly
-  const cellGap = 0.05; // Extremely minimal gap between cells
+  // Use much smaller cell sizes with minimal spacing (about 60% of original size)
+  const cellWidth = 1.9; // Matches element width exactly
+  const cellHeight = 1.7; // Matches element height exactly
+  const cellGap = 0.03; // Extremely minimal gap between cells
 
   // Calculate grid template columns for the entire grid including row labels
   const gridTemplateColumns = showRowLabels
-    ? `2.5rem repeat(${cols}, ${cellWidth}rem)`  // First column for row labels (narrower)
+    ? `1.5rem repeat(${cols}, ${cellWidth}rem)`  // First column for row labels (narrower)
     : `repeat(${cols}, ${cellWidth}rem)`;
 
   // Calculate grid template rows including header for column labels
   const gridTemplateRows = showColumnLabels
-    ? `1.2rem repeat(${rows}, ${cellHeight}rem)` // First row for column labels (shorter)
+    ? `0.7rem repeat(${rows}, ${cellHeight}rem)` // First row for column labels (shorter)
     : `repeat(${rows}, ${cellHeight}rem)`;
 
   return (
     <div className={`flex flex-col ${className} overflow-hidden`}>
       {/* Matrix Label */}
       {label && (
-        <div className="text-center font-semibold text-gray-700 mb-2">{label}</div>
+        <div className="text-center text-[0.6rem] font-semibold text-gray-700 mb-1">{label}</div>
       )}
 
       {/* Main grid container */}
@@ -112,12 +112,12 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
         {/* Column labels row */}
         {showColumnLabels && 
           columnLabels!.map((label, j) => (
-            <div 
-              key={`col-${j}`} 
-              className="text-center text-[0.65rem] text-gray-500 flex items-center justify-center"
-              style={{ 
-                gridColumn: showRowLabels ? j + 2 : j + 1, 
-                gridRow: 1 
+            <div
+              key={`col-${j}`}
+              className="text-center text-[0.4rem] text-gray-500 flex items-center justify-center"
+              style={{
+                gridColumn: showRowLabels ? j + 2 : j + 1,
+                gridRow: 1
               }}
             >
               {label}
@@ -131,7 +131,7 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
             {/* Row label */}
             {showRowLabels && (
               <div
-                className="text-center text-[0.65rem] text-gray-500 flex items-center justify-center"
+                className="text-center text-[0.4rem] text-gray-500 flex items-center justify-center"
                 style={{
                   gridColumn: 1,
                   gridRow: showColumnLabels ? i + 2 : i + 1
