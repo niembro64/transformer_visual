@@ -23,7 +23,7 @@ function App() {
     generateSampleEmbeddings(numTokens, embeddingDim)
   );
 
-  const [attentionWeights] = useState(() =>
+  const [attentionWeights, setAttentionWeights] = useState(() =>
     generateSampleAttentionWeights(embeddingDim, attentionHeadDim)
   );
 
@@ -35,8 +35,12 @@ function App() {
   // State to hold the attention output context vectors
   const [attentionContext, setAttentionContext] = useState<number[][]>([]);
 
-  // State for the currently selected element in the embeddings matrix
-  const [selectedElement, setSelectedElement] = useState<[number, number] | null>(null);
+  // State for the currently selected element - includes matrix type, row and column
+  const [selectedElement, setSelectedElement] = useState<{
+    matrixType: 'embeddings' | 'weightQ' | 'weightK' | 'weightV' | 'none';
+    row: number;
+    col: number;
+  } | null>(null);
 
   // State for the current value of the selected element
   const [selectedValue, setSelectedValue] = useState<number | null>(null);
@@ -44,28 +48,53 @@ function App() {
   // Update selectedValue when selectedElement changes
   useEffect(() => {
     if (selectedElement) {
-      const [row, col] = selectedElement;
-      setSelectedValue(embeddings[row][col]);
+      const { matrixType, row, col } = selectedElement;
+
+      if (matrixType === 'embeddings') {
+        setSelectedValue(embeddings[row][col]);
+      } else if (matrixType === 'weightQ') {
+        setSelectedValue(attentionWeights.weightQ[row][col]);
+      } else if (matrixType === 'weightK') {
+        setSelectedValue(attentionWeights.weightK[row][col]);
+      } else if (matrixType === 'weightV') {
+        setSelectedValue(attentionWeights.weightV[row][col]);
+      }
     } else {
       setSelectedValue(null);
     }
-  }, [selectedElement, embeddings]);
+  }, [selectedElement, embeddings, attentionWeights]);
 
-  // Handle element selection in the embeddings matrix
-  const handleElementClick = useCallback((row: number, col: number) => {
+  // Handle element selection in matrices
+  const handleElementClick = useCallback((
+    matrixType: 'embeddings' | 'weightQ' | 'weightK' | 'weightV' | 'none',
+    row: number,
+    col: number
+  ) => {
     // Toggle selection if clicking the same element
-    if (selectedElement && selectedElement[0] === row && selectedElement[1] === col) {
+    if (selectedElement &&
+        selectedElement.matrixType === matrixType &&
+        selectedElement.row === row &&
+        selectedElement.col === col) {
       setSelectedElement(null);
     } else {
-      setSelectedElement([row, col]);
+      setSelectedElement({ matrixType, row, col });
     }
   }, [selectedElement]);
 
   // Create value label for the selected element
   const valueLabel = useMemo(() => {
     if (selectedElement) {
-      const [row, col] = selectedElement;
-      return `${tokenLabels[row]}.d${col+1}`;
+      const { matrixType, row, col } = selectedElement;
+
+      if (matrixType === 'embeddings') {
+        return `${tokenLabels[row]}.d${col+1}`;
+      } else if (matrixType === 'weightQ') {
+        return `W^Q[${row+1},${col+1}]`;
+      } else if (matrixType === 'weightK') {
+        return `W^K[${row+1},${col+1}]`;
+      } else if (matrixType === 'weightV') {
+        return `W^V[${row+1},${col+1}]`;
+      }
     }
     return undefined;
   }, [selectedElement, tokenLabels]);
@@ -76,17 +105,40 @@ function App() {
   // Handle value change from the slider
   const handleValueChange = useCallback((newValue: number) => {
     if (selectedElement) {
-      const [row, col] = selectedElement;
-      // Create a new copy of embeddings with the updated value
-      const newEmbeddings = embeddings.map((r, i) =>
-        i === row
-          ? r.map((v, j) => j === col ? newValue : v)
-          : [...r]
-      );
-      setEmbeddings(newEmbeddings);
+      const { matrixType, row, col } = selectedElement;
+
+      if (matrixType === 'embeddings') {
+        // Create a new copy of embeddings with the updated value
+        const newEmbeddings = embeddings.map((r, i) =>
+          i === row
+            ? r.map((v, j) => j === col ? newValue : v)
+            : [...r]
+        );
+        setEmbeddings(newEmbeddings);
+      }
+      else if (matrixType === 'weightQ' || matrixType === 'weightK' || matrixType === 'weightV') {
+        // Create a deep copy of attention weights
+        const newAttentionWeights = {
+          weightQ: [...attentionWeights.weightQ.map(r => [...r])],
+          weightK: [...attentionWeights.weightK.map(r => [...r])],
+          weightV: [...attentionWeights.weightV.map(r => [...r])]
+        };
+
+        // Update the specific weight
+        if (matrixType === 'weightQ') {
+          newAttentionWeights.weightQ[row][col] = newValue;
+        } else if (matrixType === 'weightK') {
+          newAttentionWeights.weightK[row][col] = newValue;
+        } else if (matrixType === 'weightV') {
+          newAttentionWeights.weightV[row][col] = newValue;
+        }
+
+        setAttentionWeights(newAttentionWeights);
+      }
+
       setSelectedValue(newValue);
     }
-  }, [selectedElement, embeddings]);
+  }, [selectedElement, embeddings, attentionWeights]);
 
   
   // Handler for receiving the computed context from the attention head

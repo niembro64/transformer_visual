@@ -88,6 +88,8 @@ const FeedForward: React.FC<FeedForwardProps> = ({
             columnLabels={modelDimLabels}
             maxAbsValue={0.2}
             cellSize="sm"
+            selectable={false}
+            matrixType="none"
           />
         </div>
 
@@ -104,6 +106,8 @@ const FeedForward: React.FC<FeedForwardProps> = ({
                   columnLabels={ffnDimLabels}
                   maxAbsValue={0.1}
                   cellSize="sm"
+                  selectable={false}
+                  matrixType="none"
                 />
               </div>
               <div>
@@ -114,6 +118,8 @@ const FeedForward: React.FC<FeedForwardProps> = ({
                   columnLabels={modelDimLabels}
                   maxAbsValue={0.1}
                   cellSize="sm"
+                  selectable={false}
+                  matrixType="none"
                 />
               </div>
             </div>
@@ -133,6 +139,8 @@ const FeedForward: React.FC<FeedForwardProps> = ({
                   columnLabels={ffnDimLabels}
                   maxAbsValue={0.5}
                   cellSize="sm"
+                  selectable={false}
+                  matrixType="none"
                 />
               </div>
               <div>
@@ -143,6 +151,8 @@ const FeedForward: React.FC<FeedForwardProps> = ({
                   columnLabels={ffnDimLabels}
                   maxAbsValue={0.5}
                   cellSize="sm"
+                  selectable={false}
+                  matrixType="none"
                 />
               </div>
             </div>
@@ -159,6 +169,8 @@ const FeedForward: React.FC<FeedForwardProps> = ({
             columnLabels={modelDimLabels}
             maxAbsValue={0.2}
             cellSize="sm"
+            selectable={false}
+            matrixType="none"
           />
         </div>
       </div>

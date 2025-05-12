@@ -29,13 +29,21 @@ interface MatrixDisplayProps {
    */
   selectable?: boolean;
   /**
-   * Currently selected element coordinates [row, col] or null if none selected
+   * Currently selected element coordinates or null if none selected
    */
-  selectedElement?: [number, number] | null;
+  selectedElement?: {
+    matrixType: 'embeddings' | 'weightQ' | 'weightK' | 'weightV' | 'none';
+    row: number;
+    col: number;
+  } | null;
+  /**
+   * The matrix type for this matrix display
+   */
+  matrixType?: 'embeddings' | 'weightQ' | 'weightK' | 'weightV' | 'none';
   /**
    * Callback when an element is clicked
    */
-  onElementClick?: (row: number, col: number) => void;
+  onElementClick?: (matrixType: 'embeddings' | 'weightQ' | 'weightK' | 'weightV' | 'none', row: number, col: number) => void;
   /**
    * Callback when element value changes via slider
    */
@@ -56,6 +64,7 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
   className = '',
   selectable = false,
   selectedElement = null,
+  matrixType,
   onElementClick,
   onValueChange,
 }) => {
@@ -157,18 +166,18 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
                   size={cellSize}
                   selectable={selectable}
                   isSelected={selectedElement !== null &&
-                              selectedElement[0] === i &&
-                              selectedElement[1] === j}
-                  onClick={() => onElementClick && onElementClick(i, j)}
+                              selectedElement.matrixType === matrixType &&
+                              selectedElement.row === i &&
+                              selectedElement.col === j}
+                  onClick={() => onElementClick && matrixType && onElementClick(matrixType, i, j)}
                   onValueChange={selectedElement !== null &&
-                                 selectedElement[0] === i &&
-                                 selectedElement[1] === j &&
+                                 selectedElement.matrixType === matrixType &&
+                                 selectedElement.row === i &&
+                                 selectedElement.col === j &&
                                  onValueChange ?
                                  onValueChange : undefined}
-                  valueLabel={selectedElement !== null &&
-                              selectedElement[0] === i &&
-                              selectedElement[1] === j ?
-                              `${rowLabels?.[i] || i}.${columnLabels?.[j] || j}` : undefined}
+                  valueLabel={undefined}
+                  /* We provide valueLabel from the parent component now */
                 />
               </div>
             ))}

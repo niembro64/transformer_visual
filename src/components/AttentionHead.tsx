@@ -20,10 +20,14 @@ interface AttentionHeadProps {
   showSteps?: boolean;
   // Optional callback when context vectors are computed
   onContextComputed?: (context: number[][]) => void;
-  // Currently selected element coordinates [row, col] or null if none selected
-  selectedElement?: [number, number] | null;
-  // Callback when an element is clicked in the embedding matrix
-  onElementClick?: (row: number, col: number) => void;
+  // Currently selected element coordinates
+  selectedElement?: {
+    matrixType: 'embeddings' | 'weightQ' | 'weightK' | 'weightV' | 'none';
+    row: number;
+    col: number;
+  } | null;
+  // Callback when an element is clicked in any matrix
+  onElementClick?: (matrixType: 'embeddings' | 'weightQ' | 'weightK' | 'weightV' | 'none', row: number, col: number) => void;
   // Callback when element value changes via slider
   onValueChange?: (newValue: number) => void;
 }
@@ -114,6 +118,7 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
             className="mb-1"
             selectable={true}
             selectedElement={selectedElement}
+            matrixType="embeddings"
             onElementClick={onElementClick}
             onValueChange={onValueChange}
           />
@@ -132,6 +137,11 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
                   columnLabels={headDimLabels}
                   maxAbsValue={0.5}
                   cellSize="sm"
+                  selectable={true}
+                  selectedElement={selectedElement}
+                  matrixType="weightQ"
+                  onElementClick={onElementClick}
+                  onValueChange={onValueChange}
                 />
               </div>
               <div>
@@ -142,6 +152,11 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
                   columnLabels={headDimLabels}
                   maxAbsValue={0.5}
                   cellSize="sm"
+                  selectable={true}
+                  selectedElement={selectedElement}
+                  matrixType="weightK"
+                  onElementClick={onElementClick}
+                  onValueChange={onValueChange}
                 />
               </div>
               <div>
@@ -152,6 +167,11 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
                   columnLabels={headDimLabels}
                   maxAbsValue={0.5}
                   cellSize="sm"
+                  selectable={true}
+                  selectedElement={selectedElement}
+                  matrixType="weightV"
+                  onElementClick={onElementClick}
+                  onValueChange={onValueChange}
                 />
               </div>
             </div>
@@ -171,6 +191,8 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
                   columnLabels={headDimLabels}
                   maxAbsValue={0.3}
                   cellSize="sm"
+                  selectable={false}
+                  matrixType="none"
                 />
               </div>
               <div>
@@ -181,6 +203,8 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
                   columnLabels={headDimLabels}
                   maxAbsValue={0.3}
                   cellSize="sm"
+                  selectable={false}
+                  matrixType="none"
                 />
               </div>
               <div>
@@ -191,6 +215,8 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
                   columnLabels={headDimLabels}
                   maxAbsValue={0.3}
                   cellSize="sm"
+                  selectable={false}
+                  matrixType="none"
                 />
               </div>
             </div>
@@ -212,6 +238,8 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
                 columnLabels={labels}
                 maxAbsValue={1.0}
                 cellSize="sm"
+                selectable={false}
+                matrixType="none"
               />
             </div>
           </div>
@@ -227,6 +255,8 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
                 columnLabels={labels}
                 maxAbsValue={1.0}
                 cellSize="sm"
+                selectable={false}
+                matrixType="none"
               />
             </div>
           </div>
@@ -242,6 +272,8 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
                 columnLabels={headDimLabels}
                 maxAbsValue={0.3}
                 cellSize="sm"
+                selectable={false}
+                matrixType="none"
               />
             </div>
           </div>
