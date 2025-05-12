@@ -144,61 +144,96 @@ export function scaleMatrix(a: number[][], scalar: number): number[][] {
 }
 
 /**
- * Generate a random matrix of specified shape
+ * Generate a random value from normal distribution using Box-Muller transform
+ * @param mean - Mean of the distribution (default: 0)
+ * @param stdDev - Standard deviation (default: 1)
+ * @returns Random value from normal distribution
+ */
+export function randomNormal(mean = 0, stdDev = 1): number {
+  // Box-Muller transform
+  const u1 = Math.random();
+  const u2 = Math.random();
+  const z0 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+  return z0 * stdDev + mean;
+}
+
+/**
+ * Generate a matrix with values sampled from a normal distribution,
+ * using typical initializations for neural networks
  * @param rows - Number of rows
  * @param cols - Number of columns
- * @param min - Minimum value (default: -1)
- * @param max - Maximum value (default: 1)
- * @returns Random matrix
+ * @param initMethod - Initialization method ('xavier', 'he', or 'scaled')
+ * @returns Random matrix with values in typical neural network ranges
  */
-export function randomMatrix(rows: number, cols: number, min = -1, max = 1): number[][] {
+export function randomNeuralMatrix(rows: number, cols: number, initMethod: 'xavier' | 'he' | 'scaled' = 'xavier'): number[][] {
   const matrix: number[][] = [];
+  
+  let stdDev = 0.01; // Default small value
+  
+  // Calculate standard deviation based on initialization method
+  if (initMethod === 'xavier') {
+    // Xavier/Glorot initialization: good for tanh
+    stdDev = Math.sqrt(2.0 / (rows + cols));
+  } else if (initMethod === 'he') {
+    // He initialization: good for ReLU
+    stdDev = Math.sqrt(2.0 / rows);
+  } else if (initMethod === 'scaled') {
+    // Scaled initialization: good for attention
+    stdDev = 1.0 / Math.sqrt(cols);
+  }
+  
   for (let i = 0; i < rows; i++) {
     matrix[i] = [];
     for (let j = 0; j < cols; j++) {
-      matrix[i][j] = min + Math.random() * (max - min);
+      matrix[i][j] = randomNormal(0, stdDev);
     }
   }
+  
   return matrix;
 }
 
 /**
- * Generate a random vector of specified length
+ * Generate a vector with values sampled from a normal distribution,
+ * typically used for bias terms in neural networks
  * @param size - Length of vector
- * @param min - Minimum value (default: -1)
- * @param max - Maximum value (default: 1)
- * @returns Random vector
+ * @param stdDev - Standard deviation (default: 0.01)
+ * @returns Random vector with values in typical neural network ranges
  */
-export function randomVector(size: number, min = -1, max = 1): number[] {
-  return Array.from({ length: size }, () => min + Math.random() * (max - min));
+export function randomNeuralVector(size: number, stdDev = 0.01): number[] {
+  return Array.from({ length: size }, () => randomNormal(0, stdDev));
 }
 
 /**
  * Generate sample input embeddings (one embedding per token)
+ * using realistic values from a trained model
  * @param numTokens - Number of tokens
  * @param embeddingDim - Embedding dimension
  * @returns Matrix where each row is a token embedding
  */
 export function generateSampleEmbeddings(numTokens: number, embeddingDim: number): number[][] {
-  return randomMatrix(numTokens, embeddingDim, -1, 1);
+  // Embeddings are typically drawn from a normal distribution with small standard deviation
+  return randomNeuralMatrix(numTokens, embeddingDim, 'scaled');
 }
 
 /**
  * Generate sample attention weights for Q, K, V projections
+ * using realistic values from a trained model
  * @param embeddingDim - Embedding dimension
  * @param headDim - Attention head dimension
  * @returns Object containing Q, K, V weight matrices
  */
 export function generateSampleAttentionWeights(embeddingDim: number, headDim: number) {
+  // Attention weights are typically initialized with scaled initialization
   return {
-    weightQ: randomMatrix(embeddingDim, headDim, -0.5, 0.5),
-    weightK: randomMatrix(embeddingDim, headDim, -0.5, 0.5),
-    weightV: randomMatrix(embeddingDim, headDim, -0.5, 0.5),
+    weightQ: randomNeuralMatrix(embeddingDim, headDim, 'scaled'),
+    weightK: randomNeuralMatrix(embeddingDim, headDim, 'scaled'),
+    weightV: randomNeuralMatrix(embeddingDim, headDim, 'scaled'),
   };
 }
 
 /**
- * Generate sample MLP weights
+ * Generate sample MLP weights for the feed-forward network
+ * using realistic values from a trained model
  * @param inputDim - Input dimension
  * @param hiddenDim - Hidden layer dimension
  * @param attentionHeadDim - Attention head dimension (for input compatibility)
@@ -210,9 +245,10 @@ export function generateSampleMLPWeights(inputDim: number, hiddenDim: number, at
   const actualInputDim = attentionHeadDim || inputDim;
   
   return {
-    W1: randomMatrix(actualInputDim, hiddenDim, -0.5, 0.5),
-    b1: randomVector(hiddenDim, -0.1, 0.1),
-    W2: randomMatrix(hiddenDim, inputDim, -0.5, 0.5),
-    b2: randomVector(inputDim, -0.1, 0.1),
+    // Feed-forward weights typically use He initialization because of ReLU
+    W1: randomNeuralMatrix(actualInputDim, hiddenDim, 'he'),
+    b1: randomNeuralVector(hiddenDim),
+    W2: randomNeuralMatrix(hiddenDim, inputDim, 'he'),
+    b2: randomNeuralVector(inputDim),
   };
 }
