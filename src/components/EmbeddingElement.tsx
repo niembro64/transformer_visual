@@ -206,8 +206,11 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
     // Split at 'e' to separate coefficient from exponent
     const [coef, exp] = scientificNotation.split('e');
 
+    // Add "+" prefix for positive values, "-" is already included for negative values
+    const formattedCoef = value > 0 ? `+${coef}` : coef;
+
     return {
-      coefficient: coef,
+      coefficient: formattedCoef,
       exponent: `e${exp}`,
     };
   }, [value, precision]);

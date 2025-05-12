@@ -129,7 +129,7 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
         {showSteps && (
           <div className="col-span-3 flex flex-col items-center justify-center">
             <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Weights</h3>
-            <div className="grid grid-cols-3 gap-1 w-full">
+            <div className="grid grid-cols-3 gap-0.5 w-full">
               <div className="flex flex-col items-center justify-center">
                 <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700 w-full">W^Q</h4>
                 <MatrixDisplay
@@ -181,10 +181,10 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
 
         {/* Right Column: Q, K, V Matrices */}
         {showSteps && (
-          <div className="col-span-6 flex flex-col items-center justify-center">
+          <div className="col-span-6 flex flex-col items-center justify-center px-0">
             <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Projected Matrices</h3>
-            <div className="grid grid-cols-3 gap-1 w-full">
-              <div className="flex flex-col items-center justify-center">
+            <div className="grid grid-cols-3 gap-0.25 w-full mx-0">
+              <div className="flex flex-col items-center justify-center px-0">
                 <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700 w-full">Q</h4>
                 <MatrixDisplay
                   data={Q}
@@ -196,7 +196,7 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
                   matrixType="none"
                 />
               </div>
-              <div className="flex flex-col items-center justify-center">
+              <div className="flex flex-col items-center justify-center px-0">
                 <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700 w-full">K</h4>
                 <MatrixDisplay
                   data={K}
@@ -208,7 +208,7 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
                   matrixType="none"
                 />
               </div>
-              <div className="flex flex-col items-center justify-center">
+              <div className="flex flex-col items-center justify-center px-0">
                 <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700 w-full">V</h4>
                 <MatrixDisplay
                   data={V}
