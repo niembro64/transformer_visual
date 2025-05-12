@@ -36,6 +36,10 @@ interface MatrixDisplayProps {
    * Callback when an element is clicked
    */
   onElementClick?: (row: number, col: number) => void;
+  /**
+   * Callback when element value changes via slider
+   */
+  onValueChange?: (newValue: number) => void;
 }
 
 /**
@@ -53,6 +57,7 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
   selectable = false,
   selectedElement = null,
   onElementClick,
+  onValueChange,
 }) => {
   if (!data || data.length === 0) {
     return <div>No data to display</div>;
@@ -155,6 +160,15 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
                               selectedElement[0] === i &&
                               selectedElement[1] === j}
                   onClick={() => onElementClick && onElementClick(i, j)}
+                  onValueChange={selectedElement !== null &&
+                                 selectedElement[0] === i &&
+                                 selectedElement[1] === j &&
+                                 onValueChange ?
+                                 onValueChange : undefined}
+                  valueLabel={selectedElement !== null &&
+                              selectedElement[0] === i &&
+                              selectedElement[1] === j ?
+                              `${rowLabels?.[i] || i}.${columnLabels?.[j] || j}` : undefined}
                 />
               </div>
             ))}

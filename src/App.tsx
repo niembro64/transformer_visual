@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import './App.css';
 import AttentionHead from './components/AttentionHead';
 import FeedForward from './components/FeedForward';
@@ -14,6 +14,9 @@ function App() {
   const embeddingDim = 4;     // Dimension of token embeddings (d_model = 4)
   const attentionHeadDim = 3; // Dimension of attention head (d_k/d_v = 3)
   const mlpHiddenDim = 8;     // Dimension of MLP hidden layer (d_ff = 8, typically 4x d_model)
+
+  // Token labels for 6 tokens - a simple sentence
+  const tokenLabels = ["The", "cat", "sat", "on", "the", "mat"];
 
   // Sample data generation
   const [embeddings, setEmbeddings] = useState(() =>
@@ -58,6 +61,15 @@ function App() {
     }
   }, [selectedElement]);
 
+  // Create value label for the selected element
+  const valueLabel = useMemo(() => {
+    if (selectedElement) {
+      const [row, col] = selectedElement;
+      return `${tokenLabels[row]}.d${col+1}`;
+    }
+    return undefined;
+  }, [selectedElement, tokenLabels]);
+
   // Define a constant for max absolute value of embeddings
   const maxAbsValue = 0.5;
 
@@ -76,8 +88,6 @@ function App() {
     }
   }, [selectedElement, embeddings]);
 
-  // Token labels for 6 tokens - a simple sentence
-  const tokenLabels = ["The", "cat", "sat", "on", "the", "mat"];
   
   // Handler for receiving the computed context from the attention head
   const handleAttentionContextComputed = (context: number[][]) => {
@@ -93,25 +103,7 @@ function App() {
             <h3 className="text-base font-semibold mb-1 border-b pb-1">
               Self-Attention
             </h3>
-            
-            {/* Value Adjuster Slider */}
-            {selectedElement !== null && selectedValue !== null && (
-              <div className="mb-1 mt-1 p-1 bg-yellow-50 border border-yellow-200 rounded text-xs">
-                <div className="flex items-center gap-1">
-                  <span className="whitespace-nowrap">{tokenLabels[selectedElement[0]]}.{selectedElement[1] + 1}:</span>
-                  <input
-                    type="range"
-                    min={-maxAbsValue}
-                    max={maxAbsValue}
-                    step={maxAbsValue / 50}
-                    value={selectedValue}
-                    onChange={(e) => handleValueChange(parseFloat(e.target.value))}
-                    className="flex-grow h-3"
-                  />
-                  <span className="font-mono text-2xs w-12">{selectedValue.toExponential(2)}</span>
-                </div>
-              </div>
-            )}
+            {/* Value Adjuster will be shown in the EmbeddingElement component */}
 
             <AttentionHead
               embeddings={embeddings}
@@ -123,6 +115,7 @@ function App() {
               onContextComputed={handleAttentionContextComputed}
               selectedElement={selectedElement}
               onElementClick={handleElementClick}
+              onValueChange={handleValueChange}
             />
           </div>
           

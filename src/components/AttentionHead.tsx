@@ -24,6 +24,8 @@ interface AttentionHeadProps {
   selectedElement?: [number, number] | null;
   // Callback when an element is clicked in the embedding matrix
   onElementClick?: (row: number, col: number) => void;
+  // Callback when element value changes via slider
+  onValueChange?: (newValue: number) => void;
 }
 
 /**
@@ -42,7 +44,8 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
   showSteps = true,
   onContextComputed,
   selectedElement = null,
-  onElementClick
+  onElementClick,
+  onValueChange
 }) => {
   // Number of tokens and dimensionality
   const numTokens = embeddings.length;
@@ -112,6 +115,7 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
             selectable={true}
             selectedElement={selectedElement}
             onElementClick={onElementClick}
+            onValueChange={onValueChange}
           />
         </div>
 

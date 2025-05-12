@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 
 interface EmbeddingElementProps {
   value: number;
@@ -27,6 +27,14 @@ interface EmbeddingElementProps {
    * Callback when element is clicked (for selection)
    */
   onClick?: () => void;
+  /**
+   * Callback when the value changes via slider
+   */
+  onValueChange?: (newValue: number) => void;
+  /**
+   * Optional label for the element when selected (e.g., "Token.Dimension")
+   */
+  valueLabel?: string;
 }
 
 /**
@@ -50,7 +58,9 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
   precision = 2,
   selectable = false,
   isSelected = false,
-  onClick
+  onClick,
+  onValueChange,
+  valueLabel
 }) => {
   // Calculate the color based on the value
   const { backgroundColor, textColor } = useMemo(() => {
@@ -122,23 +132,50 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
   }, []);
 
   return (
-    <div
-      className={`${sizeStyles.container} ${selectable ? 'cursor-pointer' : ''} ${isSelected ? 'border-4 border-fuchsia-500' : 'border-4 border-transparent'}`}
-      style={{
-        backgroundColor,
-        color: textColor,
-        width: sizeStyles.width,
-        height: sizeStyles.height,
-        boxShadow: isSelected ? '0 0 6px rgba(217, 70, 239, 0.6)' : '0 1px 1px rgba(0, 0, 0, 0.05)'
-      }}
-      onClick={selectable ? onClick : undefined}
-    >
-      <div className={`${sizeStyles.coefficient} text-center w-full`}>
-        {coefficient}
+    <div className="relative">
+      <div
+        className={`${sizeStyles.container} ${selectable ? 'cursor-pointer' : ''} ${isSelected ? 'border-4 border-fuchsia-500' : 'border-4 border-transparent'}`}
+        style={{
+          backgroundColor,
+          color: textColor,
+          width: sizeStyles.width,
+          height: sizeStyles.height,
+          boxShadow: isSelected ? '0 0 6px rgba(217, 70, 239, 0.6)' : '0 1px 1px rgba(0, 0, 0, 0.05)'
+        }}
+        onClick={selectable ? onClick : undefined}
+      >
+        <div className={`${sizeStyles.coefficient} text-center w-full`}>
+          {coefficient}
+        </div>
+        <div className={`${sizeStyles.exponent} text-center w-full`}>
+          {exponent}
+        </div>
       </div>
-      <div className={`${sizeStyles.exponent} text-center w-full`}>
-        {exponent}
-      </div>
+
+      {/* Floating slider overlay that appears below the element when selected */}
+      {isSelected && onValueChange && (
+        <div className="absolute left-1/2 transform -translate-x-1/2 mt-1 z-10 bg-white rounded-md shadow-lg p-2 w-24 animate-fadeIn"
+             style={{ top: '100%' }}>
+          {valueLabel && (
+            <div className="text-xs font-semibold text-gray-700 mb-1 text-center">
+              {valueLabel}
+            </div>
+          )}
+          <input
+            type="range"
+            min={-maxAbsValue}
+            max={maxAbsValue}
+            step={0.01}
+            value={value}
+            onChange={(e) => onValueChange(parseFloat(e.target.value))}
+            className="w-full h-2 bg-gray-200 rounded-lg cursor-pointer"
+          />
+          <div className="flex justify-between text-xs text-gray-500 mt-1">
+            <span>{-maxAbsValue.toFixed(1)}</span>
+            <span>{maxAbsValue.toFixed(1)}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
