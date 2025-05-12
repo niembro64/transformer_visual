@@ -96,234 +96,153 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
   const labels = tokenLabels || defaultTokenLabels;
 
   return (
-    <div className="flex flex-col gap-3 p-2 bg-white rounded">
-      <h2 className="text-lg font-bold text-gray-800">Self-Attention Mechanism</h2>
-      
-      {/* Input Embeddings */}
-      <div>
-        <h3 className="text-base font-semibold mb-1 text-gray-700">Input Embeddings</h3>
-        <MatrixDisplay
-          data={embeddings}
-          label="Token Embeddings"
-          rowLabels={labels}
-          columnLabels={modelDimLabels}
-          maxAbsValue={0.2}
-          className="mb-2"
-          selectable={true}
-          selectedElement={selectedElement}
-          onElementClick={onElementClick}
-        />
+    <div className="flex flex-col gap-1 p-1 bg-white rounded">
+      {/* Main Container - Horizontal Layout */}
+      <div className="grid grid-cols-12 gap-2">
+        {/* Left Column: Input Embeddings */}
+        <div className="col-span-3">
+          <h3 className="text-sm font-semibold mb-1 text-gray-700">Input Embeddings</h3>
+          <MatrixDisplay
+            data={embeddings}
+            label="Tokens"
+            rowLabels={labels}
+            columnLabels={modelDimLabels}
+            maxAbsValue={0.2}
+            className="mb-1"
+            selectable={true}
+            selectedElement={selectedElement}
+            onElementClick={onElementClick}
+          />
+        </div>
+
+        {/* Middle Column: Projection Matrices */}
+        {showSteps && (
+          <div className="col-span-3">
+            <h3 className="text-sm font-semibold mb-1 text-gray-700">Weights</h3>
+            <div className="grid grid-cols-3 gap-1">
+              <div>
+                <h4 className="text-xs font-medium mb-1 text-center text-gray-700">W^Q</h4>
+                <MatrixDisplay
+                  data={weightQ}
+                  rowLabels={modelDimLabels}
+                  columnLabels={headDimLabels}
+                  maxAbsValue={0.5}
+                  cellSize="sm"
+                />
+              </div>
+              <div>
+                <h4 className="text-xs font-medium mb-1 text-center text-gray-700">W^K</h4>
+                <MatrixDisplay
+                  data={weightK}
+                  rowLabels={modelDimLabels}
+                  columnLabels={headDimLabels}
+                  maxAbsValue={0.5}
+                  cellSize="sm"
+                />
+              </div>
+              <div>
+                <h4 className="text-xs font-medium mb-1 text-center text-gray-700">W^V</h4>
+                <MatrixDisplay
+                  data={weightV}
+                  rowLabels={modelDimLabels}
+                  columnLabels={headDimLabels}
+                  maxAbsValue={0.5}
+                  cellSize="sm"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Right Column: Q, K, V Matrices */}
+        {showSteps && (
+          <div className="col-span-6">
+            <h3 className="text-sm font-semibold mb-1 text-gray-700">Projected Matrices</h3>
+            <div className="grid grid-cols-3 gap-1">
+              <div>
+                <h4 className="text-xs font-medium mb-1 text-center text-gray-700">Q</h4>
+                <MatrixDisplay
+                  data={Q}
+                  rowLabels={labels}
+                  columnLabels={headDimLabels}
+                  maxAbsValue={0.3}
+                  cellSize="sm"
+                />
+              </div>
+              <div>
+                <h4 className="text-xs font-medium mb-1 text-center text-gray-700">K</h4>
+                <MatrixDisplay
+                  data={K}
+                  rowLabels={labels}
+                  columnLabels={headDimLabels}
+                  maxAbsValue={0.3}
+                  cellSize="sm"
+                />
+              </div>
+              <div>
+                <h4 className="text-xs font-medium mb-1 text-center text-gray-700">V</h4>
+                <MatrixDisplay
+                  data={V}
+                  rowLabels={labels}
+                  columnLabels={headDimLabels}
+                  maxAbsValue={0.3}
+                  cellSize="sm"
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Learned Projection Matrices */}
+      {/* Second Row: Attention Scores, Weights, and Output Calculation */}
       {showSteps && (
-        <div className="mb-6">
-          <h3 className="text-base font-semibold mb-1 text-gray-700">Projection Matrices</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-2">
+        <div className="grid grid-cols-12 gap-2 mt-1">
+          {/* Left Column: Attention Scores */}
+          <div className="col-span-3">
+            <h3 className="text-xs font-semibold mb-1 text-gray-700">Attention Scores</h3>
             <div>
-              <h4 className="text-base font-medium mb-1 text-gray-700">Query (W^Q)</h4>
-              <MatrixDisplay
-                data={weightQ}
-                label="W^Q"
-                rowLabels={modelDimLabels}
-                columnLabels={headDimLabels}
-                maxAbsValue={0.5}
-                cellSize="sm"
-              />
-            </div>
-            <div>
-              <h4 className="text-base font-medium mb-1 text-gray-700">Key (W^K)</h4>
-              <MatrixDisplay
-                data={weightK}
-                label="W^K"
-                rowLabels={modelDimLabels}
-                columnLabels={headDimLabels}
-                maxAbsValue={0.5}
-                cellSize="sm"
-              />
-            </div>
-            <div>
-              <h4 className="text-base font-medium mb-1 text-gray-700">Value (W^V)</h4>
-              <MatrixDisplay
-                data={weightV}
-                label="W^V"
-                rowLabels={modelDimLabels}
-                columnLabels={headDimLabels}
-                maxAbsValue={0.5}
-                cellSize="sm"
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Query, Key, Value Matrices */}
-      {showSteps && (
-        <div>
-          <h3 className="text-base font-semibold mb-1 text-gray-700">Q, K, V Matrices</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-2">
-            <div>
-              <h4 className="text-base font-medium mb-1 text-gray-700">Q</h4>
-              <MatrixDisplay
-                data={Q}
-                label="Q"
-                rowLabels={labels}
-                columnLabels={headDimLabels}
-                maxAbsValue={0.3}
-                cellSize="sm"
-              />
-            </div>
-            <div>
-              <h4 className="text-base font-medium mb-1 text-gray-700">K</h4>
-              <MatrixDisplay
-                data={K}
-                label="K"
-                rowLabels={labels}
-                columnLabels={headDimLabels}
-                maxAbsValue={0.3}
-                cellSize="sm"
-              />
-            </div>
-            <div>
-              <h4 className="text-base font-medium mb-1 text-gray-700">V</h4>
-              <MatrixDisplay
-                data={V}
-                label="V"
-                rowLabels={labels}
-                columnLabels={headDimLabels}
-                maxAbsValue={0.3}
-                cellSize="sm"
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Attention Scores and Weights */}
-      {showSteps && (
-        <div className="mt-6">
-          <h3 className="text-lg font-semibold mb-2 text-gray-700">Scaled Dot-Product Attention</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <h4 className="text-base font-medium mb-1 text-gray-700">Scaled Dot-Product</h4>
+              <h4 className="text-xs font-medium mb-1 text-center text-gray-700">QK^T/√d_k</h4>
               <MatrixDisplay
                 data={attentionScores}
-                label={`QK^T/√d_k`}
                 rowLabels={labels}
                 columnLabels={labels}
                 maxAbsValue={1.0}
                 cellSize="sm"
               />
-              <p className="text-xs text-gray-600 mt-1">
-                Compatibility scores between query and key pairs, scaled by 1/√{headDim}.
-              </p>
             </div>
+          </div>
+
+          {/* Middle Column: Attention Weights */}
+          <div className="col-span-3">
+            <h3 className="text-xs font-semibold mb-1 text-gray-700">Attention Weights</h3>
             <div>
-              <h4 className="text-base font-medium mb-1 text-gray-700">Attention Weights</h4>
+              <h4 className="text-xs font-medium mb-1 text-center text-gray-700">softmax</h4>
               <MatrixDisplay
                 data={attentionWeights}
-                label="softmax(QK^T/√d_k)"
                 rowLabels={labels}
                 columnLabels={labels}
                 maxAbsValue={1.0}
                 cellSize="sm"
               />
-              <p className="text-xs text-gray-600 mt-1">
-                Normalized attention probabilities that sum to 1 across each row.
-              </p>
+            </div>
+          </div>
+
+          {/* Right Column: Final Output */}
+          <div className="col-span-6">
+            <h3 className="text-xs font-semibold mb-1 text-gray-700">Output</h3>
+            <div>
+              <h4 className="text-xs font-medium mb-1 text-center text-gray-700">Attention Output</h4>
+              <MatrixDisplay
+                data={attentionOutput}
+                rowLabels={labels}
+                columnLabels={headDimLabels}
+                maxAbsValue={0.3}
+                cellSize="sm"
+              />
             </div>
           </div>
         </div>
       )}
-
-      {/* Attention Output Calculation */}
-      <div className="mt-6">
-        <h3 className="text-lg font-semibold mb-2 text-gray-700">Attention Output Calculation</h3>
-        <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-4">
-          <h4 className="text-base font-medium mb-2 text-blue-800">How Attention Output Is Calculated:</h4>
-          <p className="text-sm text-blue-700 leading-relaxed">
-            The attention output is calculated by multiplying the attention weights matrix by the Value matrix:
-          </p>
-          <div className="flex flex-col items-center my-2">
-            <div className="font-mono text-blue-900 text-sm bg-blue-100 px-3 py-1 rounded mb-1">
-              Attention Output = Attention Weights × V
-            </div>
-            <div className="font-mono text-blue-900 text-sm bg-blue-100 px-3 py-1 rounded">
-              Attention Output = softmax(QK^T/√d_k) × V
-            </div>
-          </div>
-          <p className="text-sm text-blue-700 mt-2">
-            For each token (row) in the output:
-          </p>
-          <ol className="list-decimal list-inside text-sm text-blue-700 mt-1 space-y-1">
-            <li>Its attention weights (one row from the attention weights matrix) determine how much information to gather from each token</li>
-            <li>Each weight is multiplied by the corresponding token's value vector (row in the V matrix)</li>
-            <li>These weighted value vectors are summed to produce the output for that token</li>
-          </ol>
-          <p className="text-sm text-blue-700 mt-2">
-            This means each output token is a weighted combination of all value vectors, with weights determined by attention.
-          </p>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <h4 className="text-base font-medium mb-1 text-gray-700">Attention Weights</h4>
-            <MatrixDisplay
-              data={attentionWeights}
-              label="Attention Weights"
-              rowLabels={labels}
-              columnLabels={labels}
-              maxAbsValue={1.0}
-              cellSize="sm"
-            />
-            <p className="text-xs text-gray-600 mt-1">
-              Each row contains weights that sum to 1, determining how much each token attends to every other token.
-            </p>
-          </div>
-          <div>
-            <h4 className="text-base font-medium mb-1 text-gray-700">Value Matrix (V)</h4>
-            <MatrixDisplay
-              data={V}
-              label="V"
-              rowLabels={labels}
-              columnLabels={headDimLabels}
-              maxAbsValue={0.3}
-              cellSize="sm"
-            />
-            <p className="text-xs text-gray-600 mt-1">
-              Contains the value vectors that will be weighted and aggregated according to attention weights.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Final Attention Output */}
-      <div className="mt-4">
-        <h3 className="text-lg font-semibold mb-2 text-gray-700">Final Attention Output</h3>
-        <MatrixDisplay
-          data={attentionOutput}
-          label="Attention(Q,K,V) = softmax(QK^T/√d_k) × V"
-          rowLabels={labels}
-          columnLabels={headDimLabels}
-          maxAbsValue={0.3}
-        />
-        <p className="text-sm text-gray-600">
-          The final output of the self-attention mechanism. Each row is a weighted combination of value vectors,
-          where the weights come from the corresponding row in the attention weights matrix.
-          This allows each token to gather relevant information from all other tokens in the sequence.
-        </p>
-      </div>
-      
-      {/* Mathematical Intuition */}
-      <div className="mt-4 p-3 bg-gray-50 rounded-md border border-gray-200">
-        <h4 className="text-sm font-semibold text-gray-700 mb-1">Attention Mechanism Intuition</h4>
-        <p className="text-xs text-gray-600">
-          The self-attention mechanism allows each token to query all other tokens for relevant information.
-          Tokens with higher attention scores contribute more of their value vectors to the output.
-          This weighted aggregation enables the model to focus on relevant parts of the input sequence
-          when producing the output representation for each token.
-        </p>
-      </div>
     </div>
   );
 };

@@ -75,134 +75,93 @@ const FeedForward: React.FC<FeedForwardProps> = ({
   }, [activations, W2, b2]);
 
   return (
-    <div className="flex flex-col gap-3 p-2 bg-white rounded">
-      <h2 className="text-lg font-bold text-gray-800">Feed-Forward Network</h2>
-      
-      {/* Input from Attention Layer */}
-      <div>
-        <h3 className="text-base font-semibold mb-1 text-gray-700">Attention Output</h3>
-        <MatrixDisplay
-          data={inputs}
-          label="Attention Output"
-          rowLabels={labels}
-          columnLabels={modelDimLabels}
-          maxAbsValue={0.2}
-          className="mb-2"
-        />
-        <p className="text-xs text-gray-600">
-          Token representations after attention (d_model = {d_model}).
-        </p>
-      </div>
+    <div className="flex flex-col gap-1 p-1 bg-white rounded">
+      {/* Main Container - Horizontal Layout */}
+      <div className="grid grid-cols-12 gap-1">
+        {/* Left Column: Input */}
+        <div className="col-span-3">
+          <h3 className="text-xs font-semibold mb-1 text-gray-700">Input</h3>
+          <MatrixDisplay
+            data={inputs}
+            label="Attention Output"
+            rowLabels={labels}
+            columnLabels={modelDimLabels}
+            maxAbsValue={0.2}
+            cellSize="sm"
+          />
+        </div>
 
-      {/* Learned Weight Matrices */}
-      {showSteps && (
-        <div className="mb-6">
-          <h3 className="text-base font-semibold mb-1 text-gray-700">FFN Parameters</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
-            <div>
-              <h4 className="text-base font-medium mb-1 text-gray-700">First Linear Layer (W₁)</h4>
-              <MatrixDisplay
-                data={W1}
-                label="W₁"
-                rowLabels={modelDimLabels}
-                columnLabels={ffnDimLabels}
-                maxAbsValue={0.1}
-                cellSize="sm"
-              />
-              <div className="mt-3">
-                <h4 className="text-base font-medium mb-1 text-gray-700">First Layer Bias (b₁)</h4>
+        {/* Second Column: Weights and biases */}
+        {showSteps && (
+          <div className="col-span-3">
+            <h3 className="text-xs font-semibold mb-1 text-gray-700">Weights</h3>
+            <div className="grid grid-cols-1 gap-1">
+              <div>
+                <h4 className="text-xs font-medium mb-1 text-center text-gray-700">W₁</h4>
                 <MatrixDisplay
-                  data={[b1]}
-                  label="b₁"
-                  rowLabels={["bias"]}
+                  data={W1}
+                  rowLabels={modelDimLabels}
                   columnLabels={ffnDimLabels}
-                  maxAbsValue={0.05}
+                  maxAbsValue={0.1}
                   cellSize="sm"
                 />
               </div>
-              <p className="text-xs text-gray-600 mt-1">
-                Projects from model dimension (d_model = {d_model}) to inner FFN dimension (d_ff = {d_ff}).
-              </p>
-            </div>
-            <div>
-              <h4 className="text-base font-medium mb-1 text-gray-700">Second Linear Layer (W₂)</h4>
-              <MatrixDisplay
-                data={W2}
-                label="W₂"
-                rowLabels={ffnDimLabels}
-                columnLabels={modelDimLabels}
-                maxAbsValue={0.1}
-                cellSize="sm"
-              />
-              <div className="mt-3">
-                <h4 className="text-base font-medium mb-1 text-gray-700">Second Layer Bias (b₂)</h4>
+              <div>
+                <h4 className="text-xs font-medium mb-1 text-center text-gray-700">W₂</h4>
                 <MatrixDisplay
-                  data={[b2]}
-                  label="b₂"
-                  rowLabels={["bias"]}
+                  data={W2}
+                  rowLabels={ffnDimLabels}
                   columnLabels={modelDimLabels}
-                  maxAbsValue={0.05}
+                  maxAbsValue={0.1}
                   cellSize="sm"
                 />
               </div>
-              <p className="text-xs text-gray-600 mt-1">
-                Projects back from inner FFN dimension (d_ff = {d_ff}) to model dimension (d_model = {d_model}).
-              </p>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* First Layer and Activation */}
-      {showSteps && (
-        <div>
-          <h3 className="text-base font-semibold mb-1 text-gray-700">FFN Computation Steps</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
-            <div>
-              <h4 className="text-base font-medium mb-1 text-gray-700">First Linear Transformation</h4>
-              <MatrixDisplay
-                data={firstLayerOutput}
-                label="xW₁ + b₁"
-                rowLabels={labels}
-                columnLabels={ffnDimLabels}
-                maxAbsValue={0.5}
-                cellSize="sm"
-              />
-              <p className="text-xs text-gray-600 mt-1">
-                Output after the first linear transformation (d_ff = {d_ff}).
-              </p>
-            </div>
-            <div>
-              <h4 className="text-base font-medium mb-1 text-gray-700">After ReLU Activation</h4>
-              <MatrixDisplay
-                data={activations}
-                label="max(0, xW₁ + b₁)"
-                rowLabels={labels}
-                columnLabels={ffnDimLabels}
-                maxAbsValue={0.5}
-                cellSize="sm"
-              />
-              <p className="text-xs text-gray-600 mt-1">
-                Output after applying ReLU activation function. Negative values are replaced with zeros.
-              </p>
+        {/* Third Column: Intermediate results */}
+        {showSteps && (
+          <div className="col-span-3">
+            <h3 className="text-xs font-semibold mb-1 text-gray-700">Steps</h3>
+            <div className="grid grid-cols-2 gap-1">
+              <div>
+                <h4 className="text-xs font-medium mb-1 text-center text-gray-700">xW₁+b₁</h4>
+                <MatrixDisplay
+                  data={firstLayerOutput}
+                  rowLabels={labels}
+                  columnLabels={ffnDimLabels}
+                  maxAbsValue={0.5}
+                  cellSize="sm"
+                />
+              </div>
+              <div>
+                <h4 className="text-xs font-medium mb-1 text-center text-gray-700">ReLU</h4>
+                <MatrixDisplay
+                  data={activations}
+                  rowLabels={labels}
+                  columnLabels={ffnDimLabels}
+                  maxAbsValue={0.5}
+                  cellSize="sm"
+                />
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Final Output */}
-      <div className="mt-2">
-        <h3 className="text-base font-semibold mb-1 text-gray-700">FFN Output</h3>
-        <MatrixDisplay
-          data={output}
-          label="FFN(x) = max(0, xW₁ + b₁)W₂ + b₂"
-          rowLabels={labels}
-          columnLabels={modelDimLabels}
-          maxAbsValue={0.2}
-        />
+        {/* Right Column: Output */}
+        <div className="col-span-3">
+          <h3 className="text-xs font-semibold mb-1 text-gray-700">Output</h3>
+          <MatrixDisplay
+            data={output}
+            label="FFN(x)"
+            rowLabels={labels}
+            columnLabels={modelDimLabels}
+            maxAbsValue={0.2}
+            cellSize="sm"
+          />
+        </div>
       </div>
-      
-      {/* Architectural Explanation */}
     </div>
   );
 };

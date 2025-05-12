@@ -86,21 +86,19 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <main className="w-full p-2">
-        <div className="bg-white rounded p-3 mb-3">
-          
-          <div className="mb-4">
-            <h3 className="text-lg font-semibold mb-1 border-b pb-1">
+      <main className="w-full p-1">
+        <div className="bg-white rounded p-1 mb-1">
+
+          <div className="mb-1">
+            <h3 className="text-base font-semibold mb-1 border-b pb-1">
               Self-Attention
             </h3>
             
             {/* Value Adjuster Slider */}
             {selectedElement !== null && selectedValue !== null && (
-              <div className="mb-3 p-2 bg-yellow-50 border border-yellow-200 rounded">
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="font-semibold">
-                    Editing {tokenLabels[selectedElement[0]]}.{selectedElement[1] + 1}:
-                  </span>
+              <div className="mb-1 mt-1 p-1 bg-yellow-50 border border-yellow-200 rounded text-xs">
+                <div className="flex items-center gap-1">
+                  <span className="whitespace-nowrap">{tokenLabels[selectedElement[0]]}.{selectedElement[1] + 1}:</span>
                   <input
                     type="range"
                     min={-maxAbsValue}
@@ -108,9 +106,9 @@ function App() {
                     step={maxAbsValue / 50}
                     value={selectedValue}
                     onChange={(e) => handleValueChange(parseFloat(e.target.value))}
-                    className="flex-grow h-4"
+                    className="flex-grow h-3"
                   />
-                  <span className="font-mono">{selectedValue.toExponential(2)}</span>
+                  <span className="font-mono text-2xs w-12">{selectedValue.toExponential(2)}</span>
                 </div>
               </div>
             )}
@@ -128,11 +126,11 @@ function App() {
             />
           </div>
           
-          <div className="mt-4">
-            <h3 className="text-lg font-semibold mb-1 border-b pb-1">
+          <div className="mt-1">
+            <h3 className="text-base font-semibold mb-1 border-b pb-1">
               Feed-Forward Network
             </h3>
-            
+
             {attentionContext.length > 0 ? (
               <FeedForward
                 inputs={attentionContext} // Using the output from the attention layer
@@ -144,18 +142,17 @@ function App() {
                 showSteps={true}
               />
             ) : (
-              <div className="p-2 bg-gray-100 rounded">
+              <div className="p-1 bg-gray-100 rounded">
                 <p className="text-gray-600 italic text-xs">
-                  Feed-Forward Network will appear after attention computation is complete.
+                  Waiting for attention computation...
                 </p>
               </div>
             )}
           </div>
         </div>
         
-        <div className="bg-white rounded p-2 text-sm">
-          <h2 className="text-base font-bold mb-1">Usage</h2>
-          <p className="text-gray-700 text-xs">
+        <div className="bg-white rounded p-1 text-xs">
+          <p className="text-gray-700">
             Blue: positive, Pink: negative. Click a value to edit (magenta border).
           </p>
         </div>
