@@ -86,35 +86,26 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-blue-600 text-white p-4 shadow-md">
-        <div className="container mx-auto">
-          <h1 className="text-3xl font-bold">Transformer Visualization</h1>
-          <p className="text-blue-100">
-            Interactive visualization of transformer attention mechanism and feed-forward network
-          </p>
-        </div>
-      </header>
-      
-      <main className="container mx-auto p-4 pb-12">
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-2xl font-bold mb-4">Transformer Components</h2>
+      <main className="w-full p-2">
+        <div className="bg-white rounded p-3 mb-3">
+          <h2 className="text-xl font-bold mb-2">Transformer Components</h2>
           
-          <div className="mb-8">
-            <h3 className="text-xl font-semibold mb-4 border-b pb-2">
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold mb-2 border-b pb-1">
               Part 1: Self-Attention Mechanism
             </h3>
-            <p className="text-gray-700 mb-6">
+            <p className="text-gray-700 mb-2 text-sm">
               The self-attention mechanism allows each token to gather information from all other tokens
-              in the sequence, weighting their relevance. This is how transformers capture long-range dependencies.
+              in the sequence, weighting their relevance.
             </p>
             
             {/* Value Adjuster Slider */}
             {selectedElement !== null && selectedValue !== null && (
-              <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <h3 className="text-sm font-semibold mb-2">
-                  Editing Token {tokenLabels[selectedElement[0]]}, Dimension {selectedElement[1] + 1}
-                </h3>
-                <div className="flex items-center gap-4">
+              <div className="mb-3 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="font-semibold">
+                    Editing {tokenLabels[selectedElement[0]]}.{selectedElement[1] + 1}:
+                  </span>
                   <input
                     type="range"
                     min={-maxAbsValue}
@@ -122,9 +113,9 @@ function App() {
                     step={maxAbsValue / 50}
                     value={selectedValue}
                     onChange={(e) => handleValueChange(parseFloat(e.target.value))}
-                    className="flex-grow"
+                    className="flex-grow h-4"
                   />
-                  <span className="font-mono text-sm">{selectedValue.toExponential(2)}</span>
+                  <span className="font-mono">{selectedValue.toExponential(2)}</span>
                 </div>
               </div>
             )}
@@ -142,13 +133,13 @@ function App() {
             />
           </div>
           
-          <div className="mt-12">
-            <h3 className="text-xl font-semibold mb-4 border-b pb-2">
+          <div className="mt-4">
+            <h3 className="text-lg font-semibold mb-2 border-b pb-1">
               Part 2: Position-wise Feed-Forward Network
             </h3>
-            <p className="text-gray-700 mb-6">
-              After the attention mechanism, each token representation passes through a 
-              feed-forward neural network. This is applied independently to each token position.
+            <p className="text-gray-700 mb-2 text-sm">
+              After the attention mechanism, each token passes through a
+              feed-forward neural network applied independently to each position.
             </p>
             
             {attentionContext.length > 0 ? (
@@ -162,45 +153,30 @@ function App() {
                 showSteps={true}
               />
             ) : (
-              <div className="p-4 bg-gray-100 rounded">
-                <p className="text-gray-600 italic">
-                  The Feed-Forward Network visualization will appear here after the attention computation is complete.
+              <div className="p-2 bg-gray-100 rounded">
+                <p className="text-gray-600 italic text-xs">
+                  Feed-Forward Network will appear after attention computation is complete.
                 </p>
               </div>
             )}
           </div>
         </div>
         
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-bold mb-4">About This Visualization</h2>
-          <p className="text-gray-700 mb-4">
-            This interactive visualization demonstrates the core components of a transformer architecture
-            using simplified dimensions (d_model = {embeddingDim}) for clarity:
+        <div className="bg-white rounded p-2 text-sm">
+          <h2 className="text-base font-bold mb-1">About This Visualization</h2>
+          <p className="text-gray-700 mb-1">
+            This visualization demonstrates a transformer with simplified dimensions: {embeddingDim} (d_model),
+            {attentionHeadDim} (d_k/d_v), {mlpHiddenDim} (d_ff).
           </p>
-          <div className="text-gray-700 mb-4 ml-4">
-            <p>• Token Sequence: 6 tokens ("{tokenLabels.join('", "')}")</p>
-            <p>• Model Dimension (d_model): {embeddingDim}</p>
-            <p>• Attention Head Dimension (d_k, d_v): {attentionHeadDim}</p>
-            <p>• Feed-Forward Hidden Dimension (d_ff): {mlpHiddenDim}</p>
+          <div className="text-gray-700 mb-1 grid grid-cols-2">
+            <p>• Token Sequence: {tokenLabels.join(", ")}</p>
+            <p>• Pale blue: positive, Pale pink: negative, Light gray: near-zero</p>
           </div>
-          <p className="text-gray-700 mb-4">
-            Transformers work by first using attention to gather context from the entire sequence,
-            then processing that context through a feed-forward network at each position.
-            This sequence of operations is typically repeated in multiple layers.
-          </p>
-          <p className="text-gray-700">
-            The colors in the matrices represent values: blue for positive, red for negative, and black for near-zero.
-            Brighter colors indicate stronger values. All values are displayed in scientific notation with the
-            coefficient on top and the exponent below.
+          <p className="text-gray-700 text-xs">
+            Click on any value in the top embedding matrix to edit it with the slider. All downstream calculations will update automatically.
           </p>
         </div>
       </main>
-      
-      <footer className="bg-gray-800 text-white p-4">
-        <div className="container mx-auto text-center">
-          <p>Transformer Visualization Demo</p>
-        </div>
-      </footer>
     </div>
   );
 }

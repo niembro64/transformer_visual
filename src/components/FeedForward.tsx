@@ -75,12 +75,12 @@ const FeedForward: React.FC<FeedForwardProps> = ({
   }, [activations, W2, b2]);
 
   return (
-    <div className="flex flex-col gap-6 p-4 bg-white rounded-lg shadow">
-      <h2 className="text-xl font-bold text-gray-800">Position-wise Feed-Forward Network</h2>
+    <div className="flex flex-col gap-3 p-2 bg-white rounded">
+      <h2 className="text-lg font-bold text-gray-800">Position-wise Feed-Forward Network</h2>
       
       {/* Input from Attention Layer */}
       <div>
-        <h3 className="text-lg font-semibold mb-2 text-gray-700">Input from Multi-Head Attention</h3>
+        <h3 className="text-base font-semibold mb-1 text-gray-700">Input from Multi-Head Attention</h3>
         <MatrixDisplay
           data={inputs}
           label="Attention Output (d_model)"
@@ -89,16 +89,16 @@ const FeedForward: React.FC<FeedForwardProps> = ({
           maxAbsValue={0.2}
           className="mb-2"
         />
-        <p className="text-sm text-gray-600">
-          Token representations after attention mechanism, dimension d_model = {d_model}.
+        <p className="text-xs text-gray-600">
+          Token representations after attention (d_model = {d_model}).
         </p>
       </div>
 
       {/* Learned Weight Matrices */}
       {showSteps && (
         <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-2 text-gray-700">FFN Parameters</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <h3 className="text-base font-semibold mb-1 text-gray-700">FFN Parameters</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
             <div>
               <h4 className="text-base font-medium mb-1 text-gray-700">First Linear Layer (W₁)</h4>
               <MatrixDisplay
@@ -156,8 +156,8 @@ const FeedForward: React.FC<FeedForwardProps> = ({
       {/* First Layer and Activation */}
       {showSteps && (
         <div>
-          <h3 className="text-lg font-semibold mb-2 text-gray-700">FFN Computation Steps</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <h3 className="text-base font-semibold mb-1 text-gray-700">FFN Computation Steps</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
             <div>
               <h4 className="text-base font-medium mb-1 text-gray-700">First Linear Transformation</h4>
               <MatrixDisplay
@@ -191,8 +191,8 @@ const FeedForward: React.FC<FeedForwardProps> = ({
       )}
 
       {/* Final Output */}
-      <div className="mt-6">
-        <h3 className="text-lg font-semibold mb-2 text-gray-700">FFN Output</h3>
+      <div className="mt-2">
+        <h3 className="text-base font-semibold mb-1 text-gray-700">FFN Output</h3>
         <MatrixDisplay
           data={output}
           label="FFN(x) = max(0, xW₁ + b₁)W₂ + b₂"
@@ -200,20 +200,17 @@ const FeedForward: React.FC<FeedForwardProps> = ({
           columnLabels={modelDimLabels}
           maxAbsValue={0.2}
         />
-        <p className="text-sm text-gray-600">
-          The final output of the feed-forward network. Each token representation has been transformed 
-          independently through a two-layer neural network, returning to the original model dimension (d_model = {d_model}).
+        <p className="text-xs text-gray-600">
+          Each token has been independently transformed through a two-layer neural network (d_model = {d_model}).
         </p>
       </div>
       
       {/* Architectural Explanation */}
-      <div className="mt-4 p-3 bg-gray-50 rounded-md border border-gray-200">
-        <h4 className="text-sm font-semibold text-gray-700 mb-1">About the Feed-Forward Network</h4>
+      <div className="mt-2 p-1 bg-gray-50 rounded border border-gray-200">
         <p className="text-xs text-gray-600">
-          "In addition to attention sub-layers, each of the layers in our encoder and decoder contains a fully 
-          connected feed-forward network, which is applied to each position separately and identically. 
-          This consists of two linear transformations with a ReLU activation in between."
-          <span className="italic block mt-1">— Attention Is All You Need (Vaswani et al., 2017)</span>
+          "Each layer contains a fully connected feed-forward network, applied to each position separately
+          and identically. This consists of two linear transformations with a ReLU activation in between."
+          <span className="italic text-2xs">— Vaswani et al., 2017</span>
         </p>
       </div>
     </div>

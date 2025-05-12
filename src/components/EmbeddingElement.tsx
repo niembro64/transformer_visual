@@ -32,10 +32,10 @@ interface EmbeddingElementProps {
 /**
  * Component to visualize a single value in an embedding vector
  * Uses color interpolation to represent the magnitude and sign:
- * - Red for negative values
- * - Black for values near zero
- * - Blue for positive values
- * All text is displayed in white for better contrast
+ * - Extremely light pink for negative values
+ * - Extremely light gray for values near zero
+ * - Extremely light blue for positive values
+ * Text is displayed in black for good readability on these light backgrounds
  */
 const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
   value,
@@ -54,28 +54,28 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
     // Normalize to [-1, 1] range
     const normalizedValue = clampedValue / maxAbsValue;
 
-    // Neutral zone threshold - values close to zero will be black
+    // Neutral zone threshold - values close to zero will be gray
     const neutralThreshold = 0.1;
 
     if (normalizedValue < -neutralThreshold) {
-      // Negative values: red with intensity based on magnitude
-      const intensity = Math.min(1, -normalizedValue * 1.2); // Slightly boost intensity
+      // Negative values: extremely light red
+      const intensity = Math.min(1, -normalizedValue * 0.3); // Extremely light intensity
       return {
-        backgroundColor: `rgb(${Math.round(220 * intensity)}, 0, 0)`,
-        textColor: 'white'
+        backgroundColor: `rgb(${Math.round(240 + 15 * intensity)}, ${Math.round(220 * (1 - intensity))}, ${Math.round(220 * (1 - intensity))})`,
+        textColor: 'black'
       };
     } else if (normalizedValue > neutralThreshold) {
-      // Positive values: blue with intensity based on magnitude
-      const intensity = Math.min(1, normalizedValue * 1.2); // Slightly boost intensity
+      // Positive values: extremely light blue
+      const intensity = Math.min(1, normalizedValue * 0.3); // Extremely light intensity
       return {
-        backgroundColor: `rgb(0, 0, ${Math.round(220 * intensity)})`,
-        textColor: 'white'
+        backgroundColor: `rgb(${Math.round(220 * (1 - intensity))}, ${Math.round(220 * (1 - intensity))}, ${Math.round(240 + 15 * intensity)})`,
+        textColor: 'black'
       };
     } else {
-      // Values close to zero: black background
+      // Values close to zero: extremely light gray
       return {
-        backgroundColor: '#111',
-        textColor: 'white'
+        backgroundColor: '#e0e0e0',
+        textColor: 'black'
       };
     }
   }, [value, maxAbsValue]);

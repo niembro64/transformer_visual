@@ -68,11 +68,11 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
   // Use consistent smaller cell sizes with minimal spacing
   const cellWidth = 3.2; // Matches element width exactly
   const cellHeight = 2.8; // Matches element height exactly
-  const cellGap = 0.1; // Very minimal gap between cells
+  const cellGap = 0.05; // Extremely minimal gap between cells
 
   // Calculate grid template columns for the entire grid including row labels
   const gridTemplateColumns = showRowLabels
-    ? `4rem repeat(${cols}, ${cellWidth}rem)`  // First column for row labels (narrower)
+    ? `2.5rem repeat(${cols}, ${cellWidth}rem)`  // First column for row labels (narrower)
     : `repeat(${cols}, ${cellWidth}rem)`;
 
   // Calculate grid template rows including header for column labels
@@ -95,7 +95,8 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
           gridTemplateRows,
           gap: `${cellGap}rem`,
           justifyItems: 'start',
-          alignItems: 'start'
+          alignItems: 'start',
+          fontSize: 'small'
         }}
       >
         {/* Empty cell in top-left corner when both labels are shown */}
@@ -125,9 +126,9 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
             {/* Row label */}
             {showRowLabels && (
               <div
-                className="text-right text-[0.65rem] text-gray-500 pr-2 flex items-center justify-end"
-                style={{ 
-                  gridColumn: 1, 
+                className="text-right text-[0.65rem] text-gray-500 pr-1 flex items-center justify-end"
+                style={{
+                  gridColumn: 1,
                   gridRow: showColumnLabels ? i + 2 : i + 1
                 }}
               >
