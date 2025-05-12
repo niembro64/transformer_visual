@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 import AttentionHead from './components/AttentionHead';
 import FeedForward from './components/FeedForward';
@@ -16,21 +16,65 @@ function App() {
   const mlpHiddenDim = 8;     // Dimension of MLP hidden layer (d_ff = 8, typically 4x d_model)
 
   // Sample data generation
-  const [embeddings] = useState(() => 
+  const [embeddings, setEmbeddings] = useState(() =>
     generateSampleEmbeddings(numTokens, embeddingDim)
   );
-  
-  const [attentionWeights] = useState(() => 
+
+  const [attentionWeights] = useState(() =>
     generateSampleAttentionWeights(embeddingDim, attentionHeadDim)
   );
-  
+
   // Generate MLP weights that are compatible with attention head output dimensions
-  const [mlpWeights] = useState(() => 
+  const [mlpWeights] = useState(() =>
     generateSampleMLPWeights(embeddingDim, mlpHiddenDim, attentionHeadDim)
   );
 
   // State to hold the attention output context vectors
   const [attentionContext, setAttentionContext] = useState<number[][]>([]);
+
+  // State for the currently selected element in the embeddings matrix
+  const [selectedElement, setSelectedElement] = useState<[number, number] | null>(null);
+
+  // State for the current value of the selected element
+  const [selectedValue, setSelectedValue] = useState<number | null>(null);
+
+  // Update selectedValue when selectedElement changes
+  useEffect(() => {
+    if (selectedElement) {
+      const [row, col] = selectedElement;
+      setSelectedValue(embeddings[row][col]);
+    } else {
+      setSelectedValue(null);
+    }
+  }, [selectedElement, embeddings]);
+
+  // Handle element selection in the embeddings matrix
+  const handleElementClick = useCallback((row: number, col: number) => {
+    // Toggle selection if clicking the same element
+    if (selectedElement && selectedElement[0] === row && selectedElement[1] === col) {
+      setSelectedElement(null);
+    } else {
+      setSelectedElement([row, col]);
+    }
+  }, [selectedElement]);
+
+  // Define a constant for max absolute value of embeddings
+  const maxAbsValue = 0.5;
+
+  // Handle value change from the slider
+  const handleValueChange = useCallback((newValue: number) => {
+    if (selectedElement) {
+      const [row, col] = selectedElement;
+      // Create a new copy of embeddings with the updated value
+      const newEmbeddings = embeddings.map((r, i) =>
+        i === row
+          ? r.map((v, j) => j === col ? newValue : v)
+          : [...r]
+      );
+      setEmbeddings(newEmbeddings);
+      setSelectedValue(newValue);
+    }
+  }, [selectedElement, embeddings]);
 
   // Token labels for 6 tokens - a simple sentence
   const tokenLabels = ["The", "cat", "sat", "on", "the", "mat"];
@@ -64,6 +108,27 @@ function App() {
               in the sequence, weighting their relevance. This is how transformers capture long-range dependencies.
             </p>
             
+            {/* Value Adjuster Slider */}
+            {selectedElement !== null && selectedValue !== null && (
+              <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <h3 className="text-sm font-semibold mb-2">
+                  Editing Token {tokenLabels[selectedElement[0]]}, Dimension {selectedElement[1] + 1}
+                </h3>
+                <div className="flex items-center gap-4">
+                  <input
+                    type="range"
+                    min={-maxAbsValue}
+                    max={maxAbsValue}
+                    step={maxAbsValue / 50}
+                    value={selectedValue}
+                    onChange={(e) => handleValueChange(parseFloat(e.target.value))}
+                    className="flex-grow"
+                  />
+                  <span className="font-mono text-sm">{selectedValue.toExponential(2)}</span>
+                </div>
+              </div>
+            )}
+
             <AttentionHead
               embeddings={embeddings}
               weightQ={attentionWeights.weightQ}
@@ -72,6 +137,8 @@ function App() {
               tokenLabels={tokenLabels}
               showSteps={true}
               onContextComputed={handleAttentionContextComputed}
+              selectedElement={selectedElement}
+              onElementClick={handleElementClick}
             />
           </div>
           

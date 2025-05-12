@@ -24,6 +24,18 @@ interface MatrixDisplayProps {
    * CSS class for additional styling
    */
   className?: string;
+  /**
+   * Whether elements in this matrix are selectable
+   */
+  selectable?: boolean;
+  /**
+   * Currently selected element coordinates [row, col] or null if none selected
+   */
+  selectedElement?: [number, number] | null;
+  /**
+   * Callback when an element is clicked
+   */
+  onElementClick?: (row: number, col: number) => void;
 }
 
 /**
@@ -38,6 +50,9 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
   maxAbsValue = 3,
   cellSize = 'md', // Maintained for compatibility but not used for sizing
   className = '',
+  selectable = false,
+  selectedElement = null,
+  onElementClick,
 }) => {
   if (!data || data.length === 0) {
     return <div>No data to display</div>;
@@ -53,7 +68,7 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
   // Use consistent smaller cell sizes with minimal spacing
   const cellWidth = 3.2; // Matches element width exactly
   const cellHeight = 2.8; // Matches element height exactly
-  const cellGap = 0.2; // Minimal gap between cells
+  const cellGap = 0.1; // Very minimal gap between cells
 
   // Calculate grid template columns for the entire grid including row labels
   const gridTemplateColumns = showRowLabels
@@ -66,7 +81,7 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
     : `repeat(${rows}, ${cellHeight}rem)`;
 
   return (
-    <div className={`flex flex-col ${className}`}>
+    <div className={`flex flex-col ${className} overflow-hidden`}>
       {/* Matrix Label */}
       {label && (
         <div className="text-center font-semibold text-gray-700 mb-2">{label}</div>
@@ -79,8 +94,8 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
           gridTemplateColumns,
           gridTemplateRows,
           gap: `${cellGap}rem`,
-          justifyItems: 'center',
-          alignItems: 'center'
+          justifyItems: 'start',
+          alignItems: 'start'
         }}
       >
         {/* Empty cell in top-left corner when both labels are shown */}
@@ -124,7 +139,6 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
             {row.map((value, j) => (
               <div
                 key={`cell-${i}-${j}`}
-                className="flex items-center justify-center"
                 style={{
                   gridColumn: showRowLabels ? j + 2 : j + 1,
                   gridRow: showColumnLabels ? i + 2 : i + 1
@@ -134,6 +148,11 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
                   value={value}
                   maxAbsValue={maxAbsValue}
                   size={cellSize}
+                  selectable={selectable}
+                  isSelected={selectedElement !== null &&
+                              selectedElement[0] === i &&
+                              selectedElement[1] === j}
+                  onClick={() => onElementClick && onElementClick(i, j)}
                 />
               </div>
             ))}

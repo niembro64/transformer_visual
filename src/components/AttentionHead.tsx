@@ -20,6 +20,10 @@ interface AttentionHeadProps {
   showSteps?: boolean;
   // Optional callback when context vectors are computed
   onContextComputed?: (context: number[][]) => void;
+  // Currently selected element coordinates [row, col] or null if none selected
+  selectedElement?: [number, number] | null;
+  // Callback when an element is clicked in the embedding matrix
+  onElementClick?: (row: number, col: number) => void;
 }
 
 /**
@@ -36,7 +40,9 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
   weightV,
   tokenLabels,
   showSteps = true,
-  onContextComputed
+  onContextComputed,
+  selectedElement = null,
+  onElementClick
 }) => {
   // Number of tokens and dimensionality
   const numTokens = embeddings.length;
@@ -98,11 +104,14 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
         <h3 className="text-lg font-semibold mb-2 text-gray-700">Input Token Embeddings (X)</h3>
         <MatrixDisplay
           data={embeddings}
-          label="Input Embeddings (d_model)"
+          label="Input Embeddings (d_model) - Click an element to edit"
           rowLabels={labels}
           columnLabels={modelDimLabels}
           maxAbsValue={0.2}
           className="mb-2"
+          selectable={true}
+          selectedElement={selectedElement}
+          onElementClick={onElementClick}
         />
         <p className="text-sm text-gray-600">
           Each row represents the embedding vector for a token (d_model = {modelDim}).

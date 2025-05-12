@@ -15,6 +15,18 @@ interface EmbeddingElementProps {
    * Number of significant digits to show in scientific notation
    */
   precision?: number;
+  /**
+   * Whether this element is selectable
+   */
+  selectable?: boolean;
+  /**
+   * Whether this element is currently selected
+   */
+  isSelected?: boolean;
+  /**
+   * Callback when element is clicked (for selection)
+   */
+  onClick?: () => void;
 }
 
 /**
@@ -29,7 +41,10 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
   value,
   maxAbsValue = 0.5,
   size = 'md', // Size prop is maintained for compatibility but not used
-  precision = 2
+  precision = 2,
+  selectable = false,
+  isSelected = false,
+  onClick
 }) => {
   // Calculate the color based on the value
   const { backgroundColor, textColor } = useMemo(() => {
@@ -102,14 +117,15 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
 
   return (
     <div
-      className={sizeStyles.container}
+      className={`${sizeStyles.container} ${selectable ? 'cursor-pointer' : ''} ${isSelected ? 'ring-2 ring-yellow-400' : ''}`}
       style={{
         backgroundColor,
         color: textColor,
         width: sizeStyles.width,
         height: sizeStyles.height,
-        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)'
+        boxShadow: isSelected ? '0 0 5px rgba(250, 204, 21, 0.8)' : '0 1px 2px rgba(0, 0, 0, 0.1)'
       }}
+      onClick={selectable ? onClick : undefined}
     >
       <div className={`${sizeStyles.coefficient} text-center`}>
         {coefficient}
