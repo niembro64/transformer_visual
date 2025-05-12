@@ -173,7 +173,8 @@ function App() {
             <p>• Pale blue: positive, Pale pink: negative, Light gray: near-zero</p>
           </div>
           <p className="text-gray-700 text-xs">
-            Click on any value in the top embedding matrix to edit it with the slider. All downstream calculations will update automatically.
+            Click any value in the embedding matrix to select it (shown with thick magenta border),
+            then use the slider to adjust. All downstream calculations update automatically.
           </p>
         </div>
       </main>

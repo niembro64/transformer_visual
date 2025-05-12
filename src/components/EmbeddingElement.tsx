@@ -35,6 +35,12 @@ interface EmbeddingElementProps {
  * - Extremely light pink for negative values
  * - Extremely light gray for values near zero
  * - Extremely light blue for positive values
+ *
+ * Visual indicator for selected state:
+ * - Thick magenta border only appears around the currently selected element
+ * - All other elements have transparent borders
+ * - Cursor changes to pointer when hovering over selectable elements
+ *
  * Text is displayed in black for good readability on these light backgrounds
  */
 const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
@@ -106,7 +112,7 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
 
     // Use a single, smaller size for all elements
     return {
-      container: `${baseClasses} py-0.5 px-0.5`,
+      container: `${baseClasses} py-1 px-1`,
       coefficient: 'text-[0.65rem]',  // Extra small text
       exponent: 'text-[0.65rem] mt-0',  // Same size, no margin between parts
       minWidth: '3.2rem',
@@ -117,13 +123,13 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
 
   return (
     <div
-      className={`${sizeStyles.container} ${selectable ? 'cursor-pointer' : ''} ${isSelected ? 'ring-2 ring-yellow-400' : ''}`}
+      className={`${sizeStyles.container} ${selectable ? 'cursor-pointer' : ''} ${isSelected ? 'border-4 border-fuchsia-500' : 'border-4 border-transparent'}`}
       style={{
         backgroundColor,
         color: textColor,
         width: sizeStyles.width,
         height: sizeStyles.height,
-        boxShadow: isSelected ? '0 0 5px rgba(250, 204, 21, 0.8)' : '0 1px 2px rgba(0, 0, 0, 0.1)'
+        boxShadow: isSelected ? '0 0 6px rgba(217, 70, 239, 0.6)' : '0 1px 1px rgba(0, 0, 0, 0.05)'
       }}
       onClick={selectable ? onClick : undefined}
     >
