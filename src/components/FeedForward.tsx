@@ -76,14 +76,14 @@ const FeedForward: React.FC<FeedForwardProps> = ({
 
   return (
     <div className="flex flex-col gap-3 p-2 bg-white rounded">
-      <h2 className="text-lg font-bold text-gray-800">Position-wise Feed-Forward Network</h2>
+      <h2 className="text-lg font-bold text-gray-800">Feed-Forward Network</h2>
       
       {/* Input from Attention Layer */}
       <div>
-        <h3 className="text-base font-semibold mb-1 text-gray-700">Input from Multi-Head Attention</h3>
+        <h3 className="text-base font-semibold mb-1 text-gray-700">Attention Output</h3>
         <MatrixDisplay
           data={inputs}
-          label="Attention Output (d_model)"
+          label="Attention Output"
           rowLabels={labels}
           columnLabels={modelDimLabels}
           maxAbsValue={0.2}
@@ -200,19 +200,9 @@ const FeedForward: React.FC<FeedForwardProps> = ({
           columnLabels={modelDimLabels}
           maxAbsValue={0.2}
         />
-        <p className="text-xs text-gray-600">
-          Each token has been independently transformed through a two-layer neural network (d_model = {d_model}).
-        </p>
       </div>
       
       {/* Architectural Explanation */}
-      <div className="mt-2 p-1 bg-gray-50 rounded border border-gray-200">
-        <p className="text-xs text-gray-600">
-          "Each layer contains a fully connected feed-forward network, applied to each position separately
-          and identically. This consists of two linear transformations with a ReLU activation in between."
-          <span className="italic text-2xs">— Vaswani et al., 2017</span>
-        </p>
-      </div>
     </div>
   );
 };

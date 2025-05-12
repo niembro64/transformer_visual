@@ -101,10 +101,10 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
       
       {/* Input Embeddings */}
       <div>
-        <h3 className="text-base font-semibold mb-1 text-gray-700">Input Token Embeddings (X)</h3>
+        <h3 className="text-base font-semibold mb-1 text-gray-700">Input Embeddings</h3>
         <MatrixDisplay
           data={embeddings}
-          label="Input Embeddings (d_model) - Click an element to edit"
+          label="Token Embeddings"
           rowLabels={labels}
           columnLabels={modelDimLabels}
           maxAbsValue={0.2}
@@ -113,18 +113,15 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
           selectedElement={selectedElement}
           onElementClick={onElementClick}
         />
-        <p className="text-xs text-gray-600">
-          Each row represents a token embedding (d_model = {modelDim}).
-        </p>
       </div>
 
       {/* Learned Projection Matrices */}
       {showSteps && (
         <div className="mb-6">
-          <h3 className="text-base font-semibold mb-1 text-gray-700">Linear Projection Matrices</h3>
+          <h3 className="text-base font-semibold mb-1 text-gray-700">Projection Matrices</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-2">
             <div>
-              <h4 className="text-base font-medium mb-1 text-gray-700">Query Projection (W^Q)</h4>
+              <h4 className="text-base font-medium mb-1 text-gray-700">Query (W^Q)</h4>
               <MatrixDisplay
                 data={weightQ}
                 label="W^Q"
@@ -133,12 +130,9 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
                 maxAbsValue={0.5}
                 cellSize="sm"
               />
-              <p className="text-xs text-gray-600 mt-1">
-                Projects embeddings from d_model → d_k dimension.
-              </p>
             </div>
             <div>
-              <h4 className="text-base font-medium mb-1 text-gray-700">Key Projection (W^K)</h4>
+              <h4 className="text-base font-medium mb-1 text-gray-700">Key (W^K)</h4>
               <MatrixDisplay
                 data={weightK}
                 label="W^K"
@@ -147,12 +141,9 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
                 maxAbsValue={0.5}
                 cellSize="sm"
               />
-              <p className="text-xs text-gray-600 mt-1">
-                Projects embeddings from d_model → d_k dimension.
-              </p>
             </div>
             <div>
-              <h4 className="text-base font-medium mb-1 text-gray-700">Value Projection (W^V)</h4>
+              <h4 className="text-base font-medium mb-1 text-gray-700">Value (W^V)</h4>
               <MatrixDisplay
                 data={weightV}
                 label="W^V"
@@ -161,9 +152,6 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
                 maxAbsValue={0.5}
                 cellSize="sm"
               />
-              <p className="text-xs text-gray-600 mt-1">
-                Projects embeddings from d_model → d_v dimension.
-              </p>
             </div>
           </div>
         </div>
@@ -172,49 +160,40 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
       {/* Query, Key, Value Matrices */}
       {showSteps && (
         <div>
-          <h3 className="text-base font-semibold mb-1 text-gray-700">Query, Key, Value Matrices</h3>
+          <h3 className="text-base font-semibold mb-1 text-gray-700">Q, K, V Matrices</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-2">
             <div>
-              <h4 className="text-base font-medium mb-1 text-gray-700">Query Matrix (Q)</h4>
+              <h4 className="text-base font-medium mb-1 text-gray-700">Q</h4>
               <MatrixDisplay
                 data={Q}
-                label="Q = X × W^Q"
+                label="Q"
                 rowLabels={labels}
                 columnLabels={headDimLabels}
                 maxAbsValue={0.3}
                 cellSize="sm"
               />
-              <p className="text-xs text-gray-600 mt-1">
-                Queries for each token (d_k = {headDim}).
-              </p>
             </div>
             <div>
-              <h4 className="text-base font-medium mb-1 text-gray-700">Key Matrix (K)</h4>
+              <h4 className="text-base font-medium mb-1 text-gray-700">K</h4>
               <MatrixDisplay
                 data={K}
-                label="K = X × W^K"
+                label="K"
                 rowLabels={labels}
                 columnLabels={headDimLabels}
                 maxAbsValue={0.3}
                 cellSize="sm"
               />
-              <p className="text-xs text-gray-600 mt-1">
-                Keys for each token (d_k = {headDim}).
-              </p>
             </div>
             <div>
-              <h4 className="text-base font-medium mb-1 text-gray-700">Value Matrix (V)</h4>
+              <h4 className="text-base font-medium mb-1 text-gray-700">V</h4>
               <MatrixDisplay
                 data={V}
-                label="V = X × W^V"
+                label="V"
                 rowLabels={labels}
                 columnLabels={headDimLabels}
                 maxAbsValue={0.3}
                 cellSize="sm"
               />
-              <p className="text-xs text-gray-600 mt-1">
-                Values for each token (d_v = {headDim}).
-              </p>
             </div>
           </div>
         </div>

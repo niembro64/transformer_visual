@@ -88,16 +88,11 @@ function App() {
     <div className="min-h-screen bg-gray-50">
       <main className="w-full p-2">
         <div className="bg-white rounded p-3 mb-3">
-          <h2 className="text-xl font-bold mb-2">Transformer Components</h2>
           
           <div className="mb-4">
-            <h3 className="text-lg font-semibold mb-2 border-b pb-1">
-              Part 1: Self-Attention Mechanism
+            <h3 className="text-lg font-semibold mb-1 border-b pb-1">
+              Self-Attention
             </h3>
-            <p className="text-gray-700 mb-2 text-sm">
-              The self-attention mechanism allows each token to gather information from all other tokens
-              in the sequence, weighting their relevance.
-            </p>
             
             {/* Value Adjuster Slider */}
             {selectedElement !== null && selectedValue !== null && (
@@ -134,13 +129,9 @@ function App() {
           </div>
           
           <div className="mt-4">
-            <h3 className="text-lg font-semibold mb-2 border-b pb-1">
-              Part 2: Position-wise Feed-Forward Network
+            <h3 className="text-lg font-semibold mb-1 border-b pb-1">
+              Feed-Forward Network
             </h3>
-            <p className="text-gray-700 mb-2 text-sm">
-              After the attention mechanism, each token passes through a
-              feed-forward neural network applied independently to each position.
-            </p>
             
             {attentionContext.length > 0 ? (
               <FeedForward
@@ -163,18 +154,9 @@ function App() {
         </div>
         
         <div className="bg-white rounded p-2 text-sm">
-          <h2 className="text-base font-bold mb-1">About This Visualization</h2>
-          <p className="text-gray-700 mb-1">
-            This visualization demonstrates a transformer with simplified dimensions: {embeddingDim} (d_model),
-            {attentionHeadDim} (d_k/d_v), {mlpHiddenDim} (d_ff).
-          </p>
-          <div className="text-gray-700 mb-1 grid grid-cols-2">
-            <p>• Token Sequence: {tokenLabels.join(", ")}</p>
-            <p>• Pale blue: positive, Pale pink: negative, Light gray: near-zero</p>
-          </div>
+          <h2 className="text-base font-bold mb-1">Usage</h2>
           <p className="text-gray-700 text-xs">
-            Click any value in the embedding matrix to select it (shown with thick magenta border),
-            then use the slider to adjust. All downstream calculations update automatically.
+            Blue: positive, Pink: negative. Click a value to edit (magenta border).
           </p>
         </div>
       </main>
