@@ -15,6 +15,16 @@ interface FeedForwardProps {
   tokenLabels?: string[];
   // Whether to show intermediate results
   showSteps?: boolean;
+  // Currently selected element coordinates
+  selectedElement?: {
+    matrixType: 'embeddings' | 'weightQ' | 'weightK' | 'weightV' | 'weightW1' | 'weightW2' | 'none';
+    row: number;
+    col: number;
+  } | null;
+  // Callback when an element is clicked in any matrix
+  onElementClick?: (matrixType: 'embeddings' | 'weightQ' | 'weightK' | 'weightV' | 'weightW1' | 'weightW2' | 'none', row: number, col: number) => void;
+  // Callback when element value changes via slider
+  onValueChange?: (newValue: number) => void;
 }
 
 /**
@@ -30,7 +40,10 @@ const FeedForward: React.FC<FeedForwardProps> = ({
   W2,
   b2,
   tokenLabels,
-  showSteps = true
+  showSteps = true,
+  selectedElement = null,
+  onElementClick,
+  onValueChange
 }) => {
   // Number of tokens and dimensionality
   const numTokens = inputs.length;
@@ -106,8 +119,11 @@ const FeedForward: React.FC<FeedForwardProps> = ({
                   columnLabels={ffnDimLabels}
                   maxAbsValue={0.1}
                   cellSize="sm"
-                  selectable={false}
-                  matrixType="none"
+                  selectable={true}
+                  selectedElement={selectedElement}
+                  matrixType="weightW1"
+                  onElementClick={onElementClick}
+                  onValueChange={onValueChange}
                 />
               </div>
               <div>
@@ -118,8 +134,11 @@ const FeedForward: React.FC<FeedForwardProps> = ({
                   columnLabels={modelDimLabels}
                   maxAbsValue={0.1}
                   cellSize="sm"
-                  selectable={false}
-                  matrixType="none"
+                  selectable={true}
+                  selectedElement={selectedElement}
+                  matrixType="weightW2"
+                  onElementClick={onElementClick}
+                  onValueChange={onValueChange}
                 />
               </div>
             </div>

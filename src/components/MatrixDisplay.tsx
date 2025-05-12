@@ -32,18 +32,18 @@ interface MatrixDisplayProps {
    * Currently selected element coordinates or null if none selected
    */
   selectedElement?: {
-    matrixType: 'embeddings' | 'weightQ' | 'weightK' | 'weightV' | 'none';
+    matrixType: 'embeddings' | 'weightQ' | 'weightK' | 'weightV' | 'weightW1' | 'weightW2' | 'none';
     row: number;
     col: number;
   } | null;
   /**
    * The matrix type for this matrix display
    */
-  matrixType?: 'embeddings' | 'weightQ' | 'weightK' | 'weightV' | 'none';
+  matrixType?: 'embeddings' | 'weightQ' | 'weightK' | 'weightV' | 'weightW1' | 'weightW2' | 'none';
   /**
    * Callback when an element is clicked
    */
-  onElementClick?: (matrixType: 'embeddings' | 'weightQ' | 'weightK' | 'weightV' | 'none', row: number, col: number) => void;
+  onElementClick?: (matrixType: 'embeddings' | 'weightQ' | 'weightK' | 'weightV' | 'weightW1' | 'weightW2' | 'none', row: number, col: number) => void;
   /**
    * Callback when element value changes via slider
    */

@@ -28,7 +28,7 @@ function App() {
   );
 
   // Generate MLP weights that are compatible with attention head output dimensions
-  const [mlpWeights] = useState(() =>
+  const [mlpWeights, setMlpWeights] = useState(() =>
     generateSampleMLPWeights(embeddingDim, mlpHiddenDim, attentionHeadDim)
   );
 
@@ -37,7 +37,7 @@ function App() {
 
   // State for the currently selected element - includes matrix type, row and column
   const [selectedElement, setSelectedElement] = useState<{
-    matrixType: 'embeddings' | 'weightQ' | 'weightK' | 'weightV' | 'none';
+    matrixType: 'embeddings' | 'weightQ' | 'weightK' | 'weightV' | 'weightW1' | 'weightW2' | 'none';
     row: number;
     col: number;
   } | null>(null);
@@ -58,15 +58,19 @@ function App() {
         setSelectedValue(attentionWeights.weightK[row][col]);
       } else if (matrixType === 'weightV') {
         setSelectedValue(attentionWeights.weightV[row][col]);
+      } else if (matrixType === 'weightW1') {
+        setSelectedValue(mlpWeights.W1[row][col]);
+      } else if (matrixType === 'weightW2') {
+        setSelectedValue(mlpWeights.W2[row][col]);
       }
     } else {
       setSelectedValue(null);
     }
-  }, [selectedElement, embeddings, attentionWeights]);
+  }, [selectedElement, embeddings, attentionWeights, mlpWeights]);
 
   // Handle element selection in matrices
   const handleElementClick = useCallback((
-    matrixType: 'embeddings' | 'weightQ' | 'weightK' | 'weightV' | 'none',
+    matrixType: 'embeddings' | 'weightQ' | 'weightK' | 'weightV' | 'weightW1' | 'weightW2' | 'none',
     row: number,
     col: number
   ) => {
@@ -94,6 +98,10 @@ function App() {
         return `W^K[${row+1},${col+1}]`;
       } else if (matrixType === 'weightV') {
         return `W^V[${row+1},${col+1}]`;
+      } else if (matrixType === 'weightW1') {
+        return `W₁[${row+1},${col+1}]`;
+      } else if (matrixType === 'weightW2') {
+        return `W₂[${row+1},${col+1}]`;
       }
     }
     return undefined;
@@ -135,10 +143,28 @@ function App() {
 
         setAttentionWeights(newAttentionWeights);
       }
+      else if (matrixType === 'weightW1' || matrixType === 'weightW2') {
+        // Create a deep copy of MLP weights
+        const newMlpWeights = {
+          W1: [...mlpWeights.W1.map(r => [...r])],
+          b1: [...mlpWeights.b1],
+          W2: [...mlpWeights.W2.map(r => [...r])],
+          b2: [...mlpWeights.b2]
+        };
+
+        // Update the specific weight
+        if (matrixType === 'weightW1') {
+          newMlpWeights.W1[row][col] = newValue;
+        } else if (matrixType === 'weightW2') {
+          newMlpWeights.W2[row][col] = newValue;
+        }
+
+        setMlpWeights(newMlpWeights);
+      }
 
       setSelectedValue(newValue);
     }
-  }, [selectedElement, embeddings, attentionWeights]);
+  }, [selectedElement, embeddings, attentionWeights, mlpWeights]);
 
   
   // Handler for receiving the computed context from the attention head
@@ -185,6 +211,9 @@ function App() {
                 b2={mlpWeights.b2}
                 tokenLabels={tokenLabels}
                 showSteps={true}
+                selectedElement={selectedElement}
+                onElementClick={handleElementClick}
+                onValueChange={handleValueChange}
               />
             ) : (
               <div className="p-0.5 bg-gray-100 rounded">

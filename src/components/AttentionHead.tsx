@@ -22,12 +22,12 @@ interface AttentionHeadProps {
   onContextComputed?: (context: number[][]) => void;
   // Currently selected element coordinates
   selectedElement?: {
-    matrixType: 'embeddings' | 'weightQ' | 'weightK' | 'weightV' | 'none';
+    matrixType: 'embeddings' | 'weightQ' | 'weightK' | 'weightV' | 'weightW1' | 'weightW2' | 'none';
     row: number;
     col: number;
   } | null;
   // Callback when an element is clicked in any matrix
-  onElementClick?: (matrixType: 'embeddings' | 'weightQ' | 'weightK' | 'weightV' | 'none', row: number, col: number) => void;
+  onElementClick?: (matrixType: 'embeddings' | 'weightQ' | 'weightK' | 'weightV' | 'weightW1' | 'weightW2' | 'none', row: number, col: number) => void;
   // Callback when element value changes via slider
   onValueChange?: (newValue: number) => void;
 }
