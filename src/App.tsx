@@ -24,13 +24,22 @@ function App() {
     generateSampleAttentionWeights(embeddingDim, attentionHeadDim)
   );
   
+  // Generate MLP weights that are compatible with attention head output dimensions
   const [mlpWeights] = useState(() => 
-    generateSampleMLPWeights(embeddingDim, mlpHiddenDim)
+    generateSampleMLPWeights(embeddingDim, mlpHiddenDim, attentionHeadDim)
   );
+
+  // State to hold the attention output context vectors
+  const [attentionContext, setAttentionContext] = useState<number[][]>([]);
 
   // Token labels
   const tokenLabels = ["The", "cat", "sat", "down"];
   
+  // Handler for receiving the computed context from the attention head
+  const handleAttentionContextComputed = (context: number[][]) => {
+    setAttentionContext(context);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-blue-600 text-white p-4 shadow-md">
@@ -62,6 +71,7 @@ function App() {
               weightV={attentionWeights.weightV}
               tokenLabels={tokenLabels}
               showSteps={true}
+              onContextComputed={handleAttentionContextComputed}
             />
           </div>
           
@@ -74,15 +84,23 @@ function App() {
               feed-forward neural network. This MLP is applied independently to each token position.
             </p>
             
-            <FeedForward
-              inputs={embeddings} // In a real transformer, this would be the output from the attention layer
-              W1={mlpWeights.W1}
-              b1={mlpWeights.b1}
-              W2={mlpWeights.W2}
-              b2={mlpWeights.b2}
-              tokenLabels={tokenLabels}
-              showSteps={true}
-            />
+            {attentionContext.length > 0 ? (
+              <FeedForward
+                inputs={attentionContext} // Using the output from the attention layer
+                W1={mlpWeights.W1}
+                b1={mlpWeights.b1}
+                W2={mlpWeights.W2}
+                b2={mlpWeights.b2}
+                tokenLabels={tokenLabels}
+                showSteps={true}
+              />
+            ) : (
+              <div className="p-4 bg-gray-100 rounded">
+                <p className="text-gray-600 italic">
+                  The MLP visualization will appear here after the attention computation is complete.
+                </p>
+              </div>
+            )}
           </div>
         </div>
         
@@ -90,7 +108,7 @@ function App() {
           <h2 className="text-2xl font-bold mb-4">About This Visualization</h2>
           <p className="text-gray-700 mb-4">
             This interactive visualization demonstrates the core components of a transformer architecture:
-            the self-attention mechanism and the feed-forward network. 
+            the self-attention mechanism and the feed-forward network.
           </p>
           <p className="text-gray-700 mb-4">
             Transformers work by first using attention to gather context from the entire sequence,

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import MatrixDisplay from './MatrixDisplay';
 import {
   matrixMultiply,
@@ -18,6 +18,8 @@ interface AttentionHeadProps {
   tokenLabels?: string[];
   // Whether to show intermediate computation steps
   showSteps?: boolean;
+  // Optional callback when context vectors are computed
+  onContextComputed?: (context: number[][]) => void;
 }
 
 /**
@@ -34,7 +36,8 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
   weightK,
   weightV,
   tokenLabels,
-  showSteps = true
+  showSteps = true,
+  onContextComputed
 }) => {
   // Number of tokens and dimensionality
   const numTokens = embeddings.length;
@@ -58,6 +61,13 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
 
   // Compute context vectors as weighted sum of values
   const context = useMemo(() => matrixMultiply(attentionWeights, V), [attentionWeights, V]);
+
+  // Use useEffect to call the callback after render
+  useEffect(() => {
+    if (onContextComputed && context.length > 0) {
+      onContextComputed(context);
+    }
+  }, [context, onContextComputed]);
 
   // Generate token labels if not provided
   const defaultTokenLabels = useMemo(() => 

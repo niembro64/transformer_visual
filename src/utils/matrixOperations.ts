@@ -201,11 +201,16 @@ export function generateSampleAttentionWeights(embeddingDim: number, headDim: nu
  * Generate sample MLP weights
  * @param inputDim - Input dimension
  * @param hiddenDim - Hidden layer dimension
+ * @param attentionHeadDim - Attention head dimension (for input compatibility)
  * @returns Object containing weights and biases
  */
-export function generateSampleMLPWeights(inputDim: number, hiddenDim: number) {
+export function generateSampleMLPWeights(inputDim: number, hiddenDim: number, attentionHeadDim?: number) {
+  // If attentionHeadDim is provided, use that as the input dimension
+  // This ensures compatibility when the input comes from attention output
+  const actualInputDim = attentionHeadDim || inputDim;
+  
   return {
-    W1: randomMatrix(inputDim, hiddenDim, -0.5, 0.5),
+    W1: randomMatrix(actualInputDim, hiddenDim, -0.5, 0.5),
     b1: randomVector(hiddenDim, -0.1, 0.1),
     W2: randomMatrix(hiddenDim, inputDim, -0.5, 0.5),
     b2: randomVector(inputDim, -0.1, 0.1),

@@ -28,7 +28,7 @@ interface MatrixDisplayProps {
 
 /**
  * Component to display a matrix of values
- * Uses a CSS grid to show the matrix elements with proper alignment
+ * Uses a CSS grid to show the matrix elements with proper alignment of row and column labels
  */
 const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
   data,
@@ -50,6 +50,20 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
   const showRowLabels = rowLabels && rowLabels.length === rows;
   const showColumnLabels = columnLabels && columnLabels.length === cols;
 
+  // Get cell size in rems based on the cellSize prop
+  const cellWidth = cellSize === 'sm' ? 2 : cellSize === 'md' ? 2.5 : 3;
+  const cellGap = 0.25; // Gap between cells in rem
+  
+  // Calculate grid template columns for the entire grid including row labels
+  const gridTemplateColumns = showRowLabels 
+    ? `4rem repeat(${cols}, ${cellWidth}rem)`  // First column for row labels
+    : `repeat(${cols}, ${cellWidth}rem)`;
+  
+  // Calculate grid template rows including header for column labels
+  const gridTemplateRows = showColumnLabels
+    ? `1.5rem repeat(${rows}, auto)` // First row for column labels
+    : `repeat(${rows}, auto)`;
+
   return (
     <div className={`flex flex-col ${className}`}>
       {/* Matrix Label */}
@@ -57,61 +71,69 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
         <div className="text-center font-semibold text-gray-700 mb-2">{label}</div>
       )}
 
-      <div className="flex">
-        {/* Row Labels Column */}
-        {showRowLabels && (
-          <div className="flex flex-col justify-around mr-2 text-right">
-            {rowLabels!.map((label, index) => (
-              <div key={`row-${index}`} className="py-1 text-xs text-gray-500">
-                {label}
-              </div>
-            ))}
-          </div>
+      {/* Main grid container */}
+      <div 
+        className="grid gap-x-1 gap-y-1"
+        style={{ 
+          gridTemplateColumns,
+          gridTemplateRows
+        }}
+      >
+        {/* Empty cell in top-left corner when both labels are shown */}
+        {showRowLabels && showColumnLabels && (
+          <div className="col-start-1 row-start-1"></div>
         )}
-
-        <div className="flex flex-col">
-          {/* Column Labels Row */}
-          {showColumnLabels && (
+        
+        {/* Column labels row */}
+        {showColumnLabels && 
+          columnLabels!.map((label, j) => (
             <div 
-              className="flex mb-1" 
+              key={`col-${j}`} 
+              className="text-center text-xs text-gray-500 flex items-center justify-center"
               style={{ 
-                marginLeft: showRowLabels ? '0' : '0', 
-                gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` 
+                gridColumn: showRowLabels ? j + 2 : j + 1, 
+                gridRow: 1 
               }}
             >
-              {columnLabels!.map((label, index) => (
-                <div 
-                  key={`col-${index}`} 
-                  className="text-center text-xs text-gray-500"
-                  style={{ 
-                    width: cellSize === 'sm' ? '2rem' : cellSize === 'md' ? '2.5rem' : '3rem',
-                    marginRight: '0.25rem'
-                  }}
-                >
-                  {label}
-                </div>
-              ))}
+              {label}
             </div>
-          )}
-
-          {/* Matrix Grid */}
-          <div
-            className="grid gap-1"
-            style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
-          >
-            {data.flatMap((row, i) =>
-              row.map((value, j) => (
-                <div key={`${i}-${j}`}>
-                  <EmbeddingElement 
-                    value={value} 
-                    maxAbsValue={maxAbsValue} 
-                    size={cellSize} 
-                  />
-                </div>
-              ))
+          ))
+        }
+        
+        {/* Row labels and matrix cells */}
+        {data.map((row, i) => (
+          <React.Fragment key={`row-${i}`}>
+            {/* Row label */}
+            {showRowLabels && (
+              <div 
+                className="text-right text-xs text-gray-500 pr-2 flex items-center justify-end"
+                style={{ 
+                  gridColumn: 1, 
+                  gridRow: showColumnLabels ? i + 2 : i + 1
+                }}
+              >
+                {rowLabels![i]}
+              </div>
             )}
-          </div>
-        </div>
+
+            {/* Matrix cells for this row */}
+            {row.map((value, j) => (
+              <div 
+                key={`cell-${i}-${j}`}
+                style={{ 
+                  gridColumn: showRowLabels ? j + 2 : j + 1, 
+                  gridRow: showColumnLabels ? i + 2 : i + 1
+                }}
+              >
+                <EmbeddingElement 
+                  value={value}
+                  maxAbsValue={maxAbsValue}
+                  size={cellSize}
+                />
+              </div>
+            ))}
+          </React.Fragment>
+        ))}
       </div>
     </div>
   );
