@@ -81,12 +81,12 @@ export function addBias(a: number[][], b: number[]): number[][] {
 }
 
 /**
- * ReLU activation function
+ * Leaky ReLU activation function
  * @param x - Input value
- * @returns max(0, x)
+ * @returns max(0.01*x, x) - allows small gradient when x < 0
  */
 export function relu(x: number): number {
-  return Math.max(0, x);
+  return x > 0 ? x : 0.01 * x;
 }
 
 /**
@@ -175,8 +175,8 @@ export function randomNeuralMatrix(rows: number, cols: number, initMethod: 'xavi
     // Xavier/Glorot initialization: good for tanh
     stdDev = Math.sqrt(2.0 / (rows + cols));
   } else if (initMethod === 'he') {
-    // He initialization: good for ReLU
-    stdDev = Math.sqrt(2.0 / rows);
+    // He initialization with increased scale for visualization
+    stdDev = Math.sqrt(2.0 / rows) * 2.0; // Multiply by 2 to make effects more visible
   } else if (initMethod === 'scaled') {
     // Scaled initialization: good for attention
     stdDev = 1.0 / Math.sqrt(cols);
@@ -243,7 +243,7 @@ export function generateSampleMLPWeights(inputDim: number, hiddenDim: number, at
   // If attentionHeadDim is provided, use that as the input dimension
   // This ensures compatibility when the input comes from attention output
   const actualInputDim = attentionHeadDim || inputDim;
-  
+
   return {
     // Feed-forward weights typically use He initialization because of ReLU
     W1: randomNeuralMatrix(actualInputDim, hiddenDim, 'he'),

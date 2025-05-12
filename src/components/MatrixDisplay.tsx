@@ -19,7 +19,7 @@ interface MatrixDisplayProps {
   /**
    * Size of each cell
    */
-  cellSize?: 'sm' | 'md' | 'lg';
+  cellSize?: 'xs' | 'sm' | 'md' | 'lg';
   /**
    * CSS class for additional styling
    */
@@ -79,9 +79,16 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
   const showRowLabels = rowLabels && rowLabels.length === rows;
   const showColumnLabels = columnLabels && columnLabels.length === cols;
 
-  // Use much smaller cell sizes with minimal spacing (about 60% of original size)
-  const cellWidth = 1.9; // Matches element width exactly
-  const cellHeight = 1.7; // Matches element height exactly
+  // Use size-appropriate cell sizes with minimal spacing
+  const sizeMap = {
+    xs: { width: 1.7, height: 1.5 },  // Extra small for hidden layers
+    sm: { width: 2.1, height: 1.9 },  // Small for most elements
+    md: { width: 2.7, height: 2.4 },  // Medium if needed
+    lg: { width: 3.4, height: 3.0 }   // Large if needed
+  };
+
+  const cellWidth = sizeMap[cellSize].width;  // Use width based on size
+  const cellHeight = sizeMap[cellSize].height; // Use height based on size
   const cellGap = 0.03; // Extremely minimal gap between cells
 
   // Calculate grid template columns for the entire grid including row labels
@@ -123,7 +130,7 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
           columnLabels!.map((label, j) => (
             <div
               key={`col-${j}`}
-              className="text-center text-[0.4rem] text-gray-500 flex items-center justify-center"
+              className="text-center text-[0.5rem] text-gray-600 flex items-center justify-center font-medium"
               style={{
                 gridColumn: showRowLabels ? j + 2 : j + 1,
                 gridRow: 1
@@ -140,7 +147,7 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
             {/* Row label */}
             {showRowLabels && (
               <div
-                className="text-center text-[0.4rem] text-gray-500 flex items-center justify-center"
+                className="text-center text-[0.5rem] text-gray-600 flex items-center justify-center font-medium"
                 style={{
                   gridColumn: 1,
                   gridRow: showColumnLabels ? i + 2 : i + 1

@@ -50,6 +50,7 @@ const FeedForward: React.FC<FeedForwardProps> = ({
   const d_model = inputs[0].length;    // Input/output dimension (d_model)
   const d_ff = W1[0].length;           // Inner dimension of FFN (d_ff)
 
+
   // Generate token labels if not provided
   const defaultTokenLabels = useMemo(() => 
     Array.from({ length: numTokens }, (_, i) => `Token ${i+1}`),
@@ -62,8 +63,8 @@ const FeedForward: React.FC<FeedForwardProps> = ({
     [d_model]
   );
   
-  const ffnDimLabels = useMemo(() => 
-    Array.from({ length: d_ff }, (_, i) => `ff_${i+1}`),
+  const ffnDimLabels = useMemo(() =>
+    Array.from({ length: d_ff }, (_, i) => ``), // Empty strings for hidden dimensions
     [d_ff]
   );
   
@@ -100,7 +101,7 @@ const FeedForward: React.FC<FeedForwardProps> = ({
             rowLabels={labels}
             columnLabels={modelDimLabels}
             maxAbsValue={0.2}
-            cellSize="sm"
+            cellSize="xs"
             selectable={false}
             matrixType="none"
           />
@@ -118,7 +119,7 @@ const FeedForward: React.FC<FeedForwardProps> = ({
                   rowLabels={modelDimLabels}
                   columnLabels={ffnDimLabels}
                   maxAbsValue={0.1}
-                  cellSize="sm"
+                  cellSize="xs" // Using xs size for hidden layer connections
                   selectable={true}
                   selectedElement={selectedElement}
                   matrixType="weightW1"
@@ -133,7 +134,7 @@ const FeedForward: React.FC<FeedForwardProps> = ({
                   rowLabels={ffnDimLabels}
                   columnLabels={modelDimLabels}
                   maxAbsValue={0.1}
-                  cellSize="sm"
+                  cellSize="xs" // Using xs size for hidden layer connections
                   selectable={true}
                   selectedElement={selectedElement}
                   matrixType="weightW2"
@@ -149,15 +150,15 @@ const FeedForward: React.FC<FeedForwardProps> = ({
         {showSteps && (
           <div className="col-span-3">
             <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700">Steps</h3>
-            <div className="grid grid-cols-2 gap-1">
+            <div className="grid grid-cols-1 gap-1">
               <div>
                 <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700">xW₁+b₁</h4>
                 <MatrixDisplay
                   data={firstLayerOutput}
-                  rowLabels={labels}
+                  rowLabels={[]} // Removed token labels as they don't make sense for hidden layer
                   columnLabels={ffnDimLabels}
                   maxAbsValue={0.5}
-                  cellSize="sm"
+                  cellSize="xs" // Using xs size for hidden layer
                   selectable={false}
                   matrixType="none"
                 />
@@ -166,10 +167,10 @@ const FeedForward: React.FC<FeedForwardProps> = ({
                 <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700">ReLU</h4>
                 <MatrixDisplay
                   data={activations}
-                  rowLabels={labels}
+                  rowLabels={[]} // Removed token labels as they don't make sense for hidden layer
                   columnLabels={ffnDimLabels}
                   maxAbsValue={0.5}
-                  cellSize="sm"
+                  cellSize="xs" // Using xs size for hidden layer
                   selectable={false}
                   matrixType="none"
                 />
@@ -187,7 +188,7 @@ const FeedForward: React.FC<FeedForwardProps> = ({
             rowLabels={labels}
             columnLabels={modelDimLabels}
             maxAbsValue={0.2}
-            cellSize="sm"
+            cellSize="xs"
             selectable={false}
             matrixType="none"
           />
