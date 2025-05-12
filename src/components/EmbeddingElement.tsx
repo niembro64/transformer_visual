@@ -102,7 +102,7 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
   // Determine styling based on size
   // Use consistent size regardless of the size prop
   const sizeStyles = useMemo(() => {
-    const baseClasses = 'rounded-lg font-mono flex flex-col justify-center';
+    const baseClasses = 'rounded-lg font-mono flex flex-col justify-center items-center';
 
     // Use a single, smaller size for all elements
     return {
@@ -127,10 +127,10 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
       }}
       onClick={selectable ? onClick : undefined}
     >
-      <div className={`${sizeStyles.coefficient} text-center`}>
+      <div className={`${sizeStyles.coefficient} text-center w-full`}>
         {coefficient}
       </div>
-      <div className={`${sizeStyles.exponent} text-center`}>
+      <div className={`${sizeStyles.exponent} text-center w-full`}>
         {exponent}
       </div>
     </div>

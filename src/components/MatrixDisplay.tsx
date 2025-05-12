@@ -94,8 +94,8 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
           gridTemplateColumns,
           gridTemplateRows,
           gap: `${cellGap}rem`,
-          justifyItems: 'start',
-          alignItems: 'start',
+          justifyItems: 'center',
+          alignItems: 'center',
           fontSize: 'small'
         }}
       >
@@ -126,7 +126,7 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
             {/* Row label */}
             {showRowLabels && (
               <div
-                className="text-right text-[0.65rem] text-gray-500 pr-1 flex items-center justify-end"
+                className="text-center text-[0.65rem] text-gray-500 flex items-center justify-center"
                 style={{
                   gridColumn: 1,
                   gridRow: showColumnLabels ? i + 2 : i + 1
@@ -140,6 +140,7 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
             {row.map((value, j) => (
               <div
                 key={`cell-${i}-${j}`}
+                className="flex items-center justify-center"
                 style={{
                   gridColumn: showRowLabels ? j + 2 : j + 1,
                   gridRow: showColumnLabels ? i + 2 : i + 1
