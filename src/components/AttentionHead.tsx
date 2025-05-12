@@ -107,8 +107,8 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
       {/* Main Container - Horizontal Layout */}
       <div className="grid grid-cols-12 gap-1">
         {/* Left Column: Input Embeddings */}
-        <div className="col-span-3">
-          <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700">Input Embeddings</h3>
+        <div className="col-span-3 flex flex-col items-center justify-center">
+          <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Input Embeddings</h3>
           <MatrixDisplay
             data={embeddings}
             label="Tokens"
@@ -127,11 +127,11 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
 
         {/* Middle Column: Projection Matrices */}
         {showSteps && (
-          <div className="col-span-3">
-            <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700">Weights</h3>
-            <div className="grid grid-cols-3 gap-1">
-              <div>
-                <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700">W^Q</h4>
+          <div className="col-span-3 flex flex-col items-center justify-center">
+            <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Weights</h3>
+            <div className="grid grid-cols-3 gap-1 w-full">
+              <div className="flex flex-col items-center justify-center">
+                <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700 w-full">W^Q</h4>
                 <MatrixDisplay
                   data={weightQ}
                   rowLabels={modelDimLabels}
@@ -145,8 +145,8 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
                   onValueChange={onValueChange}
                 />
               </div>
-              <div>
-                <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700">W^K</h4>
+              <div className="flex flex-col items-center justify-center">
+                <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700 w-full">W^K</h4>
                 <MatrixDisplay
                   data={weightK}
                   rowLabels={modelDimLabels}
@@ -160,8 +160,8 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
                   onValueChange={onValueChange}
                 />
               </div>
-              <div>
-                <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700">W^V</h4>
+              <div className="flex flex-col items-center justify-center">
+                <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700 w-full">W^V</h4>
                 <MatrixDisplay
                   data={weightV}
                   rowLabels={modelDimLabels}
@@ -181,11 +181,11 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
 
         {/* Right Column: Q, K, V Matrices */}
         {showSteps && (
-          <div className="col-span-6">
-            <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700">Projected Matrices</h3>
-            <div className="grid grid-cols-3 gap-1">
-              <div>
-                <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700">Q</h4>
+          <div className="col-span-6 flex flex-col items-center justify-center">
+            <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Projected Matrices</h3>
+            <div className="grid grid-cols-3 gap-1 w-full">
+              <div className="flex flex-col items-center justify-center">
+                <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700 w-full">Q</h4>
                 <MatrixDisplay
                   data={Q}
                   rowLabels={labels}
@@ -196,8 +196,8 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
                   matrixType="none"
                 />
               </div>
-              <div>
-                <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700">K</h4>
+              <div className="flex flex-col items-center justify-center">
+                <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700 w-full">K</h4>
                 <MatrixDisplay
                   data={K}
                   rowLabels={labels}
@@ -208,8 +208,8 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
                   matrixType="none"
                 />
               </div>
-              <div>
-                <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700">V</h4>
+              <div className="flex flex-col items-center justify-center">
+                <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700 w-full">V</h4>
                 <MatrixDisplay
                   data={V}
                   rowLabels={labels}
@@ -229,9 +229,9 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
       {showSteps && (
         <div className="grid grid-cols-12 gap-1 mt-0.5">
           {/* Left Column: Attention Scores */}
-          <div className="col-span-3">
-            <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700">Attention Scores</h3>
-            <div>
+          <div className="col-span-3 flex flex-col items-center justify-center">
+            <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Attention Scores</h3>
+            <div className="flex flex-col items-center justify-center w-full">
               <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700">QK^T/√d_k</h4>
               <MatrixDisplay
                 data={attentionScores}
@@ -246,9 +246,9 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
           </div>
 
           {/* Middle Column: Attention Weights */}
-          <div className="col-span-3">
-            <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700">Attention Weights</h3>
-            <div>
+          <div className="col-span-3 flex flex-col items-center justify-center">
+            <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Attention Weights</h3>
+            <div className="flex flex-col items-center justify-center w-full">
               <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700">softmax</h4>
               <MatrixDisplay
                 data={attentionWeights}
@@ -263,9 +263,9 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
           </div>
 
           {/* Right Column: Final Output */}
-          <div className="col-span-6">
-            <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700">Output</h3>
-            <div>
+          <div className="col-span-6 flex flex-col items-center justify-center">
+            <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Output</h3>
+            <div className="flex flex-col items-center justify-center w-full">
               <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700">Attention Output</h4>
               <MatrixDisplay
                 data={attentionOutput}

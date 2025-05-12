@@ -93,8 +93,8 @@ const FeedForward: React.FC<FeedForwardProps> = ({
       {/* Main Container - Horizontal Layout */}
       <div className="grid grid-cols-12 gap-1">
         {/* Left Column: Input */}
-        <div className="col-span-3">
-          <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700">Input</h3>
+        <div className="col-span-3 flex flex-col items-center justify-center">
+          <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Input</h3>
           <MatrixDisplay
             data={inputs}
             label="Attention Output"
@@ -109,11 +109,11 @@ const FeedForward: React.FC<FeedForwardProps> = ({
 
         {/* Second Column: Weights and biases */}
         {showSteps && (
-          <div className="col-span-3">
-            <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700">Weights</h3>
-            <div className="grid grid-cols-1 gap-1">
-              <div>
-                <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700">W₁</h4>
+          <div className="col-span-3 flex flex-col items-center justify-center">
+            <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Weights</h3>
+            <div className="grid grid-cols-1 gap-1 w-full">
+              <div className="flex flex-col items-center justify-center">
+                <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700 w-full">W₁</h4>
                 <MatrixDisplay
                   data={W1}
                   rowLabels={modelDimLabels}
@@ -127,8 +127,8 @@ const FeedForward: React.FC<FeedForwardProps> = ({
                   onValueChange={onValueChange}
                 />
               </div>
-              <div>
-                <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700">W₂</h4>
+              <div className="flex flex-col items-center justify-center">
+                <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700 w-full">W₂</h4>
                 <MatrixDisplay
                   data={W2}
                   rowLabels={ffnDimLabels}
@@ -148,11 +148,11 @@ const FeedForward: React.FC<FeedForwardProps> = ({
 
         {/* Third Column: Intermediate results */}
         {showSteps && (
-          <div className="col-span-3">
-            <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700">Steps</h3>
-            <div className="grid grid-cols-1 gap-1">
-              <div>
-                <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700">xW₁+b₁</h4>
+          <div className="col-span-3 flex flex-col items-center justify-center">
+            <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Steps</h3>
+            <div className="grid grid-cols-1 gap-1 w-full">
+              <div className="flex flex-col items-center justify-center">
+                <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700 w-full">xW₁+b₁</h4>
                 <MatrixDisplay
                   data={firstLayerOutput}
                   rowLabels={[]} // Removed token labels as they don't make sense for hidden layer
@@ -163,8 +163,8 @@ const FeedForward: React.FC<FeedForwardProps> = ({
                   matrixType="none"
                 />
               </div>
-              <div>
-                <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700">ReLU</h4>
+              <div className="flex flex-col items-center justify-center">
+                <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700 w-full">ReLU</h4>
                 <MatrixDisplay
                   data={activations}
                   rowLabels={[]} // Removed token labels as they don't make sense for hidden layer
@@ -180,8 +180,8 @@ const FeedForward: React.FC<FeedForwardProps> = ({
         )}
 
         {/* Right Column: Output */}
-        <div className="col-span-3">
-          <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700">Output</h3>
+        <div className="col-span-3 flex flex-col items-center justify-center">
+          <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Output</h3>
           <MatrixDisplay
             data={output}
             label="FFN(x)"

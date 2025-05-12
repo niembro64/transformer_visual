@@ -11,7 +11,9 @@
 export function matrixMultiply(a: number[][], b: number[][]): number[][] {
   if (a.length === 0 || b.length === 0) return [[]];
   if (a[0].length !== b.length) {
-    throw new Error(`Matrix dimensions don't match for multiplication: ${a[0].length} != ${b.length}`);
+    throw new Error(
+      `Matrix dimensions don't match for multiplication: ${a[0].length} != ${b.length}`
+    );
   }
 
   const result: number[][] = [];
@@ -40,18 +42,18 @@ export function matrixMultiply(a: number[][], b: number[][]): number[][] {
  */
 export function transpose(a: number[][]): number[][] {
   if (a.length === 0) return [[]];
-  
+
   const rows = a.length;
   const cols = a[0].length;
   const result: number[][] = [];
-  
+
   for (let j = 0; j < cols; j++) {
     result[j] = [];
     for (let i = 0; i < rows; i++) {
       result[j][i] = a[i][j];
     }
   }
-  
+
   return result;
 }
 
@@ -62,7 +64,7 @@ export function transpose(a: number[][]): number[][] {
  * @returns Transformed matrix
  */
 export function applyFn(a: number[][], fn: (x: number) => number): number[][] {
-  return a.map(row => row.map(fn));
+  return a.map((row) => row.map(fn));
 }
 
 /**
@@ -74,10 +76,12 @@ export function applyFn(a: number[][], fn: (x: number) => number): number[][] {
 export function addBias(a: number[][], b: number[]): number[][] {
   if (a.length === 0) return [[]];
   if (a[0].length !== b.length) {
-    throw new Error(`Dimensions don't match for bias addition: ${a[0].length} != ${b.length}`);
+    throw new Error(
+      `Dimensions don't match for bias addition: ${a[0].length} != ${b.length}`
+    );
   }
-  
-  return a.map(row => row.map((val, i) => val + b[i]));
+
+  return a.map((row) => row.map((val, i) => val + b[i]));
 }
 
 /**
@@ -86,7 +90,7 @@ export function addBias(a: number[][], b: number[]): number[][] {
  * @returns max(0.01*x, x) - allows small gradient when x < 0
  */
 export function relu(x: number): number {
-  return x > 0 ? x : 0.01 * x;
+  return x > 0 ? x : 0;
 }
 
 /**
@@ -95,18 +99,18 @@ export function relu(x: number): number {
  * @returns Matrix with softmax applied to each row
  */
 export function softmax(matrix: number[][]): number[][] {
-  return matrix.map(row => {
+  return matrix.map((row) => {
     // Find the maximum value for numerical stability
     const max = Math.max(...row);
-    
+
     // Calculate exp(x - max) for each element
-    const expValues = row.map(val => Math.exp(val - max));
-    
+    const expValues = row.map((val) => Math.exp(val - max));
+
     // Sum of all exp values
     const sumExp = expValues.reduce((a, b) => a + b, 0);
-    
+
     // Normalize by dividing each by the sum
-    return expValues.map(exp => exp / sumExp);
+    return expValues.map((exp) => exp / sumExp);
   });
 }
 
@@ -140,7 +144,7 @@ export function dotProduct(a: number[][], b: number[][]): number[][] {
  * @returns Scaled matrix
  */
 export function scaleMatrix(a: number[][], scalar: number): number[][] {
-  return a.map(row => row.map(val => val * scalar));
+  return a.map((row) => row.map((val) => val * scalar));
 }
 
 /**
@@ -165,11 +169,15 @@ export function randomNormal(mean = 0, stdDev = 1): number {
  * @param initMethod - Initialization method ('xavier', 'he', or 'scaled')
  * @returns Random matrix with values in typical neural network ranges
  */
-export function randomNeuralMatrix(rows: number, cols: number, initMethod: 'xavier' | 'he' | 'scaled' = 'xavier'): number[][] {
+export function randomNeuralMatrix(
+  rows: number,
+  cols: number,
+  initMethod: 'xavier' | 'he' | 'scaled' = 'xavier'
+): number[][] {
   const matrix: number[][] = [];
-  
+
   let stdDev = 0.01; // Default small value
-  
+
   // Calculate standard deviation based on initialization method
   if (initMethod === 'xavier') {
     // Xavier/Glorot initialization: good for tanh
@@ -181,14 +189,14 @@ export function randomNeuralMatrix(rows: number, cols: number, initMethod: 'xavi
     // Scaled initialization: good for attention
     stdDev = 1.0 / Math.sqrt(cols);
   }
-  
+
   for (let i = 0; i < rows; i++) {
     matrix[i] = [];
     for (let j = 0; j < cols; j++) {
       matrix[i][j] = randomNormal(0, stdDev);
     }
   }
-  
+
   return matrix;
 }
 
@@ -210,7 +218,10 @@ export function randomNeuralVector(size: number, stdDev = 0.01): number[] {
  * @param embeddingDim - Embedding dimension
  * @returns Matrix where each row is a token embedding
  */
-export function generateSampleEmbeddings(numTokens: number, embeddingDim: number): number[][] {
+export function generateSampleEmbeddings(
+  numTokens: number,
+  embeddingDim: number
+): number[][] {
   // Embeddings are typically drawn from a normal distribution with small standard deviation
   return randomNeuralMatrix(numTokens, embeddingDim, 'scaled');
 }
@@ -222,7 +233,10 @@ export function generateSampleEmbeddings(numTokens: number, embeddingDim: number
  * @param headDim - Attention head dimension
  * @returns Object containing Q, K, V weight matrices
  */
-export function generateSampleAttentionWeights(embeddingDim: number, headDim: number) {
+export function generateSampleAttentionWeights(
+  embeddingDim: number,
+  headDim: number
+) {
   // Attention weights are typically initialized with scaled initialization
   return {
     weightQ: randomNeuralMatrix(embeddingDim, headDim, 'scaled'),
@@ -239,7 +253,11 @@ export function generateSampleAttentionWeights(embeddingDim: number, headDim: nu
  * @param attentionHeadDim - Attention head dimension (for input compatibility)
  * @returns Object containing weights and biases
  */
-export function generateSampleMLPWeights(inputDim: number, hiddenDim: number, attentionHeadDim?: number) {
+export function generateSampleMLPWeights(
+  inputDim: number,
+  hiddenDim: number,
+  attentionHeadDim?: number
+) {
   // If attentionHeadDim is provided, use that as the input dimension
   // This ensures compatibility when the input comes from attention output
   const actualInputDim = attentionHeadDim || inputDim;

@@ -102,7 +102,7 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
     : `repeat(${rows}, ${cellHeight}rem)`;
 
   return (
-    <div className={`flex flex-col ${className} overflow-hidden`}>
+    <div className={`flex flex-col items-center justify-center ${className} overflow-hidden w-full h-full`}>
       {/* Matrix Label */}
       {label && (
         <div className="text-center text-[0.6rem] font-semibold text-gray-700 mb-1">{label}</div>
@@ -110,7 +110,7 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
 
       {/* Main grid container */}
       <div
-        className="grid"
+        className="grid mx-auto"
         style={{
           gridTemplateColumns,
           gridTemplateRows,
