@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 
 interface EmbeddingElementProps {
   value: number;
@@ -62,6 +63,38 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
   onValueChange,
   valueLabel
 }) => {
+  // Create a ref for the element to position the slider relative to it
+  const elementRef = useRef<HTMLDivElement>(null);
+  // State to track position for slider
+  const [sliderPosition, setSliderPosition] = useState({ left: 0, top: 0 });
+
+  // Update slider position when the element is selected
+  useEffect(() => {
+    if (isSelected && elementRef.current) {
+      const updatePosition = () => {
+        const rect = elementRef.current?.getBoundingClientRect();
+        if (rect) {
+          // Position in the center below the element
+          setSliderPosition({
+            left: rect.left + rect.width / 2,
+            top: rect.bottom + 5 // Add a small gap
+          });
+        }
+      };
+
+      // Initial position
+      updatePosition();
+
+      // Keep updating on scroll/resize to ensure slider follows element
+      window.addEventListener('scroll', updatePosition, { passive: true });
+      window.addEventListener('resize', updatePosition, { passive: true });
+
+      return () => {
+        window.removeEventListener('scroll', updatePosition);
+        window.removeEventListener('resize', updatePosition);
+      };
+    }
+  }, [isSelected]);
   // Calculate the color based on the value
   const { backgroundColor, textColor } = useMemo(() => {
     // Clamp the value to the maximum range for color interpolation
@@ -134,6 +167,7 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
   return (
     <div className="relative">
       <div
+        ref={elementRef}
         className={`${sizeStyles.container} ${selectable ? 'cursor-pointer' : ''} ${isSelected ? 'border-2 border-fuchsia-500' : 'border-2 border-transparent'}`}
         style={{
           backgroundColor,
@@ -153,9 +187,13 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
       </div>
 
       {/* Floating slider overlay that appears below the element when selected */}
-      {isSelected && onValueChange && (
-        <div className="absolute left-1/2 transform -translate-x-1/2 mt-0.5 z-10 bg-white rounded-md shadow-lg p-1.5 w-20 animate-fadeIn"
-             style={{ top: '100%' }}>
+      {isSelected && onValueChange && createPortal(
+        <div className="fixed bg-white rounded-md shadow-lg p-1.5 w-20 animate-fadeIn z-50"
+             style={{
+               left: `${sliderPosition.left}px`,
+               top: `${sliderPosition.top}px`,
+               transform: 'translateX(-50%)'
+             }}>
           {valueLabel && (
             <div className="text-[0.6rem] font-semibold text-gray-700 mb-0.5 text-center">
               {valueLabel}
@@ -174,7 +212,8 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
             <span>{-maxAbsValue.toFixed(1)}</span>
             <span>{maxAbsValue.toFixed(1)}</span>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
