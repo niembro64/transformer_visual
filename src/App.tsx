@@ -19,8 +19,8 @@ export const dropoutUniveral = 0.03;
 
 function App() {
   // Configurable dimension values
-  const [embeddingDim, setEmbeddingDim] = useState(6); // Dimension of token embeddings (d_model)
-  const attentionHeadDim = 2; // Dimension of attention head (d_k/d_v)
+  const [embeddingDim, setEmbeddingDim] = useState(8); // Dimension of token embeddings (d_model)
+  const attentionHeadDim = 4; // Dimension of attention head (d_k/d_v)
   const mlpHiddenDim = 4; // Dimension of MLP hidden layer (d_ff = 8, typically 4x d_model)
 
   // Dropout rates
