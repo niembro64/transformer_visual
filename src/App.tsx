@@ -13,6 +13,8 @@ import {
   applyRandomWalk,
   applyRandomWalkToVector,
   relu,
+  vectorDotProduct,
+  cosineSimilarity,
 } from './utils/matrixOperations';
 
 export const dropoutUniveral = 0.03;
@@ -804,37 +806,90 @@ function App() {
           </div>
         </div>
 
-        {/* Predicted Embedding Section */}
+        {/* Next Token Prediction Section */}
         {ffnOutput.length > 0 && (
           <div className="mt-0.5 mb-0.5">
             <h3 className="text-sm font-semibold mb-0.5 border-b pb-0.5">
-              Predicted Embedding
+              Next Token Prediction
             </h3>
             <div className="bg-white rounded p-0.5">
-              <div className="flex flex-col items-center">
-                <h4 className="text-[0.65rem] font-medium mb-0.5">
-                  Final Embedding Vector
-                </h4>
-                {/* Take the average of all token embeddings to get a single predicted vector */}
-                <MatrixDisplay
-                  data={[ffnOutput.reduce((acc, row) => {
-                    // If this is the first row, initialize acc with it
-                    if (acc.length === 0) {
-                      return [...row];
-                    }
-                    // Otherwise, add values from current row to accumulator
-                    return acc.map((val, i) => val + row[i]);
-                  }, []).map(val => val / ffnOutput.length)]} // Divide by token count to get average
-                  rowLabels={["Prediction"]}
-                  columnLabels={Array.from(
-                    { length: embeddingDim },
-                    (_, i) => `d_${i + 1}`
-                  )}
-                  maxAbsValue={0.3}
-                  cellSize="xs"
-                  selectable={false}
-                  matrixType="none"
-                />
+              <div className="grid grid-cols-12 gap-1">
+                {/* Left: Next Token Prediction Vector */}
+                <div className="col-span-6 flex flex-col items-center">
+                  <h4 className="text-[0.65rem] font-medium mb-0.5">
+                    Next Token Vector
+                  </h4>
+                  {/* Use the last token's embedding as the prediction for the next token */}
+                  <MatrixDisplay
+                    data={[ffnOutput[ffnOutput.length - 1]]} // Use the last token's embedding
+                    rowLabels={["Next Token"]}
+                    columnLabels={Array.from(
+                      { length: embeddingDim },
+                      (_, i) => `d_${i + 1}`
+                    )}
+                    maxAbsValue={0.3}
+                    cellSize="xs"
+                    selectable={false}
+                    matrixType="none"
+                  />
+                </div>
+
+                {/* Right: Similarity with existing tokens */}
+                <div className="col-span-6 flex flex-col items-center">
+                  <h4 className="text-[0.65rem] font-medium mb-0.5">
+                    Similarity with Tokens
+                  </h4>
+                  {/* Calculate similarities between next token prediction and each token */}
+                  {(() => {
+                    // Get the next token prediction vector (last token's embedding)
+                    const nextTokenPrediction = ffnOutput[ffnOutput.length - 1];
+                    
+                    // Calculate dot product similarity with each token
+                    const similarities = ffnOutput.map(tokenEmbedding => {
+                      // Calculate dot product
+                      const dotProduct = vectorDotProduct(nextTokenPrediction, tokenEmbedding);
+                      // Calculate cosine similarity
+                      const similarity = cosineSimilarity(nextTokenPrediction, tokenEmbedding);
+                      return [dotProduct, similarity];
+                    });
+                    
+                    return (
+                      <div className="grid grid-cols-2 w-full gap-1">
+                        {/* Dot Products */}
+                        <div>
+                          <h5 className="text-[0.6rem] font-medium mb-0.5 text-center">
+                            Dot Product
+                          </h5>
+                          <MatrixDisplay
+                            data={similarities.map(sim => [sim[0]])}
+                            rowLabels={tokenLabels}
+                            columnLabels={["dot"]}
+                            maxAbsValue={Math.max(...similarities.map(s => Math.abs(s[0]))) || 0.3}
+                            cellSize="xs"
+                            selectable={false}
+                            matrixType="none"
+                          />
+                        </div>
+                        
+                        {/* Cosine Similarities */}
+                        <div>
+                          <h5 className="text-[0.6rem] font-medium mb-0.5 text-center">
+                            Cosine Similarity
+                          </h5>
+                          <MatrixDisplay
+                            data={similarities.map(sim => [sim[1]])}
+                            rowLabels={tokenLabels}
+                            columnLabels={["cos"]}
+                            maxAbsValue={1.0} // Cosine similarity is always between -1 and 1
+                            cellSize="xs"
+                            selectable={false}
+                            matrixType="none"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
               </div>
             </div>
           </div>

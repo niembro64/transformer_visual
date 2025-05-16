@@ -173,6 +173,39 @@ export function scaleMatrix(a: number[][], scalar: number): number[][] {
 }
 
 /**
+ * Compute the dot product between two vectors (1D arrays)
+ * @param a - First vector
+ * @param b - Second vector
+ * @returns Scalar dot product value
+ */
+export function vectorDotProduct(a: number[], b: number[]): number {
+  if (a.length !== b.length) {
+    throw new Error(`Vector dimensions don't match for dot product: ${a.length} != ${b.length}`);
+  }
+  
+  return a.reduce((sum, val, i) => sum + (val * b[i]), 0);
+}
+
+/**
+ * Compute the cosine similarity between two vectors
+ * @param a - First vector
+ * @param b - Second vector
+ * @returns Similarity value between -1 and 1
+ */
+export function cosineSimilarity(a: number[], b: number[]): number {
+  const dotProduct = vectorDotProduct(a, b);
+  
+  // Calculate magnitudes (L2 norms)
+  const magA = Math.sqrt(a.reduce((sum, val) => sum + (val * val), 0));
+  const magB = Math.sqrt(b.reduce((sum, val) => sum + (val * val), 0));
+  
+  // Avoid division by zero
+  if (magA === 0 || magB === 0) return 0;
+  
+  return dotProduct / (magA * magB);
+}
+
+/**
  * Generate a random value from normal distribution using Box-Muller transform
  * @param mean - Mean of the distribution (default: 0)
  * @param stdDev - Standard deviation (default: 1)
