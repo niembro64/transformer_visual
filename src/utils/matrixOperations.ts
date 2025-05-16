@@ -262,31 +262,25 @@ export function generatePositionalEncodings(
   embeddingDim: number
 ): number[][] {
   if (embeddingDim % 2 !== 0) {
-    throw new Error('Embedding dimension must be even for sinusoidal positional encodings');
+    throw new Error(
+      'Embedding dimension must be even for sinusoidal positional encodings'
+    );
   }
 
-  const positionalEncodings: number[][] = [];
+  const encodings: number[][] = [];
 
   for (let pos = 0; pos < maxSeqLength; pos++) {
-    const encoding: number[] = new Array(embeddingDim).fill(0);
-    
+    const row: number[] = new Array(embeddingDim).fill(0);
+
     for (let i = 0; i < embeddingDim; i += 2) {
-      // Calculate frequency based on position and dimension
-      const freq = 1.0 / Math.pow(10000, i / embeddingDim);
-      
-      // Sine for even dimensions
-      encoding[i] = Math.sin(pos * freq);
-      
-      // Cosine for odd dimensions
-      encoding[i + 1] = Math.cos(pos * freq);
+      const angle = pos / Math.pow(10000, (2 * (i / 2)) / embeddingDim);
+      row[i] = Math.sin(angle); // even
+      row[i + 1] = Math.cos(angle); // odd
     }
-    
-    positionalEncodings.push(encoding);
+    encodings.push(row);
   }
-
-  return positionalEncodings;
+  return encodings;
 }
-
 /**
  * Apply dropout to a matrix
  * @param matrix - Input matrix
@@ -301,10 +295,10 @@ export function applyDropout(
 ): number[][] {
   // During inference (training=false), we don't apply dropout
   if (!training) return matrix;
-  
+
   // During training, randomly zero out elements with probability dropoutRate
-  return matrix.map(row => 
-    row.map(val => 
+  return matrix.map((row) =>
+    row.map((val) =>
       Math.random() >= dropoutRate ? val / (1 - dropoutRate) : 0
     )
   );
@@ -322,16 +316,20 @@ export function addPositionalEncodings(
 ): number[][] {
   if (embeddings.length === 0) return embeddings;
   if (embeddings.length > posEncodings.length) {
-    throw new Error(`Sequence length ${embeddings.length} exceeds maximum supported length ${posEncodings.length}`);
+    throw new Error(
+      `Sequence length ${embeddings.length} exceeds maximum supported length ${posEncodings.length}`
+    );
   }
-  
+
   if (embeddings[0].length !== posEncodings[0].length) {
-    throw new Error(`Embedding dimension ${embeddings[0].length} doesn't match positional encoding dimension ${posEncodings[0].length}`);
+    throw new Error(
+      `Embedding dimension ${embeddings[0].length} doesn't match positional encoding dimension ${posEncodings[0].length}`
+    );
   }
-  
+
   // Select just the positional encodings we need for our sequence length
   const neededPosEncodings = posEncodings.slice(0, embeddings.length);
-  
+
   // Add positional encodings to token embeddings
   return matrixAdd(embeddings, neededPosEncodings);
 }

@@ -35,6 +35,8 @@ interface AttentionHeadProps {
   dropoutRate?: number;
   // Whether to apply dropout (simulates training)
   applyTrainingDropout?: boolean;
+  // Label for value editing
+  valueLabel?: string;
 }
 
 /**
@@ -56,7 +58,8 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
   onElementClick,
   onValueChange,
   dropoutRate = 0.1,
-  applyTrainingDropout = false
+  applyTrainingDropout = false,
+  valueLabel
 }) => {
   // Number of tokens and dimensionality
   const numTokens = embeddings.length;
@@ -122,7 +125,7 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
     <div className="flex flex-col gap-0.5 p-0.5 bg-white rounded">
       {/* Main Container - Horizontal Layout */}
       <div className="grid grid-cols-12 gap-1">
-        {/* Left Column: Input Embeddings */}
+        {/* Left Column: Input Embeddings - Not selectable, these are the fixed embeddings from previous steps */}
         <div className="col-span-3 flex flex-col items-center justify-center">
           <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Input Embeddings</h3>
           <MatrixDisplay
@@ -133,11 +136,8 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
             maxAbsValue={0.2}
             className="mb-1"
             cellSize="xs"
-            selectable={true}
-            selectedElement={selectedElement}
-            matrixType="embeddings"
-            onElementClick={onElementClick}
-            onValueChange={onValueChange}
+            selectable={false} // Set to false - not editable
+            matrixType="none" // Set to none to prevent selection
           />
         </div>
 
@@ -155,10 +155,11 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
                   maxAbsValue={0.5}
                   cellSize="xs"
                   selectable={true}
-                  selectedElement={selectedElement}
+                  selectedElement={selectedElement?.matrixType === 'weightQ' ? selectedElement : null}
                   matrixType="weightQ"
                   onElementClick={onElementClick}
                   onValueChange={onValueChange}
+                  valueLabel={selectedElement?.matrixType === 'weightQ' ? valueLabel : undefined}
                 />
               </div>
               <div className="flex flex-col items-center justify-center">
@@ -170,10 +171,11 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
                   maxAbsValue={0.5}
                   cellSize="xs"
                   selectable={true}
-                  selectedElement={selectedElement}
+                  selectedElement={selectedElement?.matrixType === 'weightK' ? selectedElement : null}
                   matrixType="weightK"
                   onElementClick={onElementClick}
                   onValueChange={onValueChange}
+                  valueLabel={selectedElement?.matrixType === 'weightK' ? valueLabel : undefined}
                 />
               </div>
               <div className="flex flex-col items-center justify-center">
@@ -185,10 +187,11 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
                   maxAbsValue={0.5}
                   cellSize="xs"
                   selectable={true}
-                  selectedElement={selectedElement}
+                  selectedElement={selectedElement?.matrixType === 'weightV' ? selectedElement : null}
                   matrixType="weightV"
                   onElementClick={onElementClick}
                   onValueChange={onValueChange}
+                  valueLabel={selectedElement?.matrixType === 'weightV' ? valueLabel : undefined}
                 />
               </div>
             </div>

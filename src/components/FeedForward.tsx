@@ -29,10 +29,12 @@ interface FeedForwardProps {
   activationFn?: (x: number) => number;
   // Name of the activation function for display
   activationFnName?: string;
-  // Dropout rate (0-1) for first linear layer (after activation)
+  // Dropout rate for first linear layer (after activation)
   dropoutRate?: number;
   // Whether to apply dropout (simulates training)
   applyTrainingDropout?: boolean;
+  // Label for value editing
+  valueLabel?: string;
 }
 
 /**
@@ -55,7 +57,8 @@ const FeedForward: React.FC<FeedForwardProps> = ({
   activationFn = relu,
   activationFnName = 'ReLU',
   dropoutRate = 0.1,
-  applyTrainingDropout = false
+  applyTrainingDropout = false,
+  valueLabel
 }) => {
   // Number of tokens and dimensionality
   const numTokens = inputs.length;
@@ -110,7 +113,7 @@ const FeedForward: React.FC<FeedForwardProps> = ({
     <div className="flex flex-col gap-0.5 p-0.5 bg-white rounded">
       {/* Main Container - Horizontal Layout */}
       <div className="grid grid-cols-12 gap-1">
-        {/* Left Column: Input */}
+        {/* Left Column: Input - Not selectable, this is the output from attention layer */}
         <div className="col-span-3 flex flex-col items-center justify-center">
           <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Input</h3>
           <MatrixDisplay
@@ -120,8 +123,8 @@ const FeedForward: React.FC<FeedForwardProps> = ({
             columnLabels={modelDimLabels}
             maxAbsValue={0.2}
             cellSize="xs"
-            selectable={false}
-            matrixType="none"
+            selectable={false} // Not editable
+            matrixType="none"   // Set to none to prevent selection
           />
         </div>
 
@@ -139,10 +142,11 @@ const FeedForward: React.FC<FeedForwardProps> = ({
                   maxAbsValue={0.1}
                   cellSize="xs" // Using xs size for hidden layer connections
                   selectable={true}
-                  selectedElement={selectedElement}
+                  selectedElement={selectedElement?.matrixType === 'weightW1' ? selectedElement : null}
                   matrixType="weightW1"
                   onElementClick={onElementClick}
                   onValueChange={onValueChange}
+                  valueLabel={selectedElement?.matrixType === 'weightW1' ? valueLabel : undefined}
                 />
               </div>
               <div className="flex flex-col items-center justify-center">
@@ -154,10 +158,11 @@ const FeedForward: React.FC<FeedForwardProps> = ({
                   maxAbsValue={0.1}
                   cellSize="xs" // Using xs size for hidden layer connections
                   selectable={true}
-                  selectedElement={selectedElement}
+                  selectedElement={selectedElement?.matrixType === 'weightW2' ? selectedElement : null}
                   matrixType="weightW2"
                   onElementClick={onElementClick}
                   onValueChange={onValueChange}
+                  valueLabel={selectedElement?.matrixType === 'weightW2' ? valueLabel : undefined}
                 />
               </div>
             </div>

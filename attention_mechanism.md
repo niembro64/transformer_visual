@@ -253,3 +253,31 @@ The complete flow visualization helps understand how:
 - Dropout regularizes the model during training
 
 This visualization demonstrates how transformers process relationships between tokens and how different components work together to enable the model's powerful capabilities in understanding and generating sequences.
+
+## Implementation Changes Summary
+
+To ensure compliance with the original "Attention Is All You Need" paper, we made the following changes:
+
+1. **Sinusoidal Positional Encodings**:
+   - Implemented `generatePositionalEncodings()` function that creates position-dependent encodings
+   - Added `addPositionalEncodings()` to combine token embeddings with positional information
+   - Added a visualization section showing raw embeddings, positional encodings, and their sum
+
+2. **Dropout Layers**:
+   - Added `applyDropout()` function with proper scaling during training
+   - Implemented dropout after positional encodings are added to embeddings
+   - Added dropout after the attention output before the residual connection
+   - Added dropout after ReLU in the feed-forward network
+   - Added a training mode toggle to enable/disable dropout visualization
+
+3. **Feed-Forward Activation**:
+   - Ensured ReLU is the default activation for feed-forward networks
+   - Made activation function configurable to support alternative options
+   - Updated visualization to clearly show the activation function in use
+
+4. **UI Improvements**:
+   - Added a "Training Mode" toggle to show the effect of dropout
+   - Fixed multiple slider issue to ensure only one element can be edited at a time
+   - Updated all component interfaces to maintain proper type safety
+
+These changes ensure the implementation accurately follows the architecture described in the original transformer paper while maintaining a clear, educational visualization.

@@ -48,6 +48,10 @@ interface MatrixDisplayProps {
    * Callback when element value changes via slider
    */
   onValueChange?: (newValue: number) => void;
+  /**
+   * Label for the currently selected value
+   */
+  valueLabel?: string;
 }
 
 /**
@@ -67,6 +71,7 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
   matrixType,
   onElementClick,
   onValueChange,
+  valueLabel,
 }) => {
   if (!data || data.length === 0) {
     return <div>No data to display</div>;
@@ -158,36 +163,38 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
             )}
 
             {/* Matrix cells for this row */}
-            {row.map((value, j) => (
-              <div
-                key={`cell-${i}-${j}`}
-                className="flex items-center justify-center"
-                style={{
-                  gridColumn: showRowLabels ? j + 2 : j + 1,
-                  gridRow: showColumnLabels ? i + 2 : i + 1
-                }}
-              >
-                <EmbeddingElement
-                  value={value}
-                  maxAbsValue={maxAbsValue}
-                  size={cellSize}
-                  selectable={selectable}
-                  isSelected={selectedElement !== null &&
+            {row.map((value, j) => {
+              // Determine if this specific cell is selected
+              const isSelected = selectedElement !== null &&
                               selectedElement.matrixType === matrixType &&
                               selectedElement.row === i &&
-                              selectedElement.col === j}
-                  onClick={() => onElementClick && matrixType && onElementClick(matrixType, i, j)}
-                  onValueChange={selectedElement !== null &&
-                                 selectedElement.matrixType === matrixType &&
-                                 selectedElement.row === i &&
-                                 selectedElement.col === j &&
-                                 onValueChange ?
-                                 onValueChange : undefined}
-                  valueLabel={undefined}
-                  /* We provide valueLabel from the parent component now */
-                />
-              </div>
-            ))}
+                              selectedElement.col === j;
+              
+              // Only provide onValueChange if this cell is selected
+              const cellValueChangeHandler = isSelected && onValueChange ? onValueChange : undefined;
+              
+              return (
+                <div
+                  key={`cell-${i}-${j}`}
+                  className="flex items-center justify-center"
+                  style={{
+                    gridColumn: showRowLabels ? j + 2 : j + 1,
+                    gridRow: showColumnLabels ? i + 2 : i + 1
+                  }}
+                >
+                  <EmbeddingElement
+                    value={value}
+                    maxAbsValue={maxAbsValue}
+                    size={cellSize}
+                    selectable={selectable}
+                    isSelected={isSelected}
+                    onClick={() => onElementClick && matrixType && onElementClick(matrixType, i, j)}
+                    onValueChange={cellValueChangeHandler}
+                    valueLabel={isSelected ? valueLabel : undefined}
+                  />
+                </div>
+              );
+            })}
           </React.Fragment>
         ))}
       </div>
