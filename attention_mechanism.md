@@ -279,5 +279,36 @@ To ensure compliance with the original "Attention Is All You Need" paper, we mad
    - Added a "Training Mode" toggle to show the effect of dropout
    - Fixed multiple slider issue to ensure only one element can be edited at a time
    - Updated all component interfaces to maintain proper type safety
+   - Enhanced matrix value visualization with sinusoidal color mapping
+   - Made UI colors more vibrant with pure blue at +10 and pure red at -10
 
-These changes ensure the implementation accurately follows the architecture described in the original transformer paper while maintaining a clear, educational visualization.
+5. **Interactive Token Management**:
+   - Added controls to add, remove, and edit tokens
+   - Support for dynamic token count with automatic recalculation of all matrices
+   - Ensured proper handling of tokens in all visualization components
+
+6. **Dimension Adjustment**:
+   - Added controls to increase/decrease embedding dimension
+   - Automatic regeneration of all matrices when dimensions change
+   - Real-time visualization updates when changing model dimensions
+
+These changes ensure the implementation accurately follows the architecture described in the original transformer paper while providing an interactive, educational visualization that allows users to explore different transformer configurations.
+
+## Interactive Controls Guide
+
+### Token Management
+- **Adding Tokens**: Click the "+" button in the token editor section to add a new empty token
+- **Removing Tokens**: Hover over a token and click the "×" button that appears to remove that token
+- **Editing Tokens**: Click on the token text field and type to modify the token's content
+
+### Model Dimension Controls
+- **Embedding Dimension**: Use the +/- buttons to increase or decrease the embedding dimension (d_model)
+- The embedding dimension is kept even to ensure proper sinusoidal positional encodings
+- When changing dimensions, all weights and matrices are regenerated appropriately
+
+### Visualization Interaction
+- Click on any editable matrix element (highlighted with a border on hover) to select it
+- Use the slider that appears to adjust the selected value
+- Click the "Oscillate" button to animate the selected value
+- The color intensity reflects the value magnitude: blue for positive, red for negative
+- Values are displayed in scientific notation for precision

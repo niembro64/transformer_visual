@@ -13,62 +13,61 @@ import {
   relu,
 } from './utils/matrixOperations';
 
+export const dropoutUniveral = 0.03;
+
 function App() {
-  // Configuration for the demo with new dimensions
-  // const numTokens = 6; // Number of tokens in the sequence (6 tokens)
-  const embeddingDim = 10; // Dimension of token embeddings (d_model = 4)
-  const attentionHeadDim = 4; // Dimension of attention head (d_k/d_v = 3)
-  const mlpHiddenDim = 8; // Dimension of MLP hidden layer (d_ff = 8, typically 4x d_model)
-  // const maxSeqLength = 32;    // Maximum sequence length for positional encodings
+  // Configurable dimension values
+  const [embeddingDim, setEmbeddingDim] = useState(6); // Dimension of token embeddings (d_model)
+  const attentionHeadDim = 2; // Dimension of attention head (d_k/d_v)
+  const mlpHiddenDim = 4; // Dimension of MLP hidden layer (d_ff = 8, typically 4x d_model)
 
   // Dropout rates
-  const embeddingDropoutRate = 0.0; // Dropout rate after embeddings + positional encodings
-  const attentionDropoutRate = 0.0; // Dropout rate after attention
-  const ffnDropoutRate = 0.0; // Dropout rate in feed-forward network
+  const embeddingDropoutRate = dropoutUniveral; // Dropout rate after embeddings + positional encodings
+  const attentionDropoutRate = dropoutUniveral; // Dropout rate after attention
+  const ffnDropoutRate = dropoutUniveral; // Dropout rate in feed-forward network
 
   // Training mode - determines if dropout is applied
   const [trainingMode, setTrainingMode] = useState(false);
 
-  // Token labels for 6 tokens - a simple sentence
-  const tokenLabels: string[] = [
-    'The',
+  // Editable token list
+  const [tokenLabels, setTokenLabels] = useState<string[]>([
+    'a',
     'cat',
     'sat',
     'on',
     'the',
     'mat',
-    'hello',
-    'world',
-    'this',
-    'is',
-    'a',
-    'test',
-    // 'example',
-    // 'sequence',
-    // 'for',
-    // 'attention',
-    // 'and',
-    // 'feed-forward',
-    // 'networks',
-    // 'in',
-    // 'transformers',
-    // 'with',
-    // 'positional',
-    // 'encoding',
-    // 'and',
-    // 'dropout',
-  ];
-  const maxSeqLength = tokenLabels.length; // Maximum sequence length for positional encodings
+  ]);
 
-  // Generate positional encodings
-  const [positionalEncodings] = useState(() =>
+  // Maximum sequence length - based on current token count
+  const maxSeqLength = useMemo(
+    () => tokenLabels.length * 2,
+    [tokenLabels.length]
+  ); // Allow room for growth
+
+  // Generate positional encodings - regenerate when embedding dimension changes
+  const [positionalEncodings, setPositionalEncodings] = useState(() =>
     generatePositionalEncodings(maxSeqLength, embeddingDim)
   );
 
-  // Generate raw embeddings
+  // Update positional encodings when dimensions change
+  useEffect(() => {
+    setPositionalEncodings(
+      generatePositionalEncodings(maxSeqLength, embeddingDim)
+    );
+  }, [maxSeqLength, embeddingDim]);
+
+  // Generate raw embeddings - regenerate when tokens or dimensions change
   const [rawEmbeddings, setRawEmbeddings] = useState(() =>
     generateSampleEmbeddings(tokenLabels.length, embeddingDim)
   );
+
+  // Regenerate embeddings when token count or dimensions change
+  useEffect(() => {
+    setRawEmbeddings(
+      generateSampleEmbeddings(tokenLabels.length, embeddingDim)
+    );
+  }, [tokenLabels.length, embeddingDim]);
 
   // Apply positional encodings to embeddings
   const embeddings = useMemo(
@@ -82,21 +81,66 @@ function App() {
     [embeddings, embeddingDropoutRate, trainingMode]
   );
 
-  // Sample data generation for attention weights
+  // Sample data generation for attention weights - regenerate when dimensions change
   const [attentionWeights, setAttentionWeights] = useState(() =>
     generateSampleAttentionWeights(embeddingDim, attentionHeadDim)
   );
+
+  // Update attention weights when dimensions change
+  useEffect(() => {
+    setAttentionWeights(
+      generateSampleAttentionWeights(embeddingDim, attentionHeadDim)
+    );
+  }, [embeddingDim, attentionHeadDim]);
 
   // Generate MLP weights that are compatible with attention head output dimensions
   const [mlpWeights, setMlpWeights] = useState(() =>
     generateSampleMLPWeights(embeddingDim, mlpHiddenDim, attentionHeadDim)
   );
 
+  // Update MLP weights when dimensions change
+  useEffect(() => {
+    setMlpWeights(
+      generateSampleMLPWeights(embeddingDim, mlpHiddenDim, attentionHeadDim)
+    );
+  }, [embeddingDim, mlpHiddenDim, attentionHeadDim]);
+
+  // Token manipulation functions
+  const addToken = useCallback(() => {
+    setTokenLabels((prevTokens) => [...prevTokens, '']);
+  }, []);
+
+  const removeToken = useCallback((index: number) => {
+    setTokenLabels((prevTokens) => {
+      const newTokens = [...prevTokens];
+      newTokens.splice(index, 1);
+      return newTokens;
+    });
+  }, []);
+
+  const updateToken = useCallback((index: number, newText: string) => {
+    setTokenLabels((prevTokens) => {
+      const newTokens = [...prevTokens];
+      newTokens[index] = newText;
+      return newTokens;
+    });
+  }, []);
+
+  // Embedding dimension adjustment
+  const increaseEmbeddingDim = useCallback(() => {
+    setEmbeddingDim((prev) => prev + 2); // Increase by 2 to keep it even for positional encodings
+    setSelectedElement(null); // Reset selection when changing dimensions
+  }, []);
+
+  const decreaseEmbeddingDim = useCallback(() => {
+    setEmbeddingDim((prev) => Math.max(2, prev - 2)); // Decrease by 2, but ensure minimum of 2
+    setSelectedElement(null); // Reset selection when changing dimensions
+  }, []);
+
   // State to hold the attention output context vectors
   const [attentionContext, setAttentionContext] = useState<number[][]>([]);
 
-  // Only have one selectedElement for the entire application to prevent multiple sliders
-  const [selectedElement, setSelectedElement] = useState<{
+  type ElementObject = {
     matrixType:
       | 'embeddings'
       | 'weightQ'
@@ -107,7 +151,24 @@ function App() {
       | 'none';
     row: number;
     col: number;
-  } | null>(null);
+  };
+
+  const initialElement: ElementObject | null = useMemo(() => {
+    // Initialize selectedElement to the first element of the first matrix
+    if (rawEmbeddings.length > 0 && rawEmbeddings[0].length > 0) {
+      return {
+        matrixType: 'embeddings',
+        row: 0,
+        col: 0,
+      };
+    }
+    return null;
+  }, [rawEmbeddings]);
+
+  // Only have one selectedElement for the entire application to prevent multiple sliders
+  const [selectedElement, setSelectedElement] = useState<ElementObject | null>(
+    initialElement
+  );
 
   // State for the current value of the selected element
   const [selectedValue, setSelectedValue] = useState<number | null>(null);
@@ -193,11 +254,14 @@ function App() {
         const { matrixType, row, col } = selectedElement;
 
         if (matrixType === 'embeddings') {
-          // Create a new copy of embeddings with the updated value
-          const newRawEmbeddings = rawEmbeddings.map((r, i) =>
-            i === row ? r.map((v, j) => (j === col ? newValue : v)) : [...r]
-          );
-          setRawEmbeddings(newRawEmbeddings);
+          // Only update if row and col are within bounds (they may not be if we've removed tokens or changed dim)
+          if (row < rawEmbeddings.length && col < rawEmbeddings[0].length) {
+            // Create a new copy of embeddings with the updated value
+            const newRawEmbeddings = rawEmbeddings.map((r, i) =>
+              i === row ? r.map((v, j) => (j === col ? newValue : v)) : [...r]
+            );
+            setRawEmbeddings(newRawEmbeddings);
+          }
         } else if (
           matrixType === 'weightQ' ||
           matrixType === 'weightK' ||
@@ -211,15 +275,28 @@ function App() {
           };
 
           // Update the specific weight
-          if (matrixType === 'weightQ') {
+          if (
+            matrixType === 'weightQ' &&
+            row < attentionWeights.weightQ.length &&
+            col < attentionWeights.weightQ[0].length
+          ) {
             newAttentionWeights.weightQ[row][col] = newValue;
-          } else if (matrixType === 'weightK') {
+            setAttentionWeights(newAttentionWeights);
+          } else if (
+            matrixType === 'weightK' &&
+            row < attentionWeights.weightK.length &&
+            col < attentionWeights.weightK[0].length
+          ) {
             newAttentionWeights.weightK[row][col] = newValue;
-          } else if (matrixType === 'weightV') {
+            setAttentionWeights(newAttentionWeights);
+          } else if (
+            matrixType === 'weightV' &&
+            row < attentionWeights.weightV.length &&
+            col < attentionWeights.weightV[0].length
+          ) {
             newAttentionWeights.weightV[row][col] = newValue;
+            setAttentionWeights(newAttentionWeights);
           }
-
-          setAttentionWeights(newAttentionWeights);
         } else if (matrixType === 'weightW1' || matrixType === 'weightW2') {
           // Create a deep copy of MLP weights
           const newMlpWeights = {
@@ -230,13 +307,21 @@ function App() {
           };
 
           // Update the specific weight
-          if (matrixType === 'weightW1') {
+          if (
+            matrixType === 'weightW1' &&
+            row < mlpWeights.W1.length &&
+            col < mlpWeights.W1[0].length
+          ) {
             newMlpWeights.W1[row][col] = newValue;
-          } else if (matrixType === 'weightW2') {
+            setMlpWeights(newMlpWeights);
+          } else if (
+            matrixType === 'weightW2' &&
+            row < mlpWeights.W2.length &&
+            col < mlpWeights.W2[0].length
+          ) {
             newMlpWeights.W2[row][col] = newValue;
+            setMlpWeights(newMlpWeights);
           }
-
-          setMlpWeights(newMlpWeights);
         }
 
         setSelectedValue(newValue);
@@ -254,22 +339,101 @@ function App() {
     <div className="min-h-screen bg-gray-50">
       <main className="w-full p-0.5">
         <div className="bg-white rounded p-0.5 mb-0.5">
-          {/* Training mode toggle */}
-          <div className="mb-2 flex justify-end">
-            <label className="inline-flex items-center cursor-pointer">
-              <span className="text-[0.6rem] text-gray-700 mr-1">
-                Training Mode
-              </span>
-              <div className="relative">
-                <input
-                  type="checkbox"
-                  className="sr-only peer"
-                  checked={trainingMode}
-                  onChange={() => setTrainingMode(!trainingMode)}
-                />
-                <div className="w-8 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+          {/* Combined top control bar with tokens and dimensions */}
+          <div className="flex flex-col mb-4 border-b pb-4">
+            <div className="flex justify-between items-start mb-3">
+              {/* Left: Token controls - takes 2/3 of space */}
+              <div className="w-2/3 pr-4">
+                <h3 className="text-sm font-semibold mb-2">Edit Tokens</h3>
+                <div className="flex flex-wrap gap-2">
+                  {tokenLabels.map((token, index) => (
+                    <div key={index} className="relative group">
+                      {/* Delete button appears on hover */}
+                      <button
+                        className="absolute -top-2.5 -right-2.5 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-medium shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => removeToken(index)}
+                        title="Remove token"
+                      >
+                        ×
+                      </button>
+
+                      {/* Editable token input */}
+                      <input
+                        type="text"
+                        value={token}
+                        onChange={(e) => updateToken(index, e.target.value)}
+                        className="px-2 py-1 border rounded text-sm min-w-[3rem] text-center"
+                        placeholder="Token"
+                      />
+                    </div>
+                  ))}
+
+                  {/* Add token button */}
+                  <button
+                    className="px-2 py-1 border rounded bg-gray-50 hover:bg-gray-100 text-gray-500"
+                    onClick={addToken}
+                    title="Add token"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
-            </label>
+
+              {/* Right: Settings controls - takes 1/3 of space */}
+              <div className="w-1/3 flex flex-col gap-3 pl-4 border-l">
+                {/* Embedding dimension controls */}
+                <div>
+                  <h3 className="text-sm font-semibold mb-2">
+                    Embedding Dimension
+                  </h3>
+                  <div className="flex items-center border rounded overflow-hidden w-32 mx-auto">
+                    <button
+                      className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm"
+                      onClick={decreaseEmbeddingDim}
+                      disabled={embeddingDim <= 2}
+                    >
+                      -
+                    </button>
+                    <div className="px-4 py-1 flex-grow text-center font-medium">
+                      {embeddingDim}
+                    </div>
+                    <button
+                      className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm"
+                      onClick={increaseEmbeddingDim}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                {/* Training mode toggle */}
+                <div>
+                  <h3 className="text-sm font-semibold mb-2">Training Mode</h3>
+                  <div className="flex items-center justify-center">
+                    <button
+                      onClick={() => setTrainingMode(false)}
+                      className={`px-4 py-1 border border-r-0 rounded-l transition-colors ${
+                        !trainingMode
+                          ? 'bg-gray-200 font-medium'
+                          : 'bg-white text-gray-500'
+                      }`}
+                    >
+                      Off
+                    </button>
+                    <button
+                      onClick={() => setTrainingMode(true)}
+                      className={`px-4 py-1 border border-l-0 rounded-r transition-colors ${
+                        trainingMode
+                          ? 'bg-blue-500 text-white font-medium'
+                          : 'bg-white text-gray-500'
+                      }`}
+                    >
+                      On
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="mb-0.5">
@@ -402,11 +566,58 @@ function App() {
         </div>
 
         <div className="bg-white rounded p-0.5 text-[0.6rem]">
-          <p className="text-gray-700">
-            Blue: positive, Pink: negative. Click a value to edit (magenta
-            border).
-            {trainingMode && ' Training mode enabled: dropout is applied.'}
-          </p>
+          <div className="flex flex-col gap-1">
+            <p className="text-gray-700">
+              Blue: positive, Red: negative. Click a value to edit (magenta
+              border).
+              {trainingMode && ' Training mode enabled: dropout is applied.'}
+            </p>
+
+            <div className="flex flex-wrap gap-4">
+              <div className="flex items-center">
+                <span className="font-semibold mr-1">Tokens:</span>
+                <span>{tokenLabels.length}</span>
+              </div>
+
+              <div className="flex items-center">
+                <span className="font-semibold mr-1">Embedding Dim:</span>
+                <span>{embeddingDim}</span>
+              </div>
+
+              <div className="flex items-center">
+                <span className="font-semibold mr-1">Attention Head Dim:</span>
+                <span>{attentionHeadDim}</span>
+              </div>
+
+              <div className="flex items-center">
+                <span className="font-semibold mr-1">FFN Hidden Dim:</span>
+                <span>{mlpHiddenDim}</span>
+              </div>
+
+              {trainingMode && (
+                <>
+                  <div className="flex items-center">
+                    <span className="font-semibold mr-1">
+                      Embedding Dropout:
+                    </span>
+                    <span>{(embeddingDropoutRate * 100).toFixed(0)}%</span>
+                  </div>
+
+                  <div className="flex items-center">
+                    <span className="font-semibold mr-1">
+                      Attention Dropout:
+                    </span>
+                    <span>{(attentionDropoutRate * 100).toFixed(0)}%</span>
+                  </div>
+
+                  <div className="flex items-center">
+                    <span className="font-semibold mr-1">FFN Dropout:</span>
+                    <span>{(ffnDropoutRate * 100).toFixed(0)}%</span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </main>
     </div>

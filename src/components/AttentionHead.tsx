@@ -66,7 +66,7 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
   const modelDim = embeddings[0].length;
   const headDim = weightQ[0].length;
 
-  // Project input embeddings to Query, Key, and Value matrices
+  // Project input embeddings to Query, Key, and Value matrices - memoized with proper dependencies
   const Q = useMemo(() => matrixMultiply(embeddings, weightQ), [embeddings, weightQ]);
   const K = useMemo(() => matrixMultiply(embeddings, weightK), [embeddings, weightK]);
   const V = useMemo(() => matrixMultiply(embeddings, weightV), [embeddings, weightV]);
