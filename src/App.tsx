@@ -976,14 +976,23 @@ function App() {
                           Most Likely Next Token
                         </h4>
                         <div className="w-full flex flex-col items-center">
-                          <div className="bg-gray-100 dark:bg-gray-100 py-1.5 px-3 rounded shadow-inner mb-1 text-center w-full border border-gray-200">
-                            <div className="font-mono flex justify-center items-center">
-                              <span className="font-semibold text-[0.8rem] text-blue-700 tracking-wide">
-                                {topPredictedToken}
-                              </span>
-                              <span className="text-[0.65rem] font-mono text-blue-600 ml-2 bg-blue-50 px-1.5 py-0.5 rounded-md">
-                                p={sortedSoftmax[0].value.toFixed(4)}
-                              </span>
+                          <div className="bg-gray-100 py-2 px-3 rounded shadow-inner mb-1 w-full border border-gray-200">
+                            <div className="grid grid-cols-1 gap-1.5">
+                              {/* Token name */}
+                              <div className="flex justify-center items-center">
+                                <div className="font-mono bg-white px-4 py-1.5 rounded-md shadow-sm border border-gray-200 min-w-[100px] text-center">
+                                  <span className="font-semibold text-[0.8rem] text-blue-700 tracking-wide">
+                                    {topPredictedToken}
+                                  </span>
+                                </div>
+                              </div>
+                              
+                              {/* Probability value */}
+                              <div className="flex justify-center">
+                                <div className="text-[0.65rem] font-mono text-blue-600 bg-blue-50 px-3 py-0.5 rounded-md border border-blue-100 min-w-[60px] text-center">
+                                  p={sortedSoftmax[0].value.toFixed(4)}
+                                </div>
+                              </div>
                             </div>
                           </div>
 
