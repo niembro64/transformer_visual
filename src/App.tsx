@@ -28,25 +28,6 @@ function App() {
 
   // Training mode - determines if dropout is applied
   const [trainingMode, setTrainingMode] = useState(false);
-  
-  // Timer to periodically refresh UI when in training mode so we can see dropout changes
-  const [, setDropoutTimer] = useState(0);
-  useEffect(() => {
-    let timerId: number | null = null;
-    
-    if (trainingMode) {
-      // Start a timer that updates every second
-      timerId = window.setInterval(() => {
-        setDropoutTimer(t => t + 1); // Just increment a counter to force renders
-      }, 1000);
-    }
-    
-    return () => {
-      if (timerId !== null) {
-        window.clearInterval(timerId);
-      }
-    };
-  }, [trainingMode]);
 
   // Editable token list
   const [tokenLabels, setTokenLabels] = useState<string[]>([
@@ -94,10 +75,32 @@ function App() {
     [rawEmbeddings, positionalEncodings]
   );
 
+  // For forcing re-renders on dropout timer cycles
+  const [dropoutCycle, setDropoutCycle] = useState(0);
+  
+  // Timer to update dropout masks every second in training mode
+  useEffect(() => {
+    let timerId: number | null = null;
+    
+    if (trainingMode) {
+      // Start a timer that updates every second
+      timerId = window.setInterval(() => {
+        setDropoutCycle(prev => prev + 1); // Increment counter to trigger re-renders
+      }, 1000);
+    }
+    
+    return () => {
+      if (timerId !== null) {
+        window.clearInterval(timerId);
+      }
+    };
+  }, [trainingMode]);
+  
   // Apply dropout to embeddings (only during training) with a unique ID
+  // Include dropoutCycle in dependencies to ensure recalculation when timer ticks
   const embeddingsWithDropout = useMemo(
     () => applyDropout(embeddings, embeddingDropoutRate, trainingMode, 'embeddings_dropout'),
-    [embeddings, embeddingDropoutRate, trainingMode]
+    [embeddings, embeddingDropoutRate, trainingMode, dropoutCycle]
   );
 
   // Sample data generation for attention weights - regenerate when dimensions change
@@ -574,6 +577,7 @@ function App() {
               onValueChange={handleValueChange}
               dropoutRate={attentionDropoutRate}
               applyTrainingDropout={trainingMode}
+              dropoutCycle={dropoutCycle} // Pass the dropout cycle to force updates
             />
           </div>
 
@@ -598,6 +602,7 @@ function App() {
                 applyTrainingDropout={trainingMode}
                 activationFn={relu} // ReLU activation as default
                 activationFnName="ReLU"
+                dropoutCycle={dropoutCycle} // Pass the dropout cycle to force updates
               />
             ) : (
               <div className="p-0.5 bg-gray-100 rounded">

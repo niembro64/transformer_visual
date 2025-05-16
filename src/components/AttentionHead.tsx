@@ -37,6 +37,8 @@ interface AttentionHeadProps {
   applyTrainingDropout?: boolean;
   // Label for value editing
   valueLabel?: string;
+  // Current dropout cycle for timed updates
+  dropoutCycle?: number;
 }
 
 /**
@@ -59,7 +61,8 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
   onValueChange,
   dropoutRate = 0.1,
   applyTrainingDropout = false,
-  valueLabel
+  valueLabel,
+  dropoutCycle
 }) => {
   // Number of tokens and dimensionality
   const numTokens = embeddings.length;
@@ -91,7 +94,7 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
   // Apply dropout to attention output (only during training) with a unique ID
   const attentionOutput = useMemo(() => 
     applyDropout(rawAttentionOutput, dropoutRate, applyTrainingDropout, 'attention_dropout'),
-    [rawAttentionOutput, dropoutRate, applyTrainingDropout]
+    [rawAttentionOutput, dropoutRate, applyTrainingDropout, dropoutCycle]
   );
 
   // Use useEffect to call the callback after render

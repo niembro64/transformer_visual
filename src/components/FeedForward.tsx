@@ -35,6 +35,8 @@ interface FeedForwardProps {
   applyTrainingDropout?: boolean;
   // Label for value editing
   valueLabel?: string;
+  // Current dropout cycle for timed updates
+  dropoutCycle?: number;
 }
 
 /**
@@ -58,7 +60,8 @@ const FeedForward: React.FC<FeedForwardProps> = ({
   activationFnName = 'ReLU',
   dropoutRate = 0.1,
   applyTrainingDropout = false,
-  valueLabel
+  valueLabel,
+  dropoutCycle
 }) => {
   // Number of tokens and dimensionality
   const numTokens = inputs.length;
@@ -100,7 +103,7 @@ const FeedForward: React.FC<FeedForwardProps> = ({
   // Apply dropout after first activation (only during training) with a unique ID
   const activationsWithDropout = useMemo(() =>
     applyDropout(activations, dropoutRate, applyTrainingDropout, 'ffn_dropout'),
-    [activations, dropoutRate, applyTrainingDropout]
+    [activations, dropoutRate, applyTrainingDropout, dropoutCycle]
   );
 
   // Second layer computation: activations × W2 + b2
