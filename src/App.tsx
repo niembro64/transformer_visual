@@ -94,45 +94,138 @@ function App() {
 
         // Apply random walks to all trainable weights when in training mode
         if (trainingMode) {
-          // Update raw embeddings (token embeddings)
-          setRawEmbeddings((prev) =>
-            applyRandomWalk(prev, weightUpdateStepSize, 'embeddings_weights')
-          );
+          // Update raw embeddings (token embeddings) but exclude the selected element
+          setRawEmbeddings((prev) => {
+            // Skip random walk for the selected element if it's being oscillated
+            if (selectedElement && selectedElement.matrixType === 'embeddings') {
+              const { row, col } = selectedElement;
+              // Create a deep copy for modification
+              const newEmbeddings = prev.map(r => [...r]);
+              
+              // Apply random walk to all elements except the selected one
+              for (let i = 0; i < newEmbeddings.length; i++) {
+                for (let j = 0; j < newEmbeddings[i].length; j++) {
+                  // Skip the selected element
+                  if (i === row && j === col) continue;
+                  
+                  // Apply random walk to this element
+                  const change = Math.random() * 2 * weightUpdateStepSize - weightUpdateStepSize;
+                  newEmbeddings[i][j] += change;
+                }
+              }
+              return newEmbeddings;
+            } else {
+              // If no element is selected or it's not an embedding, apply random walk to all
+              return applyRandomWalk(prev, weightUpdateStepSize, 'embeddings_weights');
+            }
+          });
 
           // Update attention weights (Q, K, V projection matrices)
-          setAttentionWeights((prev) => ({
-            weightQ: applyRandomWalk(
-              prev.weightQ,
-              weightUpdateStepSize,
-              'weightQ'
-            ),
-            weightK: applyRandomWalk(
-              prev.weightK,
-              weightUpdateStepSize,
-              'weightK'
-            ),
-            weightV: applyRandomWalk(
-              prev.weightV,
-              weightUpdateStepSize,
-              'weightV'
-            ),
-          }));
+          setAttentionWeights((prev) => {
+            const newWeights = {
+              weightQ: [...prev.weightQ.map(r => [...r])],
+              weightK: [...prev.weightK.map(r => [...r])],
+              weightV: [...prev.weightV.map(r => [...r])],
+            };
+            
+            // Skip the selected element for Q
+            if (selectedElement && selectedElement.matrixType === 'weightQ') {
+              const { row, col } = selectedElement;
+              // Apply random walk to all elements except the selected one
+              for (let i = 0; i < newWeights.weightQ.length; i++) {
+                for (let j = 0; j < newWeights.weightQ[i].length; j++) {
+                  if (i !== row || j !== col) {
+                    const change = Math.random() * 2 * weightUpdateStepSize - weightUpdateStepSize;
+                    newWeights.weightQ[i][j] += change;
+                  }
+                }
+              }
+            } else {
+              newWeights.weightQ = applyRandomWalk(prev.weightQ, weightUpdateStepSize, 'weightQ');
+            }
+            
+            // Skip the selected element for K
+            if (selectedElement && selectedElement.matrixType === 'weightK') {
+              const { row, col } = selectedElement;
+              // Apply random walk to all elements except the selected one
+              for (let i = 0; i < newWeights.weightK.length; i++) {
+                for (let j = 0; j < newWeights.weightK[i].length; j++) {
+                  if (i !== row || j !== col) {
+                    const change = Math.random() * 2 * weightUpdateStepSize - weightUpdateStepSize;
+                    newWeights.weightK[i][j] += change;
+                  }
+                }
+              }
+            } else {
+              newWeights.weightK = applyRandomWalk(prev.weightK, weightUpdateStepSize, 'weightK');
+            }
+            
+            // Skip the selected element for V
+            if (selectedElement && selectedElement.matrixType === 'weightV') {
+              const { row, col } = selectedElement;
+              // Apply random walk to all elements except the selected one
+              for (let i = 0; i < newWeights.weightV.length; i++) {
+                for (let j = 0; j < newWeights.weightV[i].length; j++) {
+                  if (i !== row || j !== col) {
+                    const change = Math.random() * 2 * weightUpdateStepSize - weightUpdateStepSize;
+                    newWeights.weightV[i][j] += change;
+                  }
+                }
+              }
+            } else {
+              newWeights.weightV = applyRandomWalk(prev.weightV, weightUpdateStepSize, 'weightV');
+            }
+            
+            return newWeights;
+          });
 
           // Update MLP weights and biases
-          setMlpWeights((prev) => ({
-            W1: applyRandomWalk(prev.W1, weightUpdateStepSize, 'mlp_w1'),
-            b1: applyRandomWalkToVector(
-              prev.b1,
-              weightUpdateStepSize,
-              'mlp_b1'
-            ),
-            W2: applyRandomWalk(prev.W2, weightUpdateStepSize, 'mlp_w2'),
-            b2: applyRandomWalkToVector(
-              prev.b2,
-              weightUpdateStepSize,
-              'mlp_b2'
-            ),
-          }));
+          setMlpWeights((prev) => {
+            const newWeights = {
+              W1: [...prev.W1.map(r => [...r])],
+              b1: [...prev.b1],
+              W2: [...prev.W2.map(r => [...r])],
+              b2: [...prev.b2],
+            };
+            
+            // Skip the selected element for W1
+            if (selectedElement && selectedElement.matrixType === 'weightW1') {
+              const { row, col } = selectedElement;
+              // Apply random walk to all elements except the selected one
+              for (let i = 0; i < newWeights.W1.length; i++) {
+                for (let j = 0; j < newWeights.W1[i].length; j++) {
+                  if (i !== row || j !== col) {
+                    const change = Math.random() * 2 * weightUpdateStepSize - weightUpdateStepSize;
+                    newWeights.W1[i][j] += change;
+                  }
+                }
+              }
+            } else {
+              newWeights.W1 = applyRandomWalk(prev.W1, weightUpdateStepSize, 'mlp_w1');
+            }
+            
+            // Skip the selected element for W2
+            if (selectedElement && selectedElement.matrixType === 'weightW2') {
+              const { row, col } = selectedElement;
+              // Apply random walk to all elements except the selected one
+              for (let i = 0; i < newWeights.W2.length; i++) {
+                for (let j = 0; j < newWeights.W2[i].length; j++) {
+                  if (i !== row || j !== col) {
+                    const change = Math.random() * 2 * weightUpdateStepSize - weightUpdateStepSize;
+                    newWeights.W2[i][j] += change;
+                  }
+                }
+              }
+            } else {
+              newWeights.W2 = applyRandomWalk(prev.W2, weightUpdateStepSize, 'mlp_w2');
+            }
+            
+            // Always apply random walk to biases (not selectable/oscillatable)
+            newWeights.b1 = applyRandomWalkToVector(prev.b1, weightUpdateStepSize, 'mlp_b1');
+            newWeights.b2 = applyRandomWalkToVector(prev.b2, weightUpdateStepSize, 'mlp_b2');
+            
+            return newWeights;
+          });
         }
       }, 1000);
     }
@@ -422,7 +515,7 @@ function App() {
           <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-sm overflow-hidden">
             {/* Header bar */}
             <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4 py-2 flex justify-between items-center">
-              <h2 className="text-lg font-bold">First Attention Head</h2>
+              <h2 className="text-lg font-bold">Transformer Visualization</h2>
             </div>
 
             {/* Content area */}
@@ -707,7 +800,7 @@ function App() {
             <p className="text-gray-700">
               Blue: positive, Red: negative. Click a value to edit (magenta
               border).
-              {trainingMode && ' Training mode enabled: dropout is applied.'}
+              {trainingMode && ' Training mode enabled: weights evolve and dropout is applied.'}
             </p>
 
             <div className="flex flex-wrap gap-4">

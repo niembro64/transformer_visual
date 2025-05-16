@@ -103,8 +103,12 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
       const TARGET_MAX_VALUE = 10;
       const oscillatedValue = TARGET_MAX_VALUE * Math.sin(progress * Math.PI * 2);
 
-      // Update the value
-      onValueChange(oscillatedValue);
+      // This forces the value to be exactly what we want, and other components
+      // like the random walk won't interfere with it
+      requestAnimationFrame(() => {
+        // Update the value inside another animation frame to ensure it takes priority
+        onValueChange(oscillatedValue);
+      });
 
       // Schedule next frame
       animationFrameRef.current = requestAnimationFrame(animate);
@@ -369,6 +373,7 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
                   ? 'bg-red-500 hover:bg-red-600 text-white'
                   : 'bg-indigo-500 hover:bg-indigo-600 text-white'
               } transition-colors`}
+              title="Oscillate this value using sine waves (overrides training updates)"
             >
               {isOscillating ? 'Stop' : 'Oscillate'}
             </button>
