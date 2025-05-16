@@ -845,13 +845,29 @@ function App() {
                     const nextTokenPrediction = ffnOutput[ffnOutput.length - 1];
                     
                     // Calculate dot product similarity with each token
-                    const similarities = ffnOutput.map(tokenEmbedding => {
-                      // Calculate dot product
-                      const dotProduct = vectorDotProduct(nextTokenPrediction, tokenEmbedding);
-                      // Calculate cosine similarity
-                      const similarity = cosineSimilarity(nextTokenPrediction, tokenEmbedding);
-                      return [dotProduct, similarity];
-                    });
+                    const dotProducts = ffnOutput.map(tokenEmbedding => 
+                      vectorDotProduct(nextTokenPrediction, tokenEmbedding)
+                    );
+                    
+                    // Apply softmax to the dot products to get probability-like values
+                    // First find the maximum for numerical stability
+                    const maxDotProduct = Math.max(...dotProducts);
+                    // Calculate exp(x - max) for each dot product
+                    const expValues = dotProducts.map(dp => Math.exp(dp - maxDotProduct));
+                    // Sum of all exp values
+                    const sumExp = expValues.reduce((a, b) => a + b, 0);
+                    // Normalize to get softmax values
+                    const softmaxValues = expValues.map(exp => exp / sumExp);
+                    
+                    // Create pairs of [index, softmax value] so we can sort them while keeping the original indices
+                    const indexedSoftmax = softmaxValues.map((value, index) => ({ index, value }));
+                    // Sort by softmax value in descending order
+                    const sortedSoftmax = [...indexedSoftmax].sort((a, b) => b.value - a.value);
+                    
+                    // Get corresponding token labels in the sorted order
+                    const sortedTokenLabels = sortedSoftmax.map(item => tokenLabels[item.index]);
+                    // Get the corresponding dot products in the sorted order
+                    const sortedDotProducts = sortedSoftmax.map(item => dotProducts[item.index]);
                     
                     return (
                       <div className="grid grid-cols-2 w-full gap-1">
@@ -860,27 +876,28 @@ function App() {
                           <h5 className="text-[0.6rem] font-medium mb-0.5 text-center">
                             Dot Product
                           </h5>
+                          {/* Show original unsorted dot products */}
                           <MatrixDisplay
-                            data={similarities.map(sim => [sim[0]])}
+                            data={dotProducts.map(dp => [dp])}
                             rowLabels={tokenLabels}
                             columnLabels={["dot"]}
-                            maxAbsValue={Math.max(...similarities.map(s => Math.abs(s[0]))) || 0.3}
+                            maxAbsValue={Math.max(...dotProducts.map(dp => Math.abs(dp))) || 0.3}
                             cellSize="xs"
                             selectable={false}
                             matrixType="none"
                           />
                         </div>
                         
-                        {/* Cosine Similarities */}
+                        {/* Sorted Softmax Values */}
                         <div>
                           <h5 className="text-[0.6rem] font-medium mb-0.5 text-center">
-                            Cosine Similarity
+                            Softmax (Sorted)
                           </h5>
                           <MatrixDisplay
-                            data={similarities.map(sim => [sim[1]])}
-                            rowLabels={tokenLabels}
-                            columnLabels={["cos"]}
-                            maxAbsValue={1.0} // Cosine similarity is always between -1 and 1
+                            data={sortedSoftmax.map(item => [item.value])}
+                            rowLabels={sortedTokenLabels}
+                            columnLabels={["p"]}
+                            maxAbsValue={1.0} // Softmax values are between 0 and 1
                             cellSize="xs"
                             selectable={false}
                             matrixType="none"
