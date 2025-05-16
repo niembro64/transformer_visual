@@ -248,7 +248,25 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
     const [coef, exp] = scientificNotation.split('e');
 
     // Add "+" prefix for positive values, "-" is already included for negative values
-    const formattedCoef = value > 0 ? `+${coef}` : coef;
+    let formattedCoef = value > 0 ? `+${coef}` : coef;
+    
+    // Ensure coefficient is always 5 characters for consistent sizing/centering
+    // Format should be [sign][digit].[digits] where we have 2 digits after decimal point
+    if (formattedCoef.length < 5) {
+      // If shorter than 5 chars, pad with zeros after decimal point
+      const parts = formattedCoef.split('.');
+      if (parts.length === 2) {
+        while (formattedCoef.length < 5) {
+          parts[1] += '0';
+          formattedCoef = parts[0] + '.' + parts[1];
+        }
+      }
+    } else if (formattedCoef.length > 5) {
+      // If longer than 5 chars, truncate decimal places
+      const sign = formattedCoef[0];
+      const firstDigit = formattedCoef[1];
+      formattedCoef = sign + firstDigit + '.' + formattedCoef.slice(3, 5);
+    }
 
     return {
       coefficient: formattedCoef,
@@ -260,41 +278,41 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
   // Use size-appropriate styling with mobile responsiveness
   const sizeStyles = useMemo(() => {
     const baseClasses =
-      'rounded-md font-mono flex flex-col justify-center items-center';
+      'rounded-md font-mono flex flex-col justify-between items-center';
     
     // Check if we're on a mobile device (using window.innerWidth)
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < window.innerHeight;
 
     // Size configurations with mobile variants
     const sizeMap = {
       xs: {
         container: `${baseClasses} py-0.5 px-0.5`,
-        coefficient: isMobile ? 'text-[0.35rem]' : 'text-[0.45rem]',
-        exponent: isMobile ? 'text-[0.35rem] mt-0' : 'text-[0.45rem] mt-0',
-        minWidth: isMobile ? '1.2rem' : '1.7rem',
-        height: isMobile ? '1.2rem' : '1.5rem',
-        width: isMobile ? '1.2rem' : '1.7rem',
+        coefficient: isMobile ? 'text-[0.4rem]' : 'text-[0.45rem]',
+        exponent: isMobile ? 'text-[0.35rem]' : 'text-[0.45rem]',
+        minWidth: isMobile ? '1.4rem' : '1.7rem',
+        height: isMobile ? '1.3rem' : '1.5rem',
+        width: isMobile ? '1.4rem' : '1.7rem',
       },
       sm: {
         container: `${baseClasses} py-0.5 px-0.5`,
-        coefficient: isMobile ? 'text-[0.4rem]' : 'text-[0.5rem]',
-        exponent: isMobile ? 'text-[0.4rem] mt-0' : 'text-[0.5rem] mt-0',
-        minWidth: isMobile ? '1.4rem' : '2.1rem',
-        height: isMobile ? '1.3rem' : '1.9rem',
-        width: isMobile ? '1.4rem' : '2.1rem',
+        coefficient: isMobile ? 'text-[0.42rem]' : 'text-[0.5rem]',
+        exponent: isMobile ? 'text-[0.37rem]' : 'text-[0.5rem]',
+        minWidth: isMobile ? '1.6rem' : '2.1rem',
+        height: isMobile ? '1.5rem' : '1.9rem',
+        width: isMobile ? '1.6rem' : '2.1rem',
       },
       md: {
         container: `${baseClasses} py-0.5 px-0.5`,
         coefficient: isMobile ? 'text-[0.45rem]' : 'text-[0.55rem]',
-        exponent: isMobile ? 'text-[0.45rem] mt-0' : 'text-[0.55rem] mt-0',
-        minWidth: isMobile ? '1.7rem' : '2.7rem',
-        height: isMobile ? '1.5rem' : '2.4rem',
-        width: isMobile ? '1.7rem' : '2.7rem',
+        exponent: isMobile ? 'text-[0.4rem]' : 'text-[0.55rem]',
+        minWidth: isMobile ? '1.8rem' : '2.7rem',
+        height: isMobile ? '1.6rem' : '2.4rem',
+        width: isMobile ? '1.8rem' : '2.7rem',
       },
       lg: {
         container: `${baseClasses} py-0.5 px-0.5`,
         coefficient: isMobile ? 'text-[0.5rem]' : 'text-[0.6rem]',
-        exponent: isMobile ? 'text-[0.5rem] mt-0' : 'text-[0.6rem] mt-0',
+        exponent: isMobile ? 'text-[0.45rem]' : 'text-[0.6rem]',
         minWidth: isMobile ? '2.0rem' : '3.4rem',
         height: isMobile ? '1.8rem' : '3.0rem',
         width: isMobile ? '2.0rem' : '3.4rem',
@@ -313,24 +331,33 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
         } ${
           isSelected
             ? 'border-2 border-fuchsia-500'
-            : 'border-2 border-transparent'
+            : 'border-[1px] border-white'
         }`}
         style={{
           backgroundColor,
           color: textColor,
           width: sizeStyles.width,
           height: sizeStyles.height,
-          boxShadow: isSelected
-            ? '0 0 4px rgba(217, 70, 239, 0.6)'
-            : '0 1px 1px rgba(0, 0, 0, 0.05)',
+          // boxShadow: isSelected
+          //   ? '0 0 4px rgba(217, 70, 239, 0.6)'
+          //   : '0 1px 1px rgba(0, 0, 0, 0.05)',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-evenly',
+          alignItems: 'center',
+          padding: '0.125rem',
         }}
         onClick={selectable ? onClick : undefined}
       >
-        <div className={`${sizeStyles.coefficient} text-center w-full`}>
-          {coefficient}
+        <div className={`${sizeStyles.coefficient} flex justify-center items-center w-full font-mono tracking-tight`}>
+          <span className="block text-center leading-none">
+            {coefficient}
+          </span>
         </div>
-        <div className={`${sizeStyles.exponent} text-center w-full`}>
-          {exponent}
+        <div className={`${sizeStyles.exponent} flex justify-center items-center w-full font-mono tracking-tight`}>
+          <span className="block text-center leading-none">
+            {exponent}
+          </span>
         </div>
       </div>
 
