@@ -37,6 +37,8 @@ interface FeedForwardProps {
   valueLabel?: string;
   // Current dropout cycle for timed updates
   dropoutCycle?: number;
+  // Optional callback when output is computed
+  onOutputComputed?: (output: number[][]) => void;
 }
 
 /**
@@ -61,7 +63,8 @@ const FeedForward: React.FC<FeedForwardProps> = ({
   dropoutRate = 0.1,
   applyTrainingDropout = false,
   valueLabel,
-  dropoutCycle
+  dropoutCycle,
+  onOutputComputed
 }) => {
   // Number of tokens and dimensionality
   const numTokens = inputs.length;
@@ -111,6 +114,13 @@ const FeedForward: React.FC<FeedForwardProps> = ({
     const product = matrixMultiply(activationsWithDropout, W2);
     return addBias(product, b2);
   }, [activationsWithDropout, W2, b2]);
+  
+  // Call the output computed callback when the output changes
+  React.useEffect(() => {
+    if (onOutputComputed && output.length > 0) {
+      onOutputComputed(output);
+    }
+  }, [output, onOutputComputed]);
 
   return (
     <div className="flex flex-col gap-0.5 p-0.5 bg-white rounded">

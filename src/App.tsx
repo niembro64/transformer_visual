@@ -308,6 +308,9 @@ function App() {
 
   // State to hold the attention output context vectors
   const [attentionContext, setAttentionContext] = useState<number[][]>([]);
+  
+  // State to hold the feed-forward network output (final layer prediction)
+  const [ffnOutput, setFfnOutput] = useState<number[][]>([]);
 
   type ElementObject = {
     matrixType:
@@ -505,6 +508,11 @@ function App() {
   // Handler for receiving the computed context from the attention head
   const handleAttentionContextComputed = (context: number[][]) => {
     setAttentionContext(context);
+  };
+  
+  // Handler for receiving the computed output from the feed-forward network
+  const handleFfnOutputComputed = (output: number[][]) => {
+    setFfnOutput(output);
   };
 
   return (
@@ -784,6 +792,7 @@ function App() {
                 activationFn={relu} // ReLU activation as default
                 activationFnName="ReLU"
                 dropoutCycle={trainingCycle} // Pass the training cycle to force updates
+                onOutputComputed={handleFfnOutputComputed}
               />
             ) : (
               <div className="p-0.5 bg-gray-100 rounded">
@@ -794,6 +803,42 @@ function App() {
             )}
           </div>
         </div>
+
+        {/* Predicted Embedding Section */}
+        {ffnOutput.length > 0 && (
+          <div className="mt-0.5 mb-0.5">
+            <h3 className="text-sm font-semibold mb-0.5 border-b pb-0.5">
+              Predicted Embedding
+            </h3>
+            <div className="bg-white rounded p-0.5">
+              <div className="flex flex-col items-center">
+                <h4 className="text-[0.65rem] font-medium mb-0.5">
+                  Final Embedding Vector
+                </h4>
+                {/* Take the average of all token embeddings to get a single predicted vector */}
+                <MatrixDisplay
+                  data={[ffnOutput.reduce((acc, row) => {
+                    // If this is the first row, initialize acc with it
+                    if (acc.length === 0) {
+                      return [...row];
+                    }
+                    // Otherwise, add values from current row to accumulator
+                    return acc.map((val, i) => val + row[i]);
+                  }, []).map(val => val / ffnOutput.length)]} // Divide by token count to get average
+                  rowLabels={["Prediction"]}
+                  columnLabels={Array.from(
+                    { length: embeddingDim },
+                    (_, i) => `d_${i + 1}`
+                  )}
+                  maxAbsValue={0.3}
+                  cellSize="xs"
+                  selectable={false}
+                  matrixType="none"
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="bg-white rounded p-0.5 text-[0.6rem]">
           <div className="flex flex-col gap-1">
