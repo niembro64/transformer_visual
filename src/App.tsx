@@ -99,37 +99,46 @@ function App() {
           // Update raw embeddings (token embeddings) but exclude the selected element
           setRawEmbeddings((prev) => {
             // Skip random walk for the selected element if it's being oscillated
-            if (selectedElement && selectedElement.matrixType === 'embeddings') {
+            if (
+              selectedElement &&
+              selectedElement.matrixType === 'embeddings'
+            ) {
               const { row, col } = selectedElement;
               // Create a deep copy for modification
-              const newEmbeddings = prev.map(r => [...r]);
-              
+              const newEmbeddings = prev.map((r) => [...r]);
+
               // Apply random walk to all elements except the selected one
               for (let i = 0; i < newEmbeddings.length; i++) {
                 for (let j = 0; j < newEmbeddings[i].length; j++) {
                   // Skip the selected element
                   if (i === row && j === col) continue;
-                  
+
                   // Apply random walk to this element
-                  const change = Math.random() * 2 * weightUpdateStepSize - weightUpdateStepSize;
+                  const change =
+                    Math.random() * 2 * weightUpdateStepSize -
+                    weightUpdateStepSize;
                   newEmbeddings[i][j] += change;
                 }
               }
               return newEmbeddings;
             } else {
               // If no element is selected or it's not an embedding, apply random walk to all
-              return applyRandomWalk(prev, weightUpdateStepSize, 'embeddings_weights');
+              return applyRandomWalk(
+                prev,
+                weightUpdateStepSize,
+                'embeddings_weights'
+              );
             }
           });
 
           // Update attention weights (Q, K, V projection matrices)
           setAttentionWeights((prev) => {
             const newWeights = {
-              weightQ: [...prev.weightQ.map(r => [...r])],
-              weightK: [...prev.weightK.map(r => [...r])],
-              weightV: [...prev.weightV.map(r => [...r])],
+              weightQ: [...prev.weightQ.map((r) => [...r])],
+              weightK: [...prev.weightK.map((r) => [...r])],
+              weightV: [...prev.weightV.map((r) => [...r])],
             };
-            
+
             // Skip the selected element for Q
             if (selectedElement && selectedElement.matrixType === 'weightQ') {
               const { row, col } = selectedElement;
@@ -137,15 +146,21 @@ function App() {
               for (let i = 0; i < newWeights.weightQ.length; i++) {
                 for (let j = 0; j < newWeights.weightQ[i].length; j++) {
                   if (i !== row || j !== col) {
-                    const change = Math.random() * 2 * weightUpdateStepSize - weightUpdateStepSize;
+                    const change =
+                      Math.random() * 2 * weightUpdateStepSize -
+                      weightUpdateStepSize;
                     newWeights.weightQ[i][j] += change;
                   }
                 }
               }
             } else {
-              newWeights.weightQ = applyRandomWalk(prev.weightQ, weightUpdateStepSize, 'weightQ');
+              newWeights.weightQ = applyRandomWalk(
+                prev.weightQ,
+                weightUpdateStepSize,
+                'weightQ'
+              );
             }
-            
+
             // Skip the selected element for K
             if (selectedElement && selectedElement.matrixType === 'weightK') {
               const { row, col } = selectedElement;
@@ -153,15 +168,21 @@ function App() {
               for (let i = 0; i < newWeights.weightK.length; i++) {
                 for (let j = 0; j < newWeights.weightK[i].length; j++) {
                   if (i !== row || j !== col) {
-                    const change = Math.random() * 2 * weightUpdateStepSize - weightUpdateStepSize;
+                    const change =
+                      Math.random() * 2 * weightUpdateStepSize -
+                      weightUpdateStepSize;
                     newWeights.weightK[i][j] += change;
                   }
                 }
               }
             } else {
-              newWeights.weightK = applyRandomWalk(prev.weightK, weightUpdateStepSize, 'weightK');
+              newWeights.weightK = applyRandomWalk(
+                prev.weightK,
+                weightUpdateStepSize,
+                'weightK'
+              );
             }
-            
+
             // Skip the selected element for V
             if (selectedElement && selectedElement.matrixType === 'weightV') {
               const { row, col } = selectedElement;
@@ -169,27 +190,33 @@ function App() {
               for (let i = 0; i < newWeights.weightV.length; i++) {
                 for (let j = 0; j < newWeights.weightV[i].length; j++) {
                   if (i !== row || j !== col) {
-                    const change = Math.random() * 2 * weightUpdateStepSize - weightUpdateStepSize;
+                    const change =
+                      Math.random() * 2 * weightUpdateStepSize -
+                      weightUpdateStepSize;
                     newWeights.weightV[i][j] += change;
                   }
                 }
               }
             } else {
-              newWeights.weightV = applyRandomWalk(prev.weightV, weightUpdateStepSize, 'weightV');
+              newWeights.weightV = applyRandomWalk(
+                prev.weightV,
+                weightUpdateStepSize,
+                'weightV'
+              );
             }
-            
+
             return newWeights;
           });
 
           // Update MLP weights and biases
           setMlpWeights((prev) => {
             const newWeights = {
-              W1: [...prev.W1.map(r => [...r])],
+              W1: [...prev.W1.map((r) => [...r])],
               b1: [...prev.b1],
-              W2: [...prev.W2.map(r => [...r])],
+              W2: [...prev.W2.map((r) => [...r])],
               b2: [...prev.b2],
             };
-            
+
             // Skip the selected element for W1
             if (selectedElement && selectedElement.matrixType === 'weightW1') {
               const { row, col } = selectedElement;
@@ -197,15 +224,21 @@ function App() {
               for (let i = 0; i < newWeights.W1.length; i++) {
                 for (let j = 0; j < newWeights.W1[i].length; j++) {
                   if (i !== row || j !== col) {
-                    const change = Math.random() * 2 * weightUpdateStepSize - weightUpdateStepSize;
+                    const change =
+                      Math.random() * 2 * weightUpdateStepSize -
+                      weightUpdateStepSize;
                     newWeights.W1[i][j] += change;
                   }
                 }
               }
             } else {
-              newWeights.W1 = applyRandomWalk(prev.W1, weightUpdateStepSize, 'mlp_w1');
+              newWeights.W1 = applyRandomWalk(
+                prev.W1,
+                weightUpdateStepSize,
+                'mlp_w1'
+              );
             }
-            
+
             // Skip the selected element for W2
             if (selectedElement && selectedElement.matrixType === 'weightW2') {
               const { row, col } = selectedElement;
@@ -213,19 +246,33 @@ function App() {
               for (let i = 0; i < newWeights.W2.length; i++) {
                 for (let j = 0; j < newWeights.W2[i].length; j++) {
                   if (i !== row || j !== col) {
-                    const change = Math.random() * 2 * weightUpdateStepSize - weightUpdateStepSize;
+                    const change =
+                      Math.random() * 2 * weightUpdateStepSize -
+                      weightUpdateStepSize;
                     newWeights.W2[i][j] += change;
                   }
                 }
               }
             } else {
-              newWeights.W2 = applyRandomWalk(prev.W2, weightUpdateStepSize, 'mlp_w2');
+              newWeights.W2 = applyRandomWalk(
+                prev.W2,
+                weightUpdateStepSize,
+                'mlp_w2'
+              );
             }
-            
+
             // Always apply random walk to biases (not selectable/oscillatable)
-            newWeights.b1 = applyRandomWalkToVector(prev.b1, weightUpdateStepSize, 'mlp_b1');
-            newWeights.b2 = applyRandomWalkToVector(prev.b2, weightUpdateStepSize, 'mlp_b2');
-            
+            newWeights.b1 = applyRandomWalkToVector(
+              prev.b1,
+              weightUpdateStepSize,
+              'mlp_b1'
+            );
+            newWeights.b2 = applyRandomWalkToVector(
+              prev.b2,
+              weightUpdateStepSize,
+              'mlp_b2'
+            );
+
             return newWeights;
           });
         }
@@ -310,7 +357,7 @@ function App() {
 
   // State to hold the attention output context vectors
   const [attentionContext, setAttentionContext] = useState<number[][]>([]);
-  
+
   // State to hold the feed-forward network output (final layer prediction)
   const [ffnOutput, setFfnOutput] = useState<number[][]>([]);
 
@@ -511,7 +558,7 @@ function App() {
   const handleAttentionContextComputed = (context: number[][]) => {
     setAttentionContext(context);
   };
-  
+
   // Handler for receiving the computed output from the feed-forward network
   const handleFfnOutputComputed = (output: number[][]) => {
     setFfnOutput(output);
@@ -818,35 +865,45 @@ function App() {
                 {(() => {
                   // Get the next token prediction vector (last token's embedding)
                   const nextTokenPrediction = ffnOutput[ffnOutput.length - 1];
-                  
+
                   // Calculate dot product similarity with each token
-                  const dotProducts = ffnOutput.map(tokenEmbedding => 
+                  const dotProducts = ffnOutput.map((tokenEmbedding) =>
                     vectorDotProduct(nextTokenPrediction, tokenEmbedding)
                   );
-                  
+
                   // Apply softmax to the dot products to get probability-like values
                   // First find the maximum for numerical stability
                   const maxDotProduct = Math.max(...dotProducts);
                   // Calculate exp(x - max) for each dot product
-                  const expValues = dotProducts.map(dp => Math.exp(dp - maxDotProduct));
+                  const expValues = dotProducts.map((dp) =>
+                    Math.exp(dp - maxDotProduct)
+                  );
                   // Sum of all exp values
                   const sumExp = expValues.reduce((a, b) => a + b, 0);
                   // Normalize to get softmax values
-                  const softmaxValues = expValues.map(exp => exp / sumExp);
-                  
+                  const softmaxValues = expValues.map((exp) => exp / sumExp);
+
                   // Create pairs of [index, softmax value] so we can sort them while keeping the original indices
-                  const indexedSoftmax = softmaxValues.map((value, index) => ({ index, value }));
+                  const indexedSoftmax = softmaxValues.map((value, index) => ({
+                    index,
+                    value,
+                  }));
                   // Sort by softmax value in descending order
-                  const sortedSoftmax = [...indexedSoftmax].sort((a, b) => b.value - a.value);
-                  
+                  const sortedSoftmax = [...indexedSoftmax].sort(
+                    (a, b) => b.value - a.value
+                  );
+
                   // Get corresponding token labels in the sorted order
-                  const sortedTokenLabels = sortedSoftmax.map(item => tokenLabels[item.index]);
-                  
+                  const sortedTokenLabels = sortedSoftmax.map(
+                    (item) => tokenLabels[item.index]
+                  );
+
                   // Get the highest probability token (first one in sorted list)
                   const topPredictedTokenIndex = sortedSoftmax[0].index;
                   const topPredictedToken = tokenLabels[topPredictedTokenIndex];
-                  const topPredictedTokenEmbedding = ffnOutput[topPredictedTokenIndex];
-                  
+                  const topPredictedTokenEmbedding =
+                    ffnOutput[topPredictedTokenIndex];
+
                   return (
                     <>
                       {/* Left: Next Token Prediction Vector */}
@@ -857,7 +914,7 @@ function App() {
                         {/* Use the last token's embedding as the prediction for the next token */}
                         <MatrixDisplay
                           data={[nextTokenPrediction]} // Use the last token's embedding
-                          rowLabels={["Next Token"]}
+                          rowLabels={['Next Token']}
                           columnLabels={Array.from(
                             { length: embeddingDim },
                             (_, i) => `d_${i + 1}`
@@ -881,25 +938,29 @@ function App() {
                               Dot Product
                             </h5>
                             <MatrixDisplay
-                              data={dotProducts.map(dp => [dp])}
+                              data={dotProducts.map((dp) => [dp])}
                               rowLabels={tokenLabels}
-                              columnLabels={["dot"]}
-                              maxAbsValue={Math.max(...dotProducts.map(dp => Math.abs(dp))) || 0.3}
+                              columnLabels={['dot']}
+                              maxAbsValue={
+                                Math.max(
+                                  ...dotProducts.map((dp) => Math.abs(dp))
+                                ) || 0.3
+                              }
                               cellSize="xs"
                               selectable={false}
                               matrixType="none"
                             />
                           </div>
-                          
+
                           {/* Sorted Softmax Values */}
                           <div>
                             <h5 className="text-[0.6rem] font-medium mb-0.5 text-center">
                               Softmax
                             </h5>
                             <MatrixDisplay
-                              data={sortedSoftmax.map(item => [item.value])}
+                              data={sortedSoftmax.map((item) => [item.value])}
                               rowLabels={sortedTokenLabels}
-                              columnLabels={["p"]}
+                              columnLabels={['p']}
                               maxAbsValue={1.0} // Softmax values are between 0 and 1
                               cellSize="xs"
                               selectable={false}
@@ -908,24 +969,34 @@ function App() {
                           </div>
                         </div>
                       </div>
-                      
+
                       {/* Right: Most Likely Token */}
                       <div className="col-span-4 flex flex-col items-center">
                         <h4 className="text-[0.65rem] font-medium mb-0.5 text-center">
                           Most Likely Next Token
                         </h4>
-                        <div className="w-full">
-                          <h5 className="text-[0.6rem] font-semibold text-center mb-0.5 bg-blue-50 py-0.5 rounded text-blue-700">
-                            {topPredictedToken} (p={sortedSoftmax[0].value.toFixed(3)})
+                        <div className="w-full flex flex-col items-center">
+                          <div className="bg-blue-50 py-1 px-2 rounded text-blue-700 mb-1 text-center w-full">
+                            <span className="font-semibold text-[0.7rem]">
+                              {topPredictedToken}
+                            </span>
+                            <span className="text-[0.6rem] text-blue-600 ml-1">
+                              (p={sortedSoftmax[0].value.toFixed(3)})
+                            </span>
+                          </div>
+
+                          {/* Raw embedding for the predicted token */}
+                          <h5 className="text-[0.6rem] font-medium mb-0.5 text-center border-t border-gray-100 pt-0.5 w-full">
+                            Raw Token Embedding
                           </h5>
                           <MatrixDisplay
-                            data={[topPredictedTokenEmbedding]}
+                            data={[rawEmbeddings[topPredictedTokenIndex]]}
                             rowLabels={[topPredictedToken]}
                             columnLabels={Array.from(
                               { length: embeddingDim },
                               (_, i) => `d_${i + 1}`
                             )}
-                            maxAbsValue={0.3}
+                            maxAbsValue={0.2}
                             cellSize="xs"
                             selectable={false}
                             matrixType="none"
@@ -945,7 +1016,8 @@ function App() {
             <p className="text-gray-700">
               Blue: positive, Red: negative. Click a value to edit (magenta
               border).
-              {trainingMode && ' Training mode enabled: weights evolve and dropout is applied.'}
+              {trainingMode &&
+                ' Training mode enabled: weights evolve and dropout is applied.'}
             </p>
 
             <div className="flex flex-wrap gap-4">
