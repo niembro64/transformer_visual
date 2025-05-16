@@ -821,7 +821,7 @@ function App() {
 
           <div className="mt-0.5">
             <h3 className="text-sm font-semibold mb-0.5 border-b pb-0.5">
-              Feed-Forward Network
+              Position-wise Feed-Forward Network
             </h3>
 
             {attentionContext.length > 0 ? (
@@ -914,7 +914,7 @@ function App() {
                         {/* Use the last token's embedding as the prediction for the next token */}
                         <MatrixDisplay
                           data={[nextTokenPrediction]} // Use the last token's embedding
-                          rowLabels={['Next Token']}
+                          rowLabels={['']}
                           columnLabels={Array.from(
                             { length: embeddingDim },
                             (_, i) => `d_${i + 1}`
