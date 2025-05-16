@@ -246,7 +246,7 @@ function App() {
 
   // Only have one selectedElement for the entire application to prevent multiple sliders
   const [selectedElement, setSelectedElement] = useState<ElementObject | null>(
-    initialElement
+    null
   );
 
   // State for the current value of the selected element
@@ -562,9 +562,6 @@ function App() {
                           : 'bg-white text-gray-500 hover:bg-gray-50'
                       } flex items-center`}
                     >
-                      {trainingMode && (
-                        <div className="mr-1 h-2 w-2 rounded-full bg-green-400 animate-pulse"></div>
-                      )}
                       On
                     </button>
                   </div>
@@ -602,7 +599,7 @@ function App() {
                   onElementClick={handleElementClick}
                   onValueChange={handleValueChange}
                   valueLabel={valueLabel}
-                  autoOscillate={true}
+                  autoOscillate={false}
                 />
               </div>
 

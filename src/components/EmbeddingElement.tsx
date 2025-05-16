@@ -131,7 +131,7 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
     };
   }, []);
 
-  // Auto-oscillate on initial load only, tracked with a ref to avoid repeating on re-renders
+  // Track if oscillation has happened, to avoid repeating on re-renders
   const hasAutoOscillated = useRef(false);
 
   // Update slider position when the element is selected
