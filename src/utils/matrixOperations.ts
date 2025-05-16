@@ -85,9 +85,34 @@ export function addBias(a: number[][], b: number[]): number[][] {
 }
 
 /**
- * Leaky ReLU activation function
+ * Element-wise addition of two matrices
+ * @param a - First matrix
+ * @param b - Second matrix
+ * @returns Result matrix
+ */
+export function matrixAdd(a: number[][], b: number[][]): number[][] {
+  if (a.length === 0 || b.length === 0) return [[]];
+  if (a.length !== b.length || a[0].length !== b[0].length) {
+    throw new Error(
+      `Matrix dimensions don't match for addition: [${a.length},${a[0].length}] != [${b.length},${b[0].length}]`
+    );
+  }
+
+  const result: number[][] = [];
+  for (let i = 0; i < a.length; i++) {
+    result[i] = [];
+    for (let j = 0; j < a[0].length; j++) {
+      result[i][j] = a[i][j] + b[i][j];
+    }
+  }
+
+  return result;
+}
+
+/**
+ * ReLU activation function
  * @param x - Input value
- * @returns max(0.01*x, x) - allows small gradient when x < 0
+ * @returns max(0, x) - zero when negative, identity when positive
  */
 export function relu(x: number): number {
   return x > 0 ? x : 0;
@@ -224,6 +249,91 @@ export function generateSampleEmbeddings(
 ): number[][] {
   // Embeddings are typically drawn from a normal distribution with small standard deviation
   return randomNeuralMatrix(numTokens, embeddingDim, 'scaled');
+}
+
+/**
+ * Generate sinusoidal positional encodings as described in the "Attention Is All You Need" paper
+ * @param maxSeqLength - Maximum sequence length
+ * @param embeddingDim - Embedding dimension (must be even)
+ * @returns Matrix where each row is a positional encoding vector for a position
+ */
+export function generatePositionalEncodings(
+  maxSeqLength: number,
+  embeddingDim: number
+): number[][] {
+  if (embeddingDim % 2 !== 0) {
+    throw new Error('Embedding dimension must be even for sinusoidal positional encodings');
+  }
+
+  const positionalEncodings: number[][] = [];
+
+  for (let pos = 0; pos < maxSeqLength; pos++) {
+    const encoding: number[] = new Array(embeddingDim).fill(0);
+    
+    for (let i = 0; i < embeddingDim; i += 2) {
+      // Calculate frequency based on position and dimension
+      const freq = 1.0 / Math.pow(10000, i / embeddingDim);
+      
+      // Sine for even dimensions
+      encoding[i] = Math.sin(pos * freq);
+      
+      // Cosine for odd dimensions
+      encoding[i + 1] = Math.cos(pos * freq);
+    }
+    
+    positionalEncodings.push(encoding);
+  }
+
+  return positionalEncodings;
+}
+
+/**
+ * Apply dropout to a matrix
+ * @param matrix - Input matrix
+ * @param dropoutRate - Dropout rate (0-1), probability of dropping an element
+ * @param training - Whether we're in training mode (apply dropout) or inference mode (no dropout)
+ * @returns Matrix with dropout applied
+ */
+export function applyDropout(
+  matrix: number[][],
+  dropoutRate: number,
+  training: boolean = false
+): number[][] {
+  // During inference (training=false), we don't apply dropout
+  if (!training) return matrix;
+  
+  // During training, randomly zero out elements with probability dropoutRate
+  return matrix.map(row => 
+    row.map(val => 
+      Math.random() >= dropoutRate ? val / (1 - dropoutRate) : 0
+    )
+  );
+}
+
+/**
+ * Add positional encodings to token embeddings
+ * @param embeddings - Token embeddings matrix
+ * @param posEncodings - Positional encodings matrix
+ * @returns Matrix with positional information added to embeddings
+ */
+export function addPositionalEncodings(
+  embeddings: number[][],
+  posEncodings: number[][]
+): number[][] {
+  if (embeddings.length === 0) return embeddings;
+  if (embeddings.length > posEncodings.length) {
+    throw new Error(`Sequence length ${embeddings.length} exceeds maximum supported length ${posEncodings.length}`);
+  }
+  
+  if (embeddings[0].length !== posEncodings[0].length) {
+    throw new Error(`Embedding dimension ${embeddings[0].length} doesn't match positional encoding dimension ${posEncodings[0].length}`);
+  }
+  
+  // Select just the positional encodings we need for our sequence length
+  const neededPosEncodings = posEncodings.slice(0, embeddings.length);
+  
+  // Add positional encodings to token embeddings
+  return matrixAdd(embeddings, neededPosEncodings);
 }
 
 /**

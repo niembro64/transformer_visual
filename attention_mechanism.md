@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This document describes the complete architecture of a transformer model, with particular focus on the attention mechanism and feed-forward networks (FFN) as implemented in this visualization project. The transformer architecture consists of stacked encoder and decoder layers, each containing attention mechanisms and feed-forward networks.
+This document describes the complete architecture of a transformer model as specified in the original "Attention Is All You Need" paper (Vaswani et al., 2017), with particular focus on the attention mechanism and feed-forward networks (FFN). The transformer architecture consists of stacked encoder and decoder layers, each containing attention mechanisms and feed-forward networks.
 
 ## Overall Transformer Structure
 
@@ -10,7 +10,7 @@ A standard transformer consists of:
 
 1. **Encoder Stack**: Multiple identical encoder layers
 2. **Decoder Stack**: Multiple identical decoder layers
-3. **Input Embeddings**: Converts input tokens to vectors
+3. **Input Embeddings + Positional Encodings**: Converts input tokens to vectors with position information
 4. **Output Linear Layer & Softmax**: Converts decoder outputs to probabilities
 
 ## Encoder Layer Structure
@@ -32,6 +32,45 @@ Each decoder layer contains three main sublayers:
 
 Each sublayer has a residual connection and is followed by layer normalization.
 
+## Input Processing
+
+### Token Embeddings
+
+Input tokens are converted to embeddings of dimension `d_model`:
+
+```
+X = Embed(tokens)
+```
+
+### Positional Encodings
+
+Since the transformer has no recurrence or convolution, positional information must be explicitly added:
+
+```
+PE(pos, 2i) = sin(pos / 10000^(2i/d_model))
+PE(pos, 2i+1) = cos(pos / 10000^(2i/d_model))
+```
+
+Where:
+- `pos` is the position in the sequence
+- `i` is the dimension index
+- Sine is used for even dimensions
+- Cosine is used for odd dimensions
+
+The positional encodings are added to the embeddings:
+
+```
+X' = X + PE
+```
+
+### Input Dropout
+
+Dropout is applied after adding positional encodings:
+
+```
+X'' = Dropout(X')
+```
+
 ## Multi-Head Attention Mechanism
 
 ### Structure
@@ -47,7 +86,7 @@ The attention mechanism in a transformer consists of several components working 
 
 #### 1. Input Representation
 
-Given an input sequence of tokens, each token is represented as an embedding vector of dimension `d_model`.
+Given an input sequence of tokens with positional encodings, each token is represented as an embedding vector of dimension `d_model`.
 
 Input: `X ∈ ℝ^(n×d_model)` where:
 - `n` is the sequence length
@@ -92,6 +131,14 @@ MultiHead(X) = Concat(Z_1, Z_2, ..., Z_h)W^O
 
 Where `W^O ∈ ℝ^(h×d_v×d_model)` is the output projection matrix.
 
+#### 5. Attention Dropout
+
+Dropout is applied to the attention output before the residual connection:
+
+```
+Z' = Dropout(MultiHead(X))
+```
+
 ### Self-Attention vs. Cross-Attention
 
 - **Self-Attention**: When the queries, keys, and values all come from the same source (the input sequence)
@@ -113,7 +160,7 @@ Where `M` is a mask with:
 
 ### Structure
 
-The Feed-Forward Network in a transformer is applied to each position in the sequence independently. It consists of two linear transformations with a non-linear activation function in between.
+The Feed-Forward Network in a transformer is applied to each position in the sequence independently. It consists of two linear transformations with a ReLU activation function in between, followed by dropout.
 
 ### Mathematical Formulation
 
@@ -123,50 +170,56 @@ For each position in the sequence:
 FFN(x) = max(0, xW_1 + b_1)W_2 + b_2
 ```
 
-Or more generally:
+More specifically with dropout:
 
 ```
-FFN(x) = Activation(xW_1 + b_1)W_2 + b_2
+F1 = xW_1 + b_1
+F2 = ReLU(F1)
+F3 = Dropout(F2)
+FFN(x) = F3W_2 + b_2
 ```
 
 Where:
 - `W_1 ∈ ℝ^(d_model×d_ff)` and `b_1 ∈ ℝ^d_ff` are parameters of the first linear transformation
 - `W_2 ∈ ℝ^(d_ff×d_model)` and `b_2 ∈ ℝ^d_model` are parameters of the second linear transformation
 - `d_ff` is the inner dimension of the FFN (typically 4 times `d_model`)
-- `Activation` is typically ReLU, but can also be GELU, Swish, etc.
+- `ReLU(x) = max(0, x)` is the activation function
 
-The FFN can be viewed as a two-layer neural network with a ReLU (or other) activation.
+The FFN can be viewed as a two-layer neural network with a ReLU activation.
 
 ## Complete Flow in a Transformer Layer
 
 ### Encoder Layer Flow
 
-1. **Input**: Sequence of token embeddings `X`
+1. **Input**: Sequence of token embeddings + positional encodings with dropout `X`
 
 2. **Self-Attention Sublayer**:
    - Apply multi-head self-attention: `Z = MultiHeadAttention(X, X, X)`
-   - Add residual connection: `Z' = LayerNorm(X + Z)`
+   - Apply dropout: `Z_dropout = Dropout(Z)`
+   - Add residual connection: `Z' = LayerNorm(X + Z_dropout)`
 
 3. **Feed-Forward Sublayer**:
-   - Apply position-wise FFN: `F = FFN(Z')`
+   - Apply position-wise FFN: `F = FFN(Z')` (includes internal dropout after ReLU)
    - Add residual connection: `F' = LayerNorm(Z' + F)`
 
 4. **Output**: `F'` becomes the input to the next encoder layer or the final encoder output
 
 ### Decoder Layer Flow
 
-1. **Input**: Sequence of token embeddings `Y` and encoder outputs `E`
+1. **Input**: Sequence of token embeddings + positional encodings with dropout `Y` and encoder outputs `E`
 
 2. **Masked Self-Attention Sublayer**:
    - Apply masked multi-head self-attention: `Z_1 = MaskedMultiHeadAttention(Y, Y, Y)`
-   - Add residual connection: `Z_1' = LayerNorm(Y + Z_1)`
+   - Apply dropout: `Z_1_dropout = Dropout(Z_1)`
+   - Add residual connection: `Z_1' = LayerNorm(Y + Z_1_dropout)`
 
 3. **Cross-Attention Sublayer**:
    - Apply multi-head cross-attention: `Z_2 = MultiHeadAttention(Z_1', E, E)`
-   - Add residual connection: `Z_2' = LayerNorm(Z_1' + Z_2)`
+   - Apply dropout: `Z_2_dropout = Dropout(Z_2)`
+   - Add residual connection: `Z_2' = LayerNorm(Z_1' + Z_2_dropout)`
 
 4. **Feed-Forward Sublayer**:
-   - Apply position-wise FFN: `F = FFN(Z_2')`
+   - Apply position-wise FFN: `F = FFN(Z_2')` (includes internal dropout after ReLU)
    - Add residual connection: `F' = LayerNorm(Z_2' + F)`
 
 5. **Output**: `F'` becomes the input to the next decoder layer or the final decoder output
@@ -175,20 +228,28 @@ The FFN can be viewed as a two-layer neural network with a ReLU (or other) activ
 
 In our visualization:
 
-1. **Token Embeddings**: Represented as vectors in the embedding space
+1. **Token Embeddings + Positional Encodings**:
+   - Token embeddings are represented as vectors in the embedding space
+   - Sinusoidal positional encodings are added to incorporate position information
+   - Dropout is applied after adding positional encodings (during training)
+
 2. **Attention Mechanism**:
    - Attention weights are shown as links between tokens
    - The brightness/thickness of links indicates attention strength
    - Multiple attention heads are visualized separately to show their different focus patterns
+   - Dropout is applied to attention outputs (during training)
+
 3. **Feed-Forward Network**:
    - Visualized as transformations applied to each token individually
    - Input and output projections are shown with their weights
-   - Activation functions are represented visually
+   - ReLU activation is applied after the first linear transformation
+   - Dropout is applied after the ReLU activation (during training)
 
 The complete flow visualization helps understand how:
 - Information flows between tokens through the attention mechanism
 - Each token's representation is transformed by the feed-forward network
 - Residual connections help preserve information throughout the network
 - Layer normalization stabilizes the learning process
+- Dropout regularizes the model during training
 
 This visualization demonstrates how transformers process relationships between tokens and how different components work together to enable the model's powerful capabilities in understanding and generating sequences.

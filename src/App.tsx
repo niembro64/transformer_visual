@@ -2,10 +2,15 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import './App.css';
 import AttentionHead from './components/AttentionHead';
 import FeedForward from './components/FeedForward';
+import MatrixDisplay from './components/MatrixDisplay';
 import {
   generateSampleEmbeddings,
   generateSampleAttentionWeights,
-  generateSampleMLPWeights
+  generateSampleMLPWeights,
+  generatePositionalEncodings,
+  addPositionalEncodings,
+  applyDropout,
+  relu
 } from './utils/matrixOperations';
 
 function App() {
@@ -14,15 +19,42 @@ function App() {
   const embeddingDim = 4;     // Dimension of token embeddings (d_model = 4)
   const attentionHeadDim = 3; // Dimension of attention head (d_k/d_v = 3)
   const mlpHiddenDim = 8;     // Dimension of MLP hidden layer (d_ff = 8, typically 4x d_model)
+  const maxSeqLength = 32;    // Maximum sequence length for positional encodings
+  
+  // Dropout rates
+  const embeddingDropoutRate = 0.1;  // Dropout rate after embeddings + positional encodings
+  const attentionDropoutRate = 0.1;  // Dropout rate after attention
+  const ffnDropoutRate = 0.1;        // Dropout rate in feed-forward network
+
+  // Training mode - determines if dropout is applied
+  const [trainingMode, setTrainingMode] = useState(false);
 
   // Token labels for 6 tokens - a simple sentence
   const tokenLabels = ["The", "cat", "sat", "on", "the", "mat"];
 
-  // Sample data generation
-  const [embeddings, setEmbeddings] = useState(() =>
+  // Generate positional encodings
+  const [positionalEncodings] = useState(() => 
+    generatePositionalEncodings(maxSeqLength, embeddingDim)
+  );
+
+  // Generate raw embeddings
+  const [rawEmbeddings, setRawEmbeddings] = useState(() =>
     generateSampleEmbeddings(numTokens, embeddingDim)
   );
 
+  // Apply positional encodings to embeddings
+  const embeddings = useMemo(() => 
+    addPositionalEncodings(rawEmbeddings, positionalEncodings),
+    [rawEmbeddings, positionalEncodings]
+  );
+
+  // Apply dropout to embeddings (only during training)
+  const embeddingsWithDropout = useMemo(() => 
+    applyDropout(embeddings, embeddingDropoutRate, trainingMode),
+    [embeddings, embeddingDropoutRate, trainingMode]
+  );
+
+  // Sample data generation for attention weights
   const [attentionWeights, setAttentionWeights] = useState(() =>
     generateSampleAttentionWeights(embeddingDim, attentionHeadDim)
   );
@@ -51,7 +83,7 @@ function App() {
       const { matrixType, row, col } = selectedElement;
 
       if (matrixType === 'embeddings') {
-        setSelectedValue(embeddings[row][col]);
+        setSelectedValue(rawEmbeddings[row][col]); // Show original embedding values before positional encoding
       } else if (matrixType === 'weightQ') {
         setSelectedValue(attentionWeights.weightQ[row][col]);
       } else if (matrixType === 'weightK') {
@@ -66,7 +98,7 @@ function App() {
     } else {
       setSelectedValue(null);
     }
-  }, [selectedElement, embeddings, attentionWeights, mlpWeights]);
+  }, [selectedElement, rawEmbeddings, attentionWeights, mlpWeights]);
 
   // Handle element selection in matrices
   const handleElementClick = useCallback((
@@ -117,12 +149,12 @@ function App() {
 
       if (matrixType === 'embeddings') {
         // Create a new copy of embeddings with the updated value
-        const newEmbeddings = embeddings.map((r, i) =>
+        const newRawEmbeddings = rawEmbeddings.map((r, i) =>
           i === row
             ? r.map((v, j) => j === col ? newValue : v)
             : [...r]
         );
-        setEmbeddings(newEmbeddings);
+        setRawEmbeddings(newRawEmbeddings);
       }
       else if (matrixType === 'weightQ' || matrixType === 'weightK' || matrixType === 'weightV') {
         // Create a deep copy of attention weights
@@ -164,7 +196,7 @@ function App() {
 
       setSelectedValue(newValue);
     }
-  }, [selectedElement, embeddings, attentionWeights, mlpWeights]);
+  }, [selectedElement, rawEmbeddings, attentionWeights, mlpWeights]);
 
   
   // Handler for receiving the computed context from the attention head
@@ -176,15 +208,84 @@ function App() {
     <div className="min-h-screen bg-gray-50">
       <main className="w-full p-0.5">
         <div className="bg-white rounded p-0.5 mb-0.5">
+          {/* Training mode toggle */}
+          <div className="mb-2 flex justify-end">
+            <label className="inline-flex items-center cursor-pointer">
+              <span className="text-[0.6rem] text-gray-700 mr-1">Training Mode</span>
+              <div className="relative">
+                <input 
+                  type="checkbox" 
+                  className="sr-only peer" 
+                  checked={trainingMode} 
+                  onChange={() => setTrainingMode(!trainingMode)}
+                />
+                <div className="w-8 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+              </div>
+            </label>
+          </div>
+
+          <div className="mb-0.5">
+            <h3 className="text-sm font-semibold mb-0.5 border-b pb-0.5">
+              Embeddings with Positional Encoding
+            </h3>
+            <div className="grid grid-cols-12 gap-1">
+              {/* Left: Raw Embeddings */}
+              <div className="col-span-4 flex flex-col items-center">
+                <h4 className="text-[0.65rem] font-medium mb-0.5">Raw Token Embeddings</h4>
+                <MatrixDisplay
+                  data={rawEmbeddings}
+                  rowLabels={tokenLabels}
+                  columnLabels={Array.from({ length: embeddingDim }, (_, i) => `d_${i+1}`)}
+                  maxAbsValue={0.2}
+                  cellSize="xs"
+                  selectable={true}
+                  selectedElement={selectedElement}
+                  matrixType="embeddings"
+                  onElementClick={handleElementClick}
+                  onValueChange={handleValueChange}
+                />
+              </div>
+              
+              {/* Middle: Positional Encodings */}
+              <div className="col-span-4 flex flex-col items-center">
+                <h4 className="text-[0.65rem] font-medium mb-0.5">Positional Encodings</h4>
+                <MatrixDisplay
+                  data={positionalEncodings.slice(0, numTokens)}
+                  rowLabels={Array.from({ length: numTokens }, (_, i) => `Pos ${i}`)}
+                  columnLabels={Array.from({ length: embeddingDim }, (_, i) => `d_${i+1}`)}
+                  maxAbsValue={0.2}
+                  cellSize="xs"
+                  selectable={false}
+                  matrixType="none"
+                />
+              </div>
+              
+              {/* Right: Combined embeddings with positional encoding */}
+              <div className="col-span-4 flex flex-col items-center">
+                <h4 className="text-[0.65rem] font-medium mb-0.5">
+                  Embeddings + Pos. Encoding
+                  {trainingMode ? ` + Dropout(${embeddingDropoutRate})` : ''}
+                </h4>
+                <MatrixDisplay
+                  data={embeddingsWithDropout}
+                  rowLabels={tokenLabels}
+                  columnLabels={Array.from({ length: embeddingDim }, (_, i) => `d_${i+1}`)}
+                  maxAbsValue={0.2}
+                  cellSize="xs"
+                  selectable={false}
+                  matrixType="none"
+                />
+              </div>
+            </div>
+          </div>
 
           <div className="mb-0.5">
             <h3 className="text-sm font-semibold mb-0.5 border-b pb-0.5">
               Self-Attention
             </h3>
-            {/* Value Adjuster will be shown in the EmbeddingElement component */}
 
             <AttentionHead
-              embeddings={embeddings}
+              embeddings={embeddingsWithDropout} // Using embeddings with positional encoding and dropout
               weightQ={attentionWeights.weightQ}
               weightK={attentionWeights.weightK}
               weightV={attentionWeights.weightV}
@@ -194,6 +295,8 @@ function App() {
               selectedElement={selectedElement}
               onElementClick={handleElementClick}
               onValueChange={handleValueChange}
+              dropoutRate={attentionDropoutRate}
+              applyTrainingDropout={trainingMode}
             />
           </div>
           
@@ -214,6 +317,10 @@ function App() {
                 selectedElement={selectedElement}
                 onElementClick={handleElementClick}
                 onValueChange={handleValueChange}
+                dropoutRate={ffnDropoutRate}
+                applyTrainingDropout={trainingMode}
+                activationFn={relu}  // ReLU activation as default
+                activationFnName="ReLU"
               />
             ) : (
               <div className="p-0.5 bg-gray-100 rounded">
@@ -228,6 +335,7 @@ function App() {
         <div className="bg-white rounded p-0.5 text-[0.6rem]">
           <p className="text-gray-700">
             Blue: positive, Pink: negative. Click a value to edit (magenta border).
+            {trainingMode && " Training mode enabled: dropout is applied."}
           </p>
         </div>
       </main>

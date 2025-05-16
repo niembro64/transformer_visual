@@ -4,7 +4,8 @@ import {
   matrixMultiply,
   transpose,
   softmax,
-  scaleMatrix
+  scaleMatrix,
+  applyDropout
 } from '../utils/matrixOperations';
 
 interface AttentionHeadProps {
@@ -30,6 +31,10 @@ interface AttentionHeadProps {
   onElementClick?: (matrixType: 'embeddings' | 'weightQ' | 'weightK' | 'weightV' | 'weightW1' | 'weightW2' | 'none', row: number, col: number) => void;
   // Callback when element value changes via slider
   onValueChange?: (newValue: number) => void;
+  // Dropout rate for attention output
+  dropoutRate?: number;
+  // Whether to apply dropout (simulates training)
+  applyTrainingDropout?: boolean;
 }
 
 /**
@@ -49,7 +54,9 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
   onContextComputed,
   selectedElement = null,
   onElementClick,
-  onValueChange
+  onValueChange,
+  dropoutRate = 0.1,
+  applyTrainingDropout = false
 }) => {
   // Number of tokens and dimensionality
   const numTokens = embeddings.length;
@@ -73,7 +80,16 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
   const attentionWeights = useMemo(() => softmax(attentionScores), [attentionScores]);
 
   // Compute output as attention-weighted sum of values
-  const attentionOutput = useMemo(() => matrixMultiply(attentionWeights, V), [attentionWeights, V]);
+  const rawAttentionOutput = useMemo(() => 
+    matrixMultiply(attentionWeights, V), 
+    [attentionWeights, V]
+  );
+  
+  // Apply dropout to attention output (only during training)
+  const attentionOutput = useMemo(() => 
+    applyDropout(rawAttentionOutput, dropoutRate, applyTrainingDropout),
+    [rawAttentionOutput, dropoutRate, applyTrainingDropout]
+  );
 
   // Use useEffect to call the callback after render
   useEffect(() => {
@@ -266,7 +282,10 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
           <div className="col-span-6 flex flex-col items-center justify-center">
             <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Output</h3>
             <div className="flex flex-col items-center justify-center w-full">
-              <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700">Attention Output</h4>
+              <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700">
+                Attention Output
+                {applyTrainingDropout ? ` + Dropout(${dropoutRate})` : ''}
+              </h4>
               <MatrixDisplay
                 data={attentionOutput}
                 rowLabels={labels}
