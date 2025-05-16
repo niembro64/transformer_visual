@@ -5,7 +5,8 @@ import {
   transpose,
   softmax,
   scaleMatrix,
-  applyDropout
+  applyDropout,
+  isPortraitOrientation
 } from '../utils/matrixOperations';
 
 interface AttentionHeadProps {
@@ -126,10 +127,10 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
 
   return (
     <div className="flex flex-col gap-0.5 p-0.5 bg-white rounded">
-      {/* Main Container - Vertical on mobile, Horizontal on desktop */}
-      <div className="flex flex-col lg:grid lg:grid-cols-12 gap-3 lg:gap-1">
-        {/* Input Embeddings - Full width on mobile, 3/12 on desktop */}
-        <div className="lg:col-span-3 flex flex-col items-center justify-center">
+      {/* Main Container - Responsive layout based on orientation */}
+      <div className={`flex flex-col ${!isPortraitOrientation() ? 'md:grid md:grid-cols-3' : ''} lg:grid lg:grid-cols-12 gap-3 lg:gap-1`}>
+        {/* Input Embeddings - Full width in portrait, 1/3 in landscape on mobile, 3/12 on desktop */}
+        <div className={`${!isPortraitOrientation() ? 'md:col-span-1' : ''} lg:col-span-3 flex flex-col items-center justify-center`}>
           <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Input Embeddings</h3>
           <MatrixDisplay
             data={embeddings}
@@ -144,11 +145,11 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
           />
         </div>
 
-        {/* Projection Matrices - Full width on mobile, 4/12 on desktop */}
+        {/* Projection Matrices - Full width in portrait, 1/3 in landscape on mobile, 4/12 on desktop */}
         {showSteps && (
-          <div className="lg:col-span-4 flex flex-col items-center justify-center">
+          <div className={`${!isPortraitOrientation() ? 'md:col-span-1' : ''} lg:col-span-4 flex flex-col items-center justify-center`}>
             <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Weights</h3>
-            <div className="grid grid-cols-3 gap-0.5 w-full">
+            <div className={`${isPortraitOrientation() ? 'grid grid-cols-3' : 'grid grid-cols-3'} gap-0.5 w-full`}>
               <div className="flex flex-col items-center justify-center">
                 <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700 w-full">W^Q</h4>
                 <MatrixDisplay
@@ -201,11 +202,11 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
           </div>
         )}
 
-        {/* Q, K, V Matrices - Full width on mobile, 5/12 on desktop */}
+        {/* Q, K, V Matrices - Full width in portrait, 1/3 in landscape on mobile, 5/12 on desktop */}
         {showSteps && (
-          <div className="lg:col-span-5 flex flex-col items-center justify-center">
+          <div className={`${!isPortraitOrientation() ? 'md:col-span-1' : ''} lg:col-span-5 flex flex-col items-center justify-center`}>
             <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Projected Matrices</h3>
-            <div className="grid grid-cols-3 gap-0.5 w-full">
+            <div className={`${isPortraitOrientation() ? 'grid grid-cols-3' : 'grid grid-cols-3'} gap-0.5 w-full`}>
               <div className="flex flex-col items-center justify-center">
                 <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700 w-full">Q</h4>
                 <MatrixDisplay
@@ -247,11 +248,11 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
         )}
       </div>
 
-      {/* Second Row: Attention Scores, Weights, and Output Calculation - Vertical on mobile, horizontal on desktop */}
+      {/* Second Row: Attention Scores, Weights, and Output Calculation - Responsive layout based on orientation */}
       {showSteps && (
-        <div className="flex flex-col lg:grid lg:grid-cols-12 gap-3 lg:gap-1 mt-3 lg:mt-0.5">
-          {/* Attention Scores - Full width on mobile, 3/12 on desktop */}
-          <div className="lg:col-span-3 flex flex-col items-center justify-center">
+        <div className={`flex flex-col ${!isPortraitOrientation() ? 'md:grid md:grid-cols-3' : ''} lg:grid lg:grid-cols-12 gap-3 lg:gap-1 mt-3 lg:mt-0.5`}>
+          {/* Attention Scores - Full width in portrait, 1/3 in landscape on mobile, 3/12 on desktop */}
+          <div className={`${!isPortraitOrientation() ? 'md:col-span-1' : ''} lg:col-span-3 flex flex-col items-center justify-center`}>
             <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Attention Scores</h3>
             <div className="flex flex-col items-center justify-center w-full">
               <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700">QK^T/√d_k</h4>
@@ -267,8 +268,8 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
             </div>
           </div>
 
-          {/* Attention Weights - Full width on mobile, 3/12 on desktop */}
-          <div className="lg:col-span-3 flex flex-col items-center justify-center">
+          {/* Attention Weights - Full width in portrait, 1/3 in landscape on mobile, 3/12 on desktop */}
+          <div className={`${!isPortraitOrientation() ? 'md:col-span-1' : ''} lg:col-span-3 flex flex-col items-center justify-center`}>
             <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Attention Weights</h3>
             <div className="flex flex-col items-center justify-center w-full">
               <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700">softmax</h4>
@@ -284,8 +285,8 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
             </div>
           </div>
 
-          {/* Final Output - Full width on mobile, 6/12 on desktop */}
-          <div className="lg:col-span-6 flex flex-col items-center justify-center">
+          {/* Final Output - Full width in portrait, 1/3 in landscape on mobile, 6/12 on desktop */}
+          <div className={`${!isPortraitOrientation() ? 'md:col-span-1' : ''} lg:col-span-6 flex flex-col items-center justify-center`}>
             <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Attention Output</h3>
             <div className="flex flex-col items-center justify-center w-full">
               <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700">

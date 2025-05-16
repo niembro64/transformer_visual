@@ -1,6 +1,13 @@
 import React, { useMemo } from 'react';
 import MatrixDisplay from './MatrixDisplay';
-import { matrixMultiply, addBias, applyFn, relu, applyDropout } from '../utils/matrixOperations';
+import { 
+  matrixMultiply, 
+  addBias, 
+  applyFn, 
+  relu, 
+  applyDropout,
+  isPortraitOrientation 
+} from '../utils/matrixOperations';
 
 interface FeedForwardProps {
   // Input token representations from attention layer
@@ -124,10 +131,10 @@ const FeedForward: React.FC<FeedForwardProps> = ({
 
   return (
     <div className="flex flex-col gap-0.5 p-0.5 bg-white rounded">
-      {/* Main Container - Vertical on mobile, Horizontal on desktop */}
-      <div className="flex flex-col lg:grid lg:grid-cols-12 gap-3 lg:gap-1">
-        {/* Input - Full width on mobile, 3/12 on desktop */}
-        <div className="lg:col-span-3 flex flex-col items-center justify-center">
+      {/* Main Container - Responsive layout based on orientation */}
+      <div className={`flex flex-col ${!isPortraitOrientation() ? 'md:grid md:grid-cols-4' : ''} lg:grid lg:grid-cols-12 gap-3 lg:gap-1`}>
+        {/* Input - Full width in portrait, 1/4 in landscape on mobile, 3/12 on desktop */}
+        <div className={`${!isPortraitOrientation() ? 'md:col-span-1' : ''} lg:col-span-3 flex flex-col items-center justify-center`}>
           <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Input</h3>
           <MatrixDisplay
             data={inputs}
@@ -141,11 +148,11 @@ const FeedForward: React.FC<FeedForwardProps> = ({
           />
         </div>
 
-        {/* Weights and biases - Full width on mobile, 3/12 on desktop */}
+        {/* Weights and biases - Full width in portrait, 1/4 in landscape on mobile, 3/12 on desktop */}
         {showSteps && (
-          <div className="lg:col-span-3 flex flex-col items-center justify-center">
+          <div className={`${!isPortraitOrientation() ? 'md:col-span-1' : ''} lg:col-span-3 flex flex-col items-center justify-center`}>
             <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Weights</h3>
-            <div className="grid grid-cols-1 gap-1 w-full">
+            <div className={`${!isPortraitOrientation() ? 'grid grid-cols-1' : 'grid grid-cols-2'} gap-1 w-full`}>
               <div className="flex flex-col items-center justify-center">
                 <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700 w-full">W₁</h4>
                 <MatrixDisplay
@@ -182,11 +189,11 @@ const FeedForward: React.FC<FeedForwardProps> = ({
           </div>
         )}
 
-        {/* Intermediate results - Full width on mobile, 3/12 on desktop */}
+        {/* Intermediate results - Full width in portrait, 1/4 in landscape on mobile, 3/12 on desktop */}
         {showSteps && (
-          <div className="lg:col-span-3 flex flex-col items-center justify-center">
+          <div className={`${!isPortraitOrientation() ? 'md:col-span-1' : ''} lg:col-span-3 flex flex-col items-center justify-center`}>
             <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Steps</h3>
-            <div className="grid grid-cols-1 gap-1 w-full">
+            <div className={`${!isPortraitOrientation() ? 'grid grid-cols-1' : 'grid grid-cols-2'} gap-1 w-full`}>
               <div className="flex flex-col items-center justify-center">
                 <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700 w-full">xW₁+b₁</h4>
                 <MatrixDisplay
@@ -218,8 +225,8 @@ const FeedForward: React.FC<FeedForwardProps> = ({
           </div>
         )}
 
-        {/* Output - Full width on mobile, 3/12 on desktop */}
-        <div className="lg:col-span-3 flex flex-col items-center justify-center">
+        {/* Output - Full width in portrait, 1/4 in landscape on mobile, 3/12 on desktop */}
+        <div className={`${!isPortraitOrientation() ? 'md:col-span-1' : ''} lg:col-span-3 flex flex-col items-center justify-center`}>
           <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Output</h3>
           <MatrixDisplay
             data={output}

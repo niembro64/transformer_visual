@@ -597,10 +597,10 @@ function App() {
               <h2 className="text-lg font-bold">Transformer Visualization</h2>
             </div>
 
-            {/* Content area - Split 50/50 on mobile in portrait mode, 2/3-1/3 on desktop/landscape */}
-            <div className="p-2 md:p-4 flex flex-col flex-wrap md:flex-row justify-between items-start gap-4">
-              {/* Left: Token controls - 50% width on mobile in portrait, 2/3 on desktop/landscape */}
-              <div className={`${isPortrait ? 'w-full' : ''} `}>
+            {/* Content area - Responsive layout for portrait and landscape modes */}
+            <div className="p-2 md:p-4 flex flex-col md:flex-row justify-between items-start gap-4">
+              {/* Left: Token controls - Full width in portrait, 1/2 in landscape on mobile, 2/3 on desktop */}
+              <div className={`${isPortrait ? 'w-full' : 'w-1/2'} md:w-2/3`}>
                 <div className="bg-white rounded-md shadow-sm p-3">
                   <h3 className="text-sm font-bold mb-3 text-gray-800 border-b pb-2 flex items-center">
                     <svg
@@ -654,8 +654,8 @@ function App() {
                 </div>
               </div>
 
-              {/* Right: Settings controls - 50% width on mobile in portrait, 1/3 on desktop/landscape */}
-              <div className={`w-full`}>
+              {/* Right: Settings controls - Full width in portrait, 1/2 in landscape on mobile, 1/3 on desktop */}
+              <div className={`${isPortrait ? 'w-full' : 'w-1/2'} md:w-1/3`}>
                 {/* Controls in a row for horizontal layout, column for portrait */}
                 <div
                   className={`flex ${
@@ -685,23 +685,30 @@ function App() {
                       </svg>
                       Embedding Dim
                     </h3>
-                    <div className="flex items-center border rounded-lg overflow-hidden shadow-sm w-full md:w-36 mx-auto">
-                      <button
-                        className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm font-medium transition-colors"
-                        onClick={decreaseEmbeddingDim}
-                        disabled={embeddingDim <= 2}
-                      >
-                        −
-                      </button>
-                      <div className="px-5 py-2 flex-grow text-center font-bold bg-white">
-                        {embeddingDim}
+                    <div className="flex items-center justify-center">
+                      <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden shadow-sm w-full md:w-36 mx-auto">
+                        <button
+                          className="flex-none w-10 h-9 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-800 text-base font-semibold transition-colors border-r border-gray-300"
+                          onClick={decreaseEmbeddingDim}
+                          disabled={embeddingDim <= 2}
+                          style={{
+                            cursor:
+                              embeddingDim <= 2 ? 'not-allowed' : 'pointer',
+                            opacity: embeddingDim <= 2 ? 0.5 : 1,
+                          }}
+                        >
+                          <span className="block">−</span>
+                        </button>
+                        <div className="flex-grow h-9 flex items-center justify-center font-mono font-bold bg-white px-3 text-lg">
+                          {embeddingDim}
+                        </div>
+                        <button
+                          className="flex-none w-10 h-9 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-800 text-base font-semibold transition-colors border-l border-gray-300"
+                          onClick={increaseEmbeddingDim}
+                        >
+                          <span className="block">+</span>
+                        </button>
                       </div>
-                      <button
-                        className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm font-medium transition-colors"
-                        onClick={increaseEmbeddingDim}
-                      >
-                        +
-                      </button>
                     </div>
                   </div>
 
@@ -729,27 +736,29 @@ function App() {
                       Training
                     </h3>
 
-                    <div className="flex items-center justify-center w-full md:w-36 mx-auto">
-                      <button
-                        onClick={() => setTrainingMode(false)}
-                        className={`px-4 py-2 border shadow-sm font-medium rounded-l-md transition-colors ${
-                          !trainingMode
-                            ? 'bg-gray-200 border-gray-400 text-gray-800'
-                            : 'bg-white text-gray-500 hover:bg-gray-50'
-                        }`}
-                      >
-                        Off
-                      </button>
-                      <button
-                        onClick={() => setTrainingMode(true)}
-                        className={`px-4 py-2 border shadow-sm font-medium rounded-r-md transition-colors ${
-                          trainingMode
-                            ? 'bg-blue-500 border-blue-600 text-white'
-                            : 'bg-white text-gray-500 hover:bg-gray-50'
-                        } flex items-center`}
-                      >
-                        On
-                      </button>
+                    <div className="flex items-center justify-center">
+                      <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden shadow-sm w-full md:w-36 mx-auto">
+                        <button
+                          onClick={() => setTrainingMode(false)}
+                          className={`flex-1 h-9 flex items-center justify-center font-medium transition-colors border-r border-gray-300 ${
+                            !trainingMode
+                              ? 'bg-gray-200 text-gray-800 font-semibold'
+                              : 'bg-white text-gray-500 hover:bg-gray-50'
+                          }`}
+                        >
+                          <span className="block">Off</span>
+                        </button>
+                        <button
+                          onClick={() => setTrainingMode(true)}
+                          className={`flex-1 h-9 flex items-center justify-center font-medium transition-colors ${
+                            trainingMode
+                              ? 'bg-blue-500 text-white font-semibold'
+                              : 'bg-white text-gray-500 hover:bg-gray-50'
+                          }`}
+                        >
+                          <span className="block">On</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -764,13 +773,13 @@ function App() {
             <div
               className={`${
                 isPortrait ? 'flex flex-col' : 'grid grid-cols-3'
-              } lg:grid lg:grid-cols-12 gap-4 lg:gap-1`}
+              } md:grid md:grid-cols-3 lg:grid lg:grid-cols-12 gap-4 lg:gap-1`}
             >
               {/* Left: Raw Embeddings */}
               <div
                 className={`${
                   isPortrait ? 'w-full' : 'col-span-1'
-                } lg:col-span-4 flex flex-col items-center`}
+                } md:col-span-1 lg:col-span-4 flex flex-col items-center`}
               >
                 <h4 className="text-[0.65rem] font-medium mb-1 sm:mb-0.5 text-center">
                   Raw Token Embeddings
@@ -804,7 +813,7 @@ function App() {
               <div
                 className={`${
                   isPortrait ? 'w-full' : 'col-span-1'
-                } lg:col-span-4 flex flex-col items-center`}
+                } md:col-span-1 lg:col-span-4 flex flex-col items-center`}
               >
                 <h4 className="text-[0.65rem] font-medium mb-1 sm:mb-0.5 text-center">
                   Positional Encodings
@@ -832,7 +841,7 @@ function App() {
               <div
                 className={`${
                   isPortrait ? 'w-full' : 'col-span-1'
-                } lg:col-span-4 flex flex-col items-center`}
+                } md:col-span-1 lg:col-span-4 flex flex-col items-center`}
               >
                 <h4 className="text-[0.65rem] font-medium mb-1 sm:mb-0.5 text-center">
                   Embeddings + Pos. Encoding
@@ -880,7 +889,7 @@ function App() {
 
           <div className="mt-0.5">
             <h3 className="text-sm font-semibold mb-0.5 border-b pb-0.5">
-              Position-wise Feed-Forward Network
+              Feed-Forward Network
             </h3>
 
             {attentionContext.length > 0 ? (
@@ -922,7 +931,7 @@ function App() {
               <div
                 className={`${
                   isPortrait ? 'flex flex-col' : 'grid grid-cols-3'
-                } lg:grid lg:grid-cols-12 gap-3 lg:gap-1`}
+                } md:grid md:grid-cols-3 lg:grid lg:grid-cols-12 gap-3 lg:gap-1`}
               >
                 {/* Calculate token similarities and predictions */}
                 {(() => {
@@ -972,7 +981,7 @@ function App() {
                       {/* Next Token Prediction Vector */}
                       <div
                         className={`${
-                          isPortrait ? 'w-full' : 'col-span-1'
+                          isPortrait ? 'w-full' : 'md:col-span-1'
                         } lg:col-span-4 flex flex-col items-center`}
                       >
                         <h4 className="text-[0.65rem] font-medium mb-0.5 text-center">
@@ -996,13 +1005,13 @@ function App() {
                       {/* Similarity Scores */}
                       <div
                         className={`${
-                          isPortrait ? 'w-full' : 'col-span-1'
+                          isPortrait ? 'w-full' : 'md:col-span-1'
                         } lg:col-span-4 flex flex-col items-center`}
                       >
                         <h4 className="text-[0.65rem] font-medium mb-0.5 text-center">
                           Token Similarities
                         </h4>
-                        <div className="grid grid-cols-2 w-full gap-1">
+                        <div className={`${isPortrait ? 'grid grid-cols-2' : 'grid grid-cols-2'} w-full gap-1`}>
                           {/* Dot Products */}
                           <div>
                             <h5 className="text-[0.6rem] font-medium mb-0.5 text-center">
@@ -1044,7 +1053,7 @@ function App() {
                       {/* Most Likely Token */}
                       <div
                         className={`${
-                          isPortrait ? 'w-full' : 'col-span-1'
+                          isPortrait ? 'w-full' : 'md:col-span-1'
                         } lg:col-span-4 flex flex-col items-center`}
                       >
                         <h4 className="text-[0.65rem] font-medium mb-2 text-center">

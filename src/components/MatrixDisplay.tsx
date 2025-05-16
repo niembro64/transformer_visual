@@ -1,5 +1,6 @@
 import React from 'react';
 import EmbeddingElement from './EmbeddingElement';
+import { isPortraitOrientation } from '../utils/matrixOperations';
 
 interface MatrixDisplayProps {
   data: number[][];
@@ -109,8 +110,8 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
     }
   };
 
-  // Check if we're on a mobile device (using window.innerWidth)
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  // Check if we're on a mobile device (using window.innerWidth) or in portrait orientation
+  const isMobile = typeof window !== 'undefined' && (window.innerWidth < 768 || isPortraitOrientation());
   const sizeVariant = isMobile ? 'mobile' : 'default';
 
   const cellWidth = sizeMap[cellSize][sizeVariant].width;  // Use width based on size and device

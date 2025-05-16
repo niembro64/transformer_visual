@@ -6,6 +6,7 @@ import React, {
   useCallback,
 } from 'react';
 import { createPortal } from 'react-dom';
+import { isPortraitOrientation } from '../utils/matrixOperations';
 
 interface EmbeddingElementProps {
   value: number;
@@ -138,17 +139,25 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
   // Track if oscillation has happened, to avoid repeating on re-renders
   const hasAutoOscillated = useRef(false);
 
-  // Update slider position when the element is selected
+  // Update slider position when the element is selected or orientation changes
   useEffect(() => {
     if (isSelected && elementRef.current) {
       const updatePosition = () => {
         const rect = elementRef.current?.getBoundingClientRect();
         if (rect) {
-          // Position in the center below the element
-          setSliderPosition({
-            left: rect.left + rect.width / 2,
-            top: rect.bottom + 5, // Add a small gap
-          });
+          const isPortrait = isPortraitOrientation();
+          // Position based on screen orientation - below on landscape, to the right on portrait
+          if (isPortrait) {
+            setSliderPosition({
+              left: rect.right + 10, // Place to the right with a small gap in portrait mode
+              top: rect.top + rect.height / 2,
+            });
+          } else {
+            setSliderPosition({
+              left: rect.left + rect.width / 2,
+              top: rect.bottom + 5, // Below with a small gap in landscape mode
+            });
+          }
         }
       };
 
@@ -164,10 +173,19 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
       // Keep updating on scroll/resize to ensure slider follows element
       window.addEventListener('scroll', updatePosition, { passive: true });
       window.addEventListener('resize', updatePosition, { passive: true });
+      
+      // Check orientation changes
+      const checkOrientation = () => {
+        // Simply update position on orientation change
+        updatePosition();
+      };
+      
+      window.addEventListener('orientationchange', checkOrientation, { passive: true });
 
       return () => {
         window.removeEventListener('scroll', updatePosition);
         window.removeEventListener('resize', updatePosition);
+        window.removeEventListener('orientationchange', checkOrientation);
       };
     } else {
       // When element is deselected, stop oscillation
@@ -280,42 +298,42 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
     const baseClasses =
       'rounded-md font-mono flex flex-col justify-between items-center';
     
-    // Check if we're on a mobile device (using window.innerWidth)
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < window.innerHeight;
+    // Check if we're on a mobile device or in portrait orientation
+    const isPortrait = isPortraitOrientation();
 
-    // Size configurations with mobile variants
+    // Size configurations with mobile variants - more compact in portrait mode
     const sizeMap = {
       xs: {
         container: `${baseClasses} py-0.5 px-0.5`,
-        coefficient: isMobile ? 'text-[0.4rem]' : 'text-[0.45rem]',
-        exponent: isMobile ? 'text-[0.35rem]' : 'text-[0.45rem]',
-        minWidth: isMobile ? '1.4rem' : '1.7rem',
-        height: isMobile ? '1.3rem' : '1.5rem',
-        width: isMobile ? '1.4rem' : '1.7rem',
+        coefficient: isPortrait ? 'text-[0.42rem]' : 'text-[0.45rem]',
+        exponent: isPortrait ? 'text-[0.37rem]' : 'text-[0.45rem]',
+        minWidth: isPortrait ? '1.5rem' : '1.7rem',
+        height: isPortrait ? '1.4rem' : '1.5rem',
+        width: isPortrait ? '1.5rem' : '1.7rem',
       },
       sm: {
         container: `${baseClasses} py-0.5 px-0.5`,
-        coefficient: isMobile ? 'text-[0.42rem]' : 'text-[0.5rem]',
-        exponent: isMobile ? 'text-[0.37rem]' : 'text-[0.5rem]',
-        minWidth: isMobile ? '1.6rem' : '2.1rem',
-        height: isMobile ? '1.5rem' : '1.9rem',
-        width: isMobile ? '1.6rem' : '2.1rem',
+        coefficient: isPortrait ? 'text-[0.45rem]' : 'text-[0.5rem]',
+        exponent: isPortrait ? 'text-[0.4rem]' : 'text-[0.5rem]',
+        minWidth: isPortrait ? '1.7rem' : '2.1rem',
+        height: isPortrait ? '1.6rem' : '1.9rem',
+        width: isPortrait ? '1.7rem' : '2.1rem',
       },
       md: {
         container: `${baseClasses} py-0.5 px-0.5`,
-        coefficient: isMobile ? 'text-[0.45rem]' : 'text-[0.55rem]',
-        exponent: isMobile ? 'text-[0.4rem]' : 'text-[0.55rem]',
-        minWidth: isMobile ? '1.8rem' : '2.7rem',
-        height: isMobile ? '1.6rem' : '2.4rem',
-        width: isMobile ? '1.8rem' : '2.7rem',
+        coefficient: isPortrait ? 'text-[0.48rem]' : 'text-[0.55rem]',
+        exponent: isPortrait ? 'text-[0.43rem]' : 'text-[0.55rem]',
+        minWidth: isPortrait ? '1.9rem' : '2.7rem',
+        height: isPortrait ? '1.7rem' : '2.4rem',
+        width: isPortrait ? '1.9rem' : '2.7rem',
       },
       lg: {
         container: `${baseClasses} py-0.5 px-0.5`,
-        coefficient: isMobile ? 'text-[0.5rem]' : 'text-[0.6rem]',
-        exponent: isMobile ? 'text-[0.45rem]' : 'text-[0.6rem]',
-        minWidth: isMobile ? '2.0rem' : '3.4rem',
-        height: isMobile ? '1.8rem' : '3.0rem',
-        width: isMobile ? '2.0rem' : '3.4rem',
+        coefficient: isPortrait ? 'text-[0.52rem]' : 'text-[0.6rem]',
+        exponent: isPortrait ? 'text-[0.47rem]' : 'text-[0.6rem]',
+        minWidth: isPortrait ? '2.1rem' : '3.4rem',
+        height: isPortrait ? '1.9rem' : '3.0rem',
+        width: isPortrait ? '2.1rem' : '3.4rem',
       },
     };
 
@@ -361,16 +379,19 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
         </div>
       </div>
 
-      {/* Floating slider overlay that appears below the element when selected */}
+      {/* Floating slider overlay that appears below or to the side of the element when selected */}
       {isSelected &&
         onValueChange &&
         createPortal(
           <div
-            className="fixed bg-white rounded-md shadow-lg p-1.5 w-24 animate-fadeIn z-50"
+            className="fixed bg-white rounded-md shadow-lg p-1.5 animate-fadeIn z-50"
             style={{
               left: `${sliderPosition.left}px`,
               top: `${sliderPosition.top}px`,
-              transform: 'translateX(-50%)',
+              transform: isPortraitOrientation() 
+                ? 'translateY(-50%)' // Center vertically in portrait mode
+                : 'translateX(-50%)', // Center horizontally in landscape mode
+              width: isPortraitOrientation() ? '6rem' : '8rem',
             }}
           >
             {valueLabel && (
