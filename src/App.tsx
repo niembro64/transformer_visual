@@ -422,7 +422,7 @@ function App() {
           <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-sm overflow-hidden">
             {/* Header bar */}
             <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4 py-2 flex justify-between items-center">
-              <h2 className="text-lg font-bold">Transformer Configuration</h2>
+              <h2 className="text-lg font-bold">First Attention Head</h2>
             </div>
 
             {/* Content area */}
