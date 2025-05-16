@@ -15,6 +15,7 @@ import {
   relu,
   vectorDotProduct,
   cosineSimilarity,
+  isPortraitOrientation,
 } from './utils/matrixOperations';
 
 export const dropoutUniveral = 0.03;
@@ -81,6 +82,27 @@ function App() {
 
   // For forcing re-renders on dropout timer cycles and weight updates
   const [trainingCycle, setTrainingCycle] = useState(0);
+
+  // Track device orientation (portrait vs. landscape)
+  const [isPortrait, setIsPortrait] = useState(isPortraitOrientation);
+
+  // Listen for orientation changes
+  useEffect(() => {
+    const handleResize = () => {
+      setIsPortrait(isPortraitOrientation());
+    };
+
+    // Set initial value
+    handleResize();
+
+    // Add event listener
+    window.addEventListener('resize', handleResize);
+
+    // Clean up
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
 
   // Used for random walk step size - smaller values for more subtle updates
   const weightUpdateStepSize = 0.003;
@@ -566,7 +588,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <main className="w-full p-0.5">
+      <main className="w-full p-0.5 md:p-2">
         <div className="bg-white rounded p-0.5 mb-0.5">
           {/* Main control panel */}
           <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-sm overflow-hidden">
@@ -575,10 +597,10 @@ function App() {
               <h2 className="text-lg font-bold">Transformer Visualization</h2>
             </div>
 
-            {/* Content area */}
-            <div className="p-4 flex justify-between items-start">
-              {/* Left: Token controls - takes 2/3 of space */}
-              <div className="w-2/3 pr-5">
+            {/* Content area - Split 50/50 on mobile in portrait mode, 2/3-1/3 on desktop/landscape */}
+            <div className="p-2 md:p-4 flex flex-col flex-wrap md:flex-row justify-between items-start gap-4">
+              {/* Left: Token controls - 50% width on mobile in portrait, 2/3 on desktop/landscape */}
+              <div className={`${isPortrait ? 'w-full' : ''} `}>
                 <div className="bg-white rounded-md shadow-sm p-3">
                   <h3 className="text-sm font-bold mb-3 text-gray-800 border-b pb-2 flex items-center">
                     <svg
@@ -600,9 +622,9 @@ function App() {
                   <div className="flex flex-wrap gap-2">
                     {tokenLabels.map((token, index) => (
                       <div key={index} className="relative group">
-                        {/* Delete button appears on hover */}
+                        {/* Delete button appears on hover or always visible on touch devices */}
                         <button
-                          className="absolute -top-2.5 -right-2.5 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-medium shadow-sm opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                          className="absolute -top-2.5 -right-2.5 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-medium shadow-sm md:opacity-0 md:group-hover:opacity-100 transition-opacity z-10"
                           onClick={() => removeToken(index)}
                           title="Remove token"
                         >
@@ -632,88 +654,103 @@ function App() {
                 </div>
               </div>
 
-              {/* Right: Settings controls - takes 1/3 of space */}
-              <div className="w-1/3 flex flex-col gap-4">
-                {/* Embedding dimension controls */}
-                <div className="bg-white rounded-md shadow-sm p-3">
-                  <h3 className="text-sm font-bold mb-3 text-gray-800 border-b pb-2 flex items-center">
-                    <svg
-                      className="w-4 h-4 mr-1 text-blue-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                      />
-                    </svg>
-                    Embedding Dimension
-                  </h3>
-                  <div className="flex items-center border rounded-lg overflow-hidden shadow-sm w-36 mx-auto">
-                    <button
-                      className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm font-medium transition-colors"
-                      onClick={decreaseEmbeddingDim}
-                      disabled={embeddingDim <= 2}
-                    >
-                      −
-                    </button>
-                    <div className="px-5 py-2 flex-grow text-center font-bold bg-white">
-                      {embeddingDim}
+              {/* Right: Settings controls - 50% width on mobile in portrait, 1/3 on desktop/landscape */}
+              <div className={`w-full`}>
+                {/* Controls in a row for horizontal layout, column for portrait */}
+                <div
+                  className={`flex ${
+                    isPortrait ? 'flex-row' : 'flex-row'
+                  }  gap-4`}
+                >
+                  {/* Embedding dimension controls */}
+                  <div
+                    className={`bg-white rounded-md shadow-sm p-3 ${
+                      isPortrait ? 'w-1/2' : 'w-full'
+                    }`}
+                  >
+                    <h3 className="text-sm font-bold mb-3 text-gray-800 border-b pb-2 flex items-center">
+                      <svg
+                        className="w-4 h-4 mr-1 text-blue-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                        />
+                      </svg>
+                      Embedding Dim
+                    </h3>
+                    <div className="flex items-center border rounded-lg overflow-hidden shadow-sm w-full md:w-36 mx-auto">
+                      <button
+                        className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm font-medium transition-colors"
+                        onClick={decreaseEmbeddingDim}
+                        disabled={embeddingDim <= 2}
+                      >
+                        −
+                      </button>
+                      <div className="px-5 py-2 flex-grow text-center font-bold bg-white">
+                        {embeddingDim}
+                      </div>
+                      <button
+                        className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm font-medium transition-colors"
+                        onClick={increaseEmbeddingDim}
+                      >
+                        +
+                      </button>
                     </div>
-                    <button
-                      className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm font-medium transition-colors"
-                      onClick={increaseEmbeddingDim}
-                    >
-                      +
-                    </button>
                   </div>
-                </div>
 
-                {/* Training mode toggle */}
-                <div className="bg-white rounded-md shadow-sm p-3">
-                  <h3 className="text-sm font-bold mb-3 text-gray-800 border-b pb-2 flex items-center">
-                    <svg
-                      className="w-4 h-4 mr-1 text-blue-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
-                      />
-                    </svg>
-                    Training Mode
-                  </h3>
+                  {/* Training mode toggle */}
+                  <div
+                    className={`bg-white rounded-md shadow-sm p-3 ${
+                      isPortrait ? 'w-1/2' : 'w-full'
+                    }`}
+                  >
+                    <h3 className="text-sm font-bold mb-3 text-gray-800 border-b pb-2 flex items-center">
+                      <svg
+                        className="w-4 h-4 mr-1 text-blue-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
+                        />
+                      </svg>
+                      Training
+                    </h3>
 
-                  <div className="flex items-center justify-center w-36 mx-auto">
-                    <button
-                      onClick={() => setTrainingMode(false)}
-                      className={`px-4 py-2 border shadow-sm font-medium rounded-l-md transition-colors ${
-                        !trainingMode
-                          ? 'bg-gray-200 border-gray-400 text-gray-800'
-                          : 'bg-white text-gray-500 hover:bg-gray-50'
-                      }`}
-                    >
-                      Off
-                    </button>
-                    <button
-                      onClick={() => setTrainingMode(true)}
-                      className={`px-4 py-2 border shadow-sm font-medium rounded-r-md transition-colors ${
-                        trainingMode
-                          ? 'bg-blue-500 border-blue-600 text-white'
-                          : 'bg-white text-gray-500 hover:bg-gray-50'
-                      } flex items-center`}
-                    >
-                      On
-                    </button>
+                    <div className="flex items-center justify-center w-full md:w-36 mx-auto">
+                      <button
+                        onClick={() => setTrainingMode(false)}
+                        className={`px-4 py-2 border shadow-sm font-medium rounded-l-md transition-colors ${
+                          !trainingMode
+                            ? 'bg-gray-200 border-gray-400 text-gray-800'
+                            : 'bg-white text-gray-500 hover:bg-gray-50'
+                        }`}
+                      >
+                        Off
+                      </button>
+                      <button
+                        onClick={() => setTrainingMode(true)}
+                        className={`px-4 py-2 border shadow-sm font-medium rounded-r-md transition-colors ${
+                          trainingMode
+                            ? 'bg-blue-500 border-blue-600 text-white'
+                            : 'bg-white text-gray-500 hover:bg-gray-50'
+                        } flex items-center`}
+                      >
+                        On
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -724,75 +761,97 @@ function App() {
             <h3 className="text-sm font-semibold mb-0.5 border-b pb-0.5">
               Embeddings with Positional Encoding
             </h3>
-            <div className="grid grid-cols-12 gap-1">
+            <div
+              className={`${
+                isPortrait ? 'flex flex-col' : 'grid grid-cols-3'
+              } lg:grid lg:grid-cols-12 gap-4 lg:gap-1`}
+            >
               {/* Left: Raw Embeddings */}
-              <div className="col-span-4 flex flex-col items-center">
-                <h4 className="text-[0.65rem] font-medium mb-0.5">
+              <div
+                className={`${
+                  isPortrait ? 'w-full' : 'col-span-1'
+                } lg:col-span-4 flex flex-col items-center`}
+              >
+                <h4 className="text-[0.65rem] font-medium mb-1 sm:mb-0.5 text-center">
                   Raw Token Embeddings
                 </h4>
-                <MatrixDisplay
-                  data={rawEmbeddings}
-                  rowLabels={tokenLabels}
-                  columnLabels={Array.from(
-                    { length: embeddingDim },
-                    (_, i) => `d_${i + 1}`
-                  )}
-                  maxAbsValue={0.2}
-                  cellSize="xs"
-                  selectable={true}
-                  selectedElement={
-                    selectedElement?.matrixType === 'embeddings'
-                      ? selectedElement
-                      : null
-                  }
-                  matrixType="embeddings"
-                  onElementClick={handleElementClick}
-                  onValueChange={handleValueChange}
-                  valueLabel={valueLabel}
-                  autoOscillate={false}
-                />
+                <div className="w-full overflow-x-auto pb-2">
+                  <MatrixDisplay
+                    data={rawEmbeddings}
+                    rowLabels={tokenLabels}
+                    columnLabels={Array.from(
+                      { length: embeddingDim },
+                      (_, i) => `d_${i + 1}`
+                    )}
+                    maxAbsValue={0.2}
+                    cellSize="xs"
+                    selectable={true}
+                    selectedElement={
+                      selectedElement?.matrixType === 'embeddings'
+                        ? selectedElement
+                        : null
+                    }
+                    matrixType="embeddings"
+                    onElementClick={handleElementClick}
+                    onValueChange={handleValueChange}
+                    valueLabel={valueLabel}
+                    autoOscillate={false}
+                  />
+                </div>
               </div>
 
               {/* Middle: Positional Encodings */}
-              <div className="col-span-4 flex flex-col items-center">
-                <h4 className="text-[0.65rem] font-medium mb-0.5">
+              <div
+                className={`${
+                  isPortrait ? 'w-full' : 'col-span-1'
+                } lg:col-span-4 flex flex-col items-center`}
+              >
+                <h4 className="text-[0.65rem] font-medium mb-1 sm:mb-0.5 text-center">
                   Positional Encodings
                 </h4>
-                <MatrixDisplay
-                  data={positionalEncodings.slice(0, tokenLabels.length)}
-                  rowLabels={Array.from(
-                    { length: tokenLabels.length },
-                    (_, i) => `Pos ${i}`
-                  )}
-                  columnLabels={Array.from(
-                    { length: embeddingDim },
-                    (_, i) => `d_${i + 1}`
-                  )}
-                  maxAbsValue={0.2}
-                  cellSize="xs"
-                  selectable={false}
-                  matrixType="none"
-                />
+                <div className="w-full overflow-x-auto pb-2">
+                  <MatrixDisplay
+                    data={positionalEncodings.slice(0, tokenLabels.length)}
+                    rowLabels={Array.from(
+                      { length: tokenLabels.length },
+                      (_, i) => `Pos ${i}`
+                    )}
+                    columnLabels={Array.from(
+                      { length: embeddingDim },
+                      (_, i) => `d_${i + 1}`
+                    )}
+                    maxAbsValue={0.2}
+                    cellSize="xs"
+                    selectable={false}
+                    matrixType="none"
+                  />
+                </div>
               </div>
 
               {/* Right: Combined embeddings with positional encoding */}
-              <div className="col-span-4 flex flex-col items-center">
-                <h4 className="text-[0.65rem] font-medium mb-0.5">
+              <div
+                className={`${
+                  isPortrait ? 'w-full' : 'col-span-1'
+                } lg:col-span-4 flex flex-col items-center`}
+              >
+                <h4 className="text-[0.65rem] font-medium mb-1 sm:mb-0.5 text-center">
                   Embeddings + Pos. Encoding
                   {trainingMode ? ` + Dropout(${embeddingDropoutRate})` : ''}
                 </h4>
-                <MatrixDisplay
-                  data={embeddingsWithDropout}
-                  rowLabels={tokenLabels}
-                  columnLabels={Array.from(
-                    { length: embeddingDim },
-                    (_, i) => `d_${i + 1}`
-                  )}
-                  maxAbsValue={0.2}
-                  cellSize="xs"
-                  selectable={false}
-                  matrixType="none"
-                />
+                <div className="w-full overflow-x-auto pb-2">
+                  <MatrixDisplay
+                    data={embeddingsWithDropout}
+                    rowLabels={tokenLabels}
+                    columnLabels={Array.from(
+                      { length: embeddingDim },
+                      (_, i) => `d_${i + 1}`
+                    )}
+                    maxAbsValue={0.2}
+                    cellSize="xs"
+                    selectable={false}
+                    matrixType="none"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -860,7 +919,11 @@ function App() {
               Next Token Prediction
             </h3>
             <div className="bg-white rounded p-0.5">
-              <div className="grid grid-cols-12 gap-1">
+              <div
+                className={`${
+                  isPortrait ? 'flex flex-col' : 'grid grid-cols-3'
+                } lg:grid lg:grid-cols-12 gap-3 lg:gap-1`}
+              >
                 {/* Calculate token similarities and predictions */}
                 {(() => {
                   // Get the next token prediction vector (last token's embedding)
@@ -906,8 +969,12 @@ function App() {
 
                   return (
                     <>
-                      {/* Left: Next Token Prediction Vector */}
-                      <div className="col-span-4 flex flex-col items-center">
+                      {/* Next Token Prediction Vector */}
+                      <div
+                        className={`${
+                          isPortrait ? 'w-full' : 'col-span-1'
+                        } lg:col-span-4 flex flex-col items-center`}
+                      >
                         <h4 className="text-[0.65rem] font-medium mb-0.5 text-center">
                           Next Token Vector
                         </h4>
@@ -926,8 +993,12 @@ function App() {
                         />
                       </div>
 
-                      {/* Middle: Similarity Scores */}
-                      <div className="col-span-4 flex flex-col items-center">
+                      {/* Similarity Scores */}
+                      <div
+                        className={`${
+                          isPortrait ? 'w-full' : 'col-span-1'
+                        } lg:col-span-4 flex flex-col items-center`}
+                      >
                         <h4 className="text-[0.65rem] font-medium mb-0.5 text-center">
                           Token Similarities
                         </h4>
@@ -970,8 +1041,12 @@ function App() {
                         </div>
                       </div>
 
-                      {/* Right: Most Likely Token */}
-                      <div className="col-span-4 flex flex-col items-center">
+                      {/* Most Likely Token */}
+                      <div
+                        className={`${
+                          isPortrait ? 'w-full' : 'col-span-1'
+                        } lg:col-span-4 flex flex-col items-center`}
+                      >
                         <h4 className="text-[0.65rem] font-medium mb-2 text-center">
                           Most Likely Next Token
                         </h4>
@@ -986,7 +1061,7 @@ function App() {
                                   </span>
                                 </div>
                               </div>
-                              
+
                               {/* Probability value */}
                               <div className="flex justify-center">
                                 <div className="text-[0.65rem] font-mono text-blue-600 bg-blue-50 px-3 py-0.5 rounded-md border border-blue-100 min-w-[60px] text-center">
@@ -1022,7 +1097,7 @@ function App() {
           </div>
         )}
 
-        <div className="bg-white rounded p-0.5 text-[0.6rem]">
+        <div className="bg-white rounded p-0.5 mt-8 text-[0.6rem]">
           <div className="flex flex-col gap-1">
             <p className="text-gray-700">
               Blue: positive, Red: negative. Click a value to edit (magenta

@@ -498,3 +498,12 @@ export function applyRandomWalkToVector(
   
   return result;
 }
+
+/**
+ * Utility function to check if device is in portrait orientation (height > width)
+ * @returns boolean indicating if device is in portrait orientation
+ */
+export function isPortraitOrientation(): boolean {
+  if (typeof window === 'undefined') return false; // Default to landscape for SSR
+  return window.innerHeight > window.innerWidth;
+}

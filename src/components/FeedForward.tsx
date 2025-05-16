@@ -124,10 +124,10 @@ const FeedForward: React.FC<FeedForwardProps> = ({
 
   return (
     <div className="flex flex-col gap-0.5 p-0.5 bg-white rounded">
-      {/* Main Container - Horizontal Layout */}
-      <div className="grid grid-cols-12 gap-1">
-        {/* Left Column: Input - Not selectable, this is the output from attention layer */}
-        <div className="col-span-3 flex flex-col items-center justify-center">
+      {/* Main Container - Vertical on mobile, Horizontal on desktop */}
+      <div className="flex flex-col lg:grid lg:grid-cols-12 gap-3 lg:gap-1">
+        {/* Input - Full width on mobile, 3/12 on desktop */}
+        <div className="lg:col-span-3 flex flex-col items-center justify-center">
           <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Input</h3>
           <MatrixDisplay
             data={inputs}
@@ -141,9 +141,9 @@ const FeedForward: React.FC<FeedForwardProps> = ({
           />
         </div>
 
-        {/* Second Column: Weights and biases */}
+        {/* Weights and biases - Full width on mobile, 3/12 on desktop */}
         {showSteps && (
-          <div className="col-span-3 flex flex-col items-center justify-center">
+          <div className="lg:col-span-3 flex flex-col items-center justify-center">
             <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Weights</h3>
             <div className="grid grid-cols-1 gap-1 w-full">
               <div className="flex flex-col items-center justify-center">
@@ -182,9 +182,9 @@ const FeedForward: React.FC<FeedForwardProps> = ({
           </div>
         )}
 
-        {/* Third Column: Intermediate results */}
+        {/* Intermediate results - Full width on mobile, 3/12 on desktop */}
         {showSteps && (
-          <div className="col-span-3 flex flex-col items-center justify-center">
+          <div className="lg:col-span-3 flex flex-col items-center justify-center">
             <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Steps</h3>
             <div className="grid grid-cols-1 gap-1 w-full">
               <div className="flex flex-col items-center justify-center">
@@ -218,8 +218,8 @@ const FeedForward: React.FC<FeedForwardProps> = ({
           </div>
         )}
 
-        {/* Right Column: Output */}
-        <div className="col-span-3 flex flex-col items-center justify-center">
+        {/* Output - Full width on mobile, 3/12 on desktop */}
+        <div className="lg:col-span-3 flex flex-col items-center justify-center">
           <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Output</h3>
           <MatrixDisplay
             data={output}

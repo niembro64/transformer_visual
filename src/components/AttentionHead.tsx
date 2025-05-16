@@ -126,10 +126,10 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
 
   return (
     <div className="flex flex-col gap-0.5 p-0.5 bg-white rounded">
-      {/* Main Container - Horizontal Layout */}
-      <div className="grid grid-cols-12 gap-1">
-        {/* Left Column: Input Embeddings - Not selectable, these are the fixed embeddings from previous steps */}
-        <div className="col-span-3 flex flex-col items-center justify-center">
+      {/* Main Container - Vertical on mobile, Horizontal on desktop */}
+      <div className="flex flex-col lg:grid lg:grid-cols-12 gap-3 lg:gap-1">
+        {/* Input Embeddings - Full width on mobile, 3/12 on desktop */}
+        <div className="lg:col-span-3 flex flex-col items-center justify-center">
           <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Input Embeddings</h3>
           <MatrixDisplay
             data={embeddings}
@@ -144,9 +144,9 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
           />
         </div>
 
-        {/* Middle Column: Projection Matrices */}
+        {/* Projection Matrices - Full width on mobile, 4/12 on desktop */}
         {showSteps && (
-          <div className="col-span-4 flex flex-col items-center justify-center">
+          <div className="lg:col-span-4 flex flex-col items-center justify-center">
             <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Weights</h3>
             <div className="grid grid-cols-3 gap-0.5 w-full">
               <div className="flex flex-col items-center justify-center">
@@ -201,9 +201,9 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
           </div>
         )}
 
-        {/* Right Column: Q, K, V Matrices */}
+        {/* Q, K, V Matrices - Full width on mobile, 5/12 on desktop */}
         {showSteps && (
-          <div className="col-span-5 flex flex-col items-center justify-center">
+          <div className="lg:col-span-5 flex flex-col items-center justify-center">
             <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Projected Matrices</h3>
             <div className="grid grid-cols-3 gap-0.5 w-full">
               <div className="flex flex-col items-center justify-center">
@@ -247,11 +247,11 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
         )}
       </div>
 
-      {/* Second Row: Attention Scores, Weights, and Output Calculation */}
+      {/* Second Row: Attention Scores, Weights, and Output Calculation - Vertical on mobile, horizontal on desktop */}
       {showSteps && (
-        <div className="grid grid-cols-12 gap-1 mt-0.5">
-          {/* Left Column: Attention Scores */}
-          <div className="col-span-3 flex flex-col items-center justify-center">
+        <div className="flex flex-col lg:grid lg:grid-cols-12 gap-3 lg:gap-1 mt-3 lg:mt-0.5">
+          {/* Attention Scores - Full width on mobile, 3/12 on desktop */}
+          <div className="lg:col-span-3 flex flex-col items-center justify-center">
             <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Attention Scores</h3>
             <div className="flex flex-col items-center justify-center w-full">
               <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700">QK^T/√d_k</h4>
@@ -267,8 +267,8 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
             </div>
           </div>
 
-          {/* Middle Column: Attention Weights */}
-          <div className="col-span-3 flex flex-col items-center justify-center">
+          {/* Attention Weights - Full width on mobile, 3/12 on desktop */}
+          <div className="lg:col-span-3 flex flex-col items-center justify-center">
             <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Attention Weights</h3>
             <div className="flex flex-col items-center justify-center w-full">
               <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700">softmax</h4>
@@ -284,8 +284,8 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
             </div>
           </div>
 
-          {/* Right Column: Final Output */}
-          <div className="col-span-6 flex flex-col items-center justify-center">
+          {/* Final Output - Full width on mobile, 6/12 on desktop */}
+          <div className="lg:col-span-6 flex flex-col items-center justify-center">
             <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Attention Output</h3>
             <div className="flex flex-col items-center justify-center w-full">
               <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700">

@@ -256,45 +256,48 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
     };
   }, [value, precision]);
 
-  // Determine styling based on size
-  // Use size-appropriate styling
+  // Determine styling based on size and device
+  // Use size-appropriate styling with mobile responsiveness
   const sizeStyles = useMemo(() => {
     const baseClasses =
       'rounded-md font-mono flex flex-col justify-center items-center';
+    
+    // Check if we're on a mobile device (using window.innerWidth)
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
-    // Size configurations
+    // Size configurations with mobile variants
     const sizeMap = {
       xs: {
         container: `${baseClasses} py-0.5 px-0.5`,
-        coefficient: 'text-[0.45rem]',
-        exponent: 'text-[0.45rem] mt-0',
-        minWidth: '1.7rem',
-        height: '1.5rem',
-        width: '1.7rem',
+        coefficient: isMobile ? 'text-[0.35rem]' : 'text-[0.45rem]',
+        exponent: isMobile ? 'text-[0.35rem] mt-0' : 'text-[0.45rem] mt-0',
+        minWidth: isMobile ? '1.2rem' : '1.7rem',
+        height: isMobile ? '1.2rem' : '1.5rem',
+        width: isMobile ? '1.2rem' : '1.7rem',
       },
       sm: {
         container: `${baseClasses} py-0.5 px-0.5`,
-        coefficient: 'text-[0.5rem]',
-        exponent: 'text-[0.5rem] mt-0',
-        minWidth: '2.1rem',
-        height: '1.9rem',
-        width: '2.1rem',
+        coefficient: isMobile ? 'text-[0.4rem]' : 'text-[0.5rem]',
+        exponent: isMobile ? 'text-[0.4rem] mt-0' : 'text-[0.5rem] mt-0',
+        minWidth: isMobile ? '1.4rem' : '2.1rem',
+        height: isMobile ? '1.3rem' : '1.9rem',
+        width: isMobile ? '1.4rem' : '2.1rem',
       },
       md: {
         container: `${baseClasses} py-0.5 px-0.5`,
-        coefficient: 'text-[0.55rem]',
-        exponent: 'text-[0.55rem] mt-0',
-        minWidth: '2.7rem',
-        height: '2.4rem',
-        width: '2.7rem',
+        coefficient: isMobile ? 'text-[0.45rem]' : 'text-[0.55rem]',
+        exponent: isMobile ? 'text-[0.45rem] mt-0' : 'text-[0.55rem] mt-0',
+        minWidth: isMobile ? '1.7rem' : '2.7rem',
+        height: isMobile ? '1.5rem' : '2.4rem',
+        width: isMobile ? '1.7rem' : '2.7rem',
       },
       lg: {
         container: `${baseClasses} py-0.5 px-0.5`,
-        coefficient: 'text-[0.6rem]',
-        exponent: 'text-[0.6rem] mt-0',
-        minWidth: '3.4rem',
-        height: '3.0rem',
-        width: '3.4rem',
+        coefficient: isMobile ? 'text-[0.5rem]' : 'text-[0.6rem]',
+        exponent: isMobile ? 'text-[0.5rem] mt-0' : 'text-[0.6rem] mt-0',
+        minWidth: isMobile ? '2.0rem' : '3.4rem',
+        height: isMobile ? '1.8rem' : '3.0rem',
+        width: isMobile ? '2.0rem' : '3.4rem',
       },
     };
 

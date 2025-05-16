@@ -89,17 +89,33 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
   const showRowLabels = rowLabels && rowLabels.length === rows;
   const showColumnLabels = columnLabels && columnLabels.length === cols;
 
-  // Use size-appropriate cell sizes with minimal spacing
+  // Use size-appropriate cell sizes with minimal spacing, responsive to screen size
   const sizeMap = {
-    xs: { width: 1.7, height: 1.5 },  // Extra small for hidden layers
-    sm: { width: 2.1, height: 1.9 },  // Small for most elements
-    md: { width: 2.7, height: 2.4 },  // Medium if needed
-    lg: { width: 3.4, height: 3.0 }   // Large if needed
+    xs: { 
+      default: { width: 1.7, height: 1.5 },  // Extra small for hidden layers
+      mobile: { width: 1.2, height: 1.2 }    // Even smaller for mobile
+    },
+    sm: { 
+      default: { width: 2.1, height: 1.9 },  // Small for most elements
+      mobile: { width: 1.4, height: 1.3 }    // Mobile size
+    },
+    md: { 
+      default: { width: 2.7, height: 2.4 },  // Medium if needed
+      mobile: { width: 1.7, height: 1.5 }    // Mobile size
+    },
+    lg: { 
+      default: { width: 3.4, height: 3.0 },  // Large if needed
+      mobile: { width: 2.0, height: 1.8 }    // Mobile size
+    }
   };
 
-  const cellWidth = sizeMap[cellSize].width;  // Use width based on size
-  const cellHeight = sizeMap[cellSize].height; // Use height based on size
-  const cellGap = 0.03; // Extremely minimal gap between cells
+  // Check if we're on a mobile device (using window.innerWidth)
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const sizeVariant = isMobile ? 'mobile' : 'default';
+
+  const cellWidth = sizeMap[cellSize][sizeVariant].width;  // Use width based on size and device
+  const cellHeight = sizeMap[cellSize][sizeVariant].height; // Use height based on size and device
+  const cellGap = isMobile ? 0.02 : 0.03; // Even smaller gap on mobile
 
   // Calculate grid template columns for the entire grid including row labels
   const gridTemplateColumns = showRowLabels
