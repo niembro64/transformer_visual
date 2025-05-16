@@ -972,21 +972,23 @@ function App() {
 
                       {/* Right: Most Likely Token */}
                       <div className="col-span-4 flex flex-col items-center">
-                        <h4 className="text-[0.65rem] font-medium mb-0.5 text-center">
+                        <h4 className="text-[0.65rem] font-medium mb-2 text-center">
                           Most Likely Next Token
                         </h4>
                         <div className="w-full flex flex-col items-center">
-                          <div className="bg-blue-50 py-1 px-2 rounded text-blue-700 mb-1 text-center w-full">
-                            <span className="font-semibold text-[0.7rem]">
-                              {topPredictedToken}
-                            </span>
-                            <span className="text-[0.6rem] text-blue-600 ml-1">
-                              (p={sortedSoftmax[0].value.toFixed(3)})
-                            </span>
+                          <div className="bg-gray-100 dark:bg-gray-100 py-1.5 px-3 rounded shadow-inner mb-1 text-center w-full border border-gray-200">
+                            <div className="font-mono flex justify-center items-center">
+                              <span className="font-semibold text-[0.8rem] text-blue-700 tracking-wide">
+                                {topPredictedToken}
+                              </span>
+                              <span className="text-[0.65rem] font-mono text-blue-600 ml-2 bg-blue-50 px-1.5 py-0.5 rounded-md">
+                                p={sortedSoftmax[0].value.toFixed(4)}
+                              </span>
+                            </div>
                           </div>
 
                           {/* Raw embedding for the predicted token */}
-                          <h5 className="text-[0.6rem] font-medium mb-0.5 text-center border-t border-gray-100 pt-0.5 w-full">
+                          <h5 className="text-[0.65rem] font-medium mt-2 mb-1 text-center text-gray-700 pt-1.5 w-full">
                             Raw Token Embedding
                           </h5>
                           <MatrixDisplay
