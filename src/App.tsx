@@ -154,12 +154,15 @@ function App() {
   };
 
   const initialElement: ElementObject | null = useMemo(() => {
-    // Initialize selectedElement to the first element of the first matrix
+    // Initialize selectedElement to the second-to-last token's 4th embedding
     if (rawEmbeddings.length > 0 && rawEmbeddings[0].length > 0) {
+      const tokenIndex = Math.max(0, rawEmbeddings.length - 2); // Second-to-last token
+      const embIndex = Math.min(3, rawEmbeddings[0].length - 1); // 4th embedding (index 3) or last if fewer
+      
       return {
         matrixType: 'embeddings',
-        row: 0,
-        col: 0,
+        row: tokenIndex,
+        col: embIndex,
       };
     }
     return null;
@@ -339,66 +342,82 @@ function App() {
     <div className="min-h-screen bg-gray-50">
       <main className="w-full p-0.5">
         <div className="bg-white rounded p-0.5 mb-0.5">
-          {/* Combined top control bar with tokens and dimensions */}
-          <div className="flex flex-col mb-4 border-b pb-4">
-            <div className="flex justify-between items-start mb-3">
+          {/* Main control panel */}
+          <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-sm overflow-hidden">
+            {/* Header bar */}
+            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4 py-2 flex justify-between items-center">
+              <h2 className="text-lg font-bold">Transformer Configuration</h2>
+            </div>
+            
+            {/* Content area */}
+            <div className="p-4 flex justify-between items-start">
               {/* Left: Token controls - takes 2/3 of space */}
-              <div className="w-2/3 pr-4">
-                <h3 className="text-sm font-semibold mb-2">Edit Tokens</h3>
-                <div className="flex flex-wrap gap-2">
-                  {tokenLabels.map((token, index) => (
-                    <div key={index} className="relative group">
-                      {/* Delete button appears on hover */}
-                      <button
-                        className="absolute -top-2.5 -right-2.5 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-medium shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => removeToken(index)}
-                        title="Remove token"
-                      >
-                        ×
-                      </button>
+              <div className="w-2/3 pr-5">
+                <div className="bg-white rounded-md shadow-sm p-3">
+                  <h3 className="text-sm font-bold mb-3 text-gray-800 border-b pb-2 flex items-center">
+                    <svg className="w-4 h-4 mr-1 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                    </svg>
+                    Edit Tokens
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {tokenLabels.map((token, index) => (
+                      <div key={index} className="relative group">
+                        {/* Delete button appears on hover */}
+                        <button
+                          className="absolute -top-2.5 -right-2.5 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-medium shadow-sm opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                          onClick={() => removeToken(index)}
+                          title="Remove token"
+                        >
+                          ×
+                        </button>
 
-                      {/* Editable token input */}
-                      <input
-                        type="text"
-                        value={token}
-                        onChange={(e) => updateToken(index, e.target.value)}
-                        className="px-2 py-1 border rounded text-sm min-w-[3rem] text-center"
-                        placeholder="Token"
-                      />
-                    </div>
-                  ))}
+                        {/* Editable token input */}
+                        <input
+                          type="text"
+                          value={token}
+                          onChange={(e) => updateToken(index, e.target.value)}
+                          className="px-3 py-1.5 border rounded text-sm min-w-[3.5rem] h-[34px] text-center shadow-sm hover:border-blue-300 focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 transition-colors"
+                          placeholder="Token"
+                        />
+                      </div>
+                    ))}
 
-                  {/* Add token button */}
-                  <button
-                    className="px-2 py-1 border rounded bg-gray-50 hover:bg-gray-100 text-gray-500"
-                    onClick={addToken}
-                    title="Add token"
-                  >
-                    +
-                  </button>
+                    {/* Add token button */}
+                    <button
+                      className="px-3 py-1.5 border rounded min-w-[3.5rem] h-[34px] text-center bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors shadow-sm flex items-center justify-center"
+                      onClick={addToken}
+                      title="Add token"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
               </div>
 
               {/* Right: Settings controls - takes 1/3 of space */}
-              <div className="w-1/3 flex flex-col gap-3 pl-4 border-l">
+              <div className="w-1/3 flex flex-col gap-4">
                 {/* Embedding dimension controls */}
-                <div>
-                  <h3 className="text-sm font-semibold mb-2">
+                <div className="bg-white rounded-md shadow-sm p-3">
+                  <h3 className="text-sm font-bold mb-3 text-gray-800 border-b pb-2 flex items-center">
+                    <svg className="w-4 h-4 mr-1 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                    </svg>
                     Embedding Dimension
                   </h3>
-                  <div className="flex items-center border rounded overflow-hidden w-32 mx-auto">
+                  <div className="flex items-center border rounded-lg overflow-hidden shadow-sm w-36 mx-auto">
                     <button
-                      className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm"
+                      className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm font-medium transition-colors"
                       onClick={decreaseEmbeddingDim}
                       disabled={embeddingDim <= 2}
                     >
-                      -
+                      −
                     </button>
-                    <div className="px-4 py-1 flex-grow text-center font-medium">
+                    <div className="px-5 py-2 flex-grow text-center font-bold bg-white">
                       {embeddingDim}
                     </div>
                     <button
-                      className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm"
+                      className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm font-medium transition-colors"
                       onClick={increaseEmbeddingDim}
                     >
                       +
@@ -407,25 +426,30 @@ function App() {
                 </div>
 
                 {/* Training mode toggle */}
-                <div>
-                  <h3 className="text-sm font-semibold mb-2">Training Mode</h3>
-                  <div className="flex items-center justify-center">
+                <div className="bg-white rounded-md shadow-sm p-3">
+                  <h3 className="text-sm font-bold mb-3 text-gray-800 border-b pb-2 flex items-center">
+                    <svg className="w-4 h-4 mr-1 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                    </svg>
+                    Training Mode
+                  </h3>
+                  <div className="flex items-center justify-center w-36 mx-auto">
                     <button
                       onClick={() => setTrainingMode(false)}
-                      className={`px-4 py-1 border border-r-0 rounded-l transition-colors ${
+                      className={`px-4 py-2 border shadow-sm font-medium rounded-l-md transition-colors ${
                         !trainingMode
-                          ? 'bg-gray-200 font-medium'
-                          : 'bg-white text-gray-500'
+                          ? 'bg-gray-200 border-gray-400 text-gray-800'
+                          : 'bg-white text-gray-500 hover:bg-gray-50'
                       }`}
                     >
                       Off
                     </button>
                     <button
                       onClick={() => setTrainingMode(true)}
-                      className={`px-4 py-1 border border-l-0 rounded-r transition-colors ${
+                      className={`px-4 py-2 border shadow-sm font-medium rounded-r-md transition-colors ${
                         trainingMode
-                          ? 'bg-blue-500 text-white font-medium'
-                          : 'bg-white text-gray-500'
+                          ? 'bg-blue-500 border-blue-600 text-white'
+                          : 'bg-white text-gray-500 hover:bg-gray-50'
                       }`}
                     >
                       On
@@ -465,6 +489,7 @@ function App() {
                   onElementClick={handleElementClick}
                   onValueChange={handleValueChange}
                   valueLabel={valueLabel}
+                  autoOscillate={true}
                 />
               </div>
 

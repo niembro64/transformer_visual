@@ -52,6 +52,10 @@ interface MatrixDisplayProps {
    * Label for the currently selected value
    */
   valueLabel?: string;
+  /**
+   * Whether to auto-oscillate the selected value
+   */
+  autoOscillate?: boolean;
 }
 
 /**
@@ -72,6 +76,7 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
   onElementClick,
   onValueChange,
   valueLabel,
+  autoOscillate = false,
 }) => {
   if (!data || data.length === 0) {
     return <div>No data to display</div>;
@@ -191,6 +196,7 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
                     onClick={() => onElementClick && matrixType && onElementClick(matrixType, i, j)}
                     onValueChange={cellValueChangeHandler}
                     valueLabel={isSelected ? valueLabel : undefined}
+                    autoOscillate={isSelected && autoOscillate}
                   />
                 </div>
               );

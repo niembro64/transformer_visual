@@ -42,6 +42,10 @@ interface EmbeddingElementProps {
    * Optional label for the element when selected (e.g., "Token.Dimension")
    */
   valueLabel?: string;
+  /**
+   * Whether to start oscillating automatically when selected
+   */
+  autoOscillate?: boolean;
 }
 
 /**
@@ -68,6 +72,7 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
   onClick,
   onValueChange,
   valueLabel,
+  autoOscillate = false,
 }) => {
   // Create a ref for the element to position the slider relative to it
   const elementRef = useRef<HTMLDivElement>(null);
@@ -80,7 +85,7 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
   // Reference to track the animation start time
   const startTimeRef = useRef<number>(0);
 
-  // Start oscillation animation
+  // Start oscillation animation - using a smooth sine wave
   const startOscillation = useCallback(() => {
     if (!onValueChange) return;
 
@@ -91,7 +96,7 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
       // Calculate sine wave value (oscillating between -10 and 10)
       const elapsedTime = time - startTimeRef.current;
       // Complete one cycle every 3 seconds (3000ms)
-      const frequency = 1000;
+      const frequency = 1000; // Slower frequency for smoother oscillation
       const progress = (elapsedTime % frequency) / frequency;
       
       // Oscillate between -10 and 10 regardless of maxAbsValue
@@ -126,6 +131,9 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
     };
   }, []);
 
+  // Auto-oscillate on initial load only, tracked with a ref to avoid repeating on re-renders
+  const hasAutoOscillated = useRef(false);
+
   // Update slider position when the element is selected
   useEffect(() => {
     if (isSelected && elementRef.current) {
@@ -142,6 +150,12 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
 
       // Initial position
       updatePosition();
+      
+      // Auto start oscillation ONLY on initial page load for the designated element
+      if (autoOscillate && onValueChange && !hasAutoOscillated.current) {
+        hasAutoOscillated.current = true;
+        setTimeout(() => startOscillation(), 100); // Short delay to ensure everything is rendered
+      }
 
       // Keep updating on scroll/resize to ensure slider follows element
       window.addEventListener('scroll', updatePosition, { passive: true });
@@ -155,7 +169,7 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
       // When element is deselected, stop oscillation
       stopOscillation();
     }
-  }, [isSelected, stopOscillation]);
+  }, [isSelected, stopOscillation, autoOscillate, onValueChange, startOscillation]);
   
   // Calculate the color based on a sinusoidal mapping function that provides
   // stronger visual differentiation near zero and asymptotically approaches
@@ -336,7 +350,7 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
               type="range"
               min={-10}
               max={10}
-              step={0.1}
+              step={0.5}
               value={value}
               onChange={(e) => onValueChange(parseFloat(e.target.value))}
               className="w-full h-1.5 bg-gray-200 rounded-lg cursor-pointer"
