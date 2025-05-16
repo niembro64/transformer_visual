@@ -10,6 +10,8 @@ import {
   generatePositionalEncodings,
   addPositionalEncodings,
   applyDropout,
+  applyRandomWalk,
+  applyRandomWalkToVector,
   relu,
 } from './utils/matrixOperations';
 
@@ -75,32 +77,84 @@ function App() {
     [rawEmbeddings, positionalEncodings]
   );
 
-  // For forcing re-renders on dropout timer cycles
-  const [dropoutCycle, setDropoutCycle] = useState(0);
-  
-  // Timer to update dropout masks every second in training mode
+  // For forcing re-renders on dropout timer cycles and weight updates
+  const [trainingCycle, setTrainingCycle] = useState(0);
+
+  // Used for random walk step size - smaller values for more subtle updates
+  const weightUpdateStepSize = 0.003;
+
+  // Timer to update dropout masks and perform weight random walks every second in training mode
   useEffect(() => {
     let timerId: number | null = null;
-    
+
     if (trainingMode) {
       // Start a timer that updates every second
       timerId = window.setInterval(() => {
-        setDropoutCycle(prev => prev + 1); // Increment counter to trigger re-renders
+        setTrainingCycle((prev) => prev + 1); // Increment counter to trigger re-renders
+
+        // Apply random walks to all trainable weights when in training mode
+        if (trainingMode) {
+          // Update raw embeddings (token embeddings)
+          setRawEmbeddings((prev) =>
+            applyRandomWalk(prev, weightUpdateStepSize, 'embeddings_weights')
+          );
+
+          // Update attention weights (Q, K, V projection matrices)
+          setAttentionWeights((prev) => ({
+            weightQ: applyRandomWalk(
+              prev.weightQ,
+              weightUpdateStepSize,
+              'weightQ'
+            ),
+            weightK: applyRandomWalk(
+              prev.weightK,
+              weightUpdateStepSize,
+              'weightK'
+            ),
+            weightV: applyRandomWalk(
+              prev.weightV,
+              weightUpdateStepSize,
+              'weightV'
+            ),
+          }));
+
+          // Update MLP weights and biases
+          setMlpWeights((prev) => ({
+            W1: applyRandomWalk(prev.W1, weightUpdateStepSize, 'mlp_w1'),
+            b1: applyRandomWalkToVector(
+              prev.b1,
+              weightUpdateStepSize,
+              'mlp_b1'
+            ),
+            W2: applyRandomWalk(prev.W2, weightUpdateStepSize, 'mlp_w2'),
+            b2: applyRandomWalkToVector(
+              prev.b2,
+              weightUpdateStepSize,
+              'mlp_b2'
+            ),
+          }));
+        }
       }, 1000);
     }
-    
+
     return () => {
       if (timerId !== null) {
         window.clearInterval(timerId);
       }
     };
-  }, [trainingMode]);
-  
+  }, [trainingMode, weightUpdateStepSize]);
+
   // Apply dropout to embeddings (only during training) with a unique ID
-  // Include dropoutCycle in dependencies to ensure recalculation when timer ticks
+  // Include trainingCycle in dependencies to ensure recalculation when timer ticks
   const embeddingsWithDropout = useMemo(
-    () => applyDropout(embeddings, embeddingDropoutRate, trainingMode, 'embeddings_dropout'),
-    [embeddings, embeddingDropoutRate, trainingMode, dropoutCycle]
+    () =>
+      applyDropout(
+        embeddings,
+        embeddingDropoutRate,
+        trainingMode,
+        'embeddings_dropout'
+      ),
+    [embeddings, embeddingDropoutRate, trainingMode, trainingCycle]
   );
 
   // Sample data generation for attention weights - regenerate when dimensions change
@@ -180,7 +234,7 @@ function App() {
     if (rawEmbeddings.length > 0 && rawEmbeddings[0].length > 0) {
       const tokenIndex = Math.max(0, rawEmbeddings.length - 2); // Second-to-last token
       const embIndex = Math.min(3, rawEmbeddings[0].length - 1); // 4th embedding (index 3) or last if fewer
-      
+
       return {
         matrixType: 'embeddings',
         row: tokenIndex,
@@ -370,15 +424,26 @@ function App() {
             <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4 py-2 flex justify-between items-center">
               <h2 className="text-lg font-bold">Transformer Configuration</h2>
             </div>
-            
+
             {/* Content area */}
             <div className="p-4 flex justify-between items-start">
               {/* Left: Token controls - takes 2/3 of space */}
               <div className="w-2/3 pr-5">
                 <div className="bg-white rounded-md shadow-sm p-3">
                   <h3 className="text-sm font-bold mb-3 text-gray-800 border-b pb-2 flex items-center">
-                    <svg className="w-4 h-4 mr-1 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                    <svg
+                      className="w-4 h-4 mr-1 text-blue-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"
+                      />
                     </svg>
                     Edit Tokens
                   </h3>
@@ -422,8 +487,19 @@ function App() {
                 {/* Embedding dimension controls */}
                 <div className="bg-white rounded-md shadow-sm p-3">
                   <h3 className="text-sm font-bold mb-3 text-gray-800 border-b pb-2 flex items-center">
-                    <svg className="w-4 h-4 mr-1 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                    <svg
+                      className="w-4 h-4 mr-1 text-blue-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                      />
                     </svg>
                     Embedding Dimension
                   </h3>
@@ -450,11 +526,23 @@ function App() {
                 {/* Training mode toggle */}
                 <div className="bg-white rounded-md shadow-sm p-3">
                   <h3 className="text-sm font-bold mb-3 text-gray-800 border-b pb-2 flex items-center">
-                    <svg className="w-4 h-4 mr-1 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                    <svg
+                      className="w-4 h-4 mr-1 text-blue-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
+                      />
                     </svg>
                     Training Mode
                   </h3>
+
                   <div className="flex items-center justify-center w-36 mx-auto">
                     <button
                       onClick={() => setTrainingMode(false)}
@@ -472,8 +560,11 @@ function App() {
                         trainingMode
                           ? 'bg-blue-500 border-blue-600 text-white'
                           : 'bg-white text-gray-500 hover:bg-gray-50'
-                      }`}
+                      } flex items-center`}
                     >
+                      {trainingMode && (
+                        <div className="mr-1 h-2 w-2 rounded-full bg-green-400 animate-pulse"></div>
+                      )}
                       On
                     </button>
                   </div>
@@ -577,7 +668,7 @@ function App() {
               onValueChange={handleValueChange}
               dropoutRate={attentionDropoutRate}
               applyTrainingDropout={trainingMode}
-              dropoutCycle={dropoutCycle} // Pass the dropout cycle to force updates
+              dropoutCycle={trainingCycle} // Pass the training cycle to force updates
             />
           </div>
 
@@ -602,7 +693,7 @@ function App() {
                 applyTrainingDropout={trainingMode}
                 activationFn={relu} // ReLU activation as default
                 activationFnName="ReLU"
-                dropoutCycle={dropoutCycle} // Pass the dropout cycle to force updates
+                dropoutCycle={trainingCycle} // Pass the training cycle to force updates
               />
             ) : (
               <div className="p-0.5 bg-gray-100 rounded">

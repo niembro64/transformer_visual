@@ -408,3 +408,60 @@ export function generateSampleMLPWeights(
     b2: randomNeuralVector(inputDim),
   };
 }
+
+/**
+ * Applies a small random walk to a matrix to simulate weight updates during training
+ * @param matrix - The matrix to update
+ * @param stepSize - The size of random walk steps (standard deviation of changes)
+ * @param walkId - Optional identifier for this random walk instance (for caching)
+ * @returns Updated matrix with small random changes
+ */
+export function applyRandomWalk(
+  matrix: number[][],
+  stepSize: number = 0.005,
+  walkId: string = 'default'
+): number[][] {
+  if (matrix.length === 0 || matrix[0].length === 0) return matrix;
+  
+  // Create deep copy of the matrix to avoid mutating the original
+  const result: number[][] = [];
+  
+  // Apply small random changes to each element
+  for (let i = 0; i < matrix.length; i++) {
+    result[i] = [];
+    for (let j = 0; j < matrix[0].length; j++) {
+      // Use randomNormal to get a change value with mean 0
+      const change = randomNormal(0, stepSize);
+      result[i][j] = matrix[i][j] + change;
+    }
+  }
+  
+  return result;
+}
+
+/**
+ * Applies a small random walk to a vector to simulate bias updates during training
+ * @param vector - The vector to update
+ * @param stepSize - The size of random walk steps (standard deviation of changes)
+ * @param walkId - Optional identifier for this random walk instance (for caching)
+ * @returns Updated vector with small random changes
+ */
+export function applyRandomWalkToVector(
+  vector: number[],
+  stepSize: number = 0.005,
+  walkId: string = 'default'
+): number[] {
+  if (vector.length === 0) return vector;
+  
+  // Create a copy of the vector to avoid mutating the original
+  const result: number[] = [];
+  
+  // Apply small random changes to each element
+  for (let i = 0; i < vector.length; i++) {
+    // Use randomNormal to get a change value with mean 0
+    const change = randomNormal(0, stepSize);
+    result[i] = vector[i] + change;
+  }
+  
+  return result;
+}
