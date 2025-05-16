@@ -97,9 +97,9 @@ const FeedForward: React.FC<FeedForwardProps> = ({
     [firstLayerOutput, activationFn]
   );
   
-  // Apply dropout after first activation (only during training)
+  // Apply dropout after first activation (only during training) with a unique ID
   const activationsWithDropout = useMemo(() =>
-    applyDropout(activations, dropoutRate, applyTrainingDropout),
+    applyDropout(activations, dropoutRate, applyTrainingDropout, 'ffn_dropout'),
     [activations, dropoutRate, applyTrainingDropout]
   );
 

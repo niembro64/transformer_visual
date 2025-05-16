@@ -28,6 +28,25 @@ function App() {
 
   // Training mode - determines if dropout is applied
   const [trainingMode, setTrainingMode] = useState(false);
+  
+  // Timer to periodically refresh UI when in training mode so we can see dropout changes
+  const [, setDropoutTimer] = useState(0);
+  useEffect(() => {
+    let timerId: number | null = null;
+    
+    if (trainingMode) {
+      // Start a timer that updates every second
+      timerId = window.setInterval(() => {
+        setDropoutTimer(t => t + 1); // Just increment a counter to force renders
+      }, 1000);
+    }
+    
+    return () => {
+      if (timerId !== null) {
+        window.clearInterval(timerId);
+      }
+    };
+  }, [trainingMode]);
 
   // Editable token list
   const [tokenLabels, setTokenLabels] = useState<string[]>([
@@ -75,9 +94,9 @@ function App() {
     [rawEmbeddings, positionalEncodings]
   );
 
-  // Apply dropout to embeddings (only during training)
+  // Apply dropout to embeddings (only during training) with a unique ID
   const embeddingsWithDropout = useMemo(
-    () => applyDropout(embeddings, embeddingDropoutRate, trainingMode),
+    () => applyDropout(embeddings, embeddingDropoutRate, trainingMode, 'embeddings_dropout'),
     [embeddings, embeddingDropoutRate, trainingMode]
   );
 

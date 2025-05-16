@@ -88,9 +88,9 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
     [attentionWeights, V]
   );
   
-  // Apply dropout to attention output (only during training)
+  // Apply dropout to attention output (only during training) with a unique ID
   const attentionOutput = useMemo(() => 
-    applyDropout(rawAttentionOutput, dropoutRate, applyTrainingDropout),
+    applyDropout(rawAttentionOutput, dropoutRate, applyTrainingDropout, 'attention_dropout'),
     [rawAttentionOutput, dropoutRate, applyTrainingDropout]
   );
 
