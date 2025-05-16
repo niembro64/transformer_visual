@@ -869,39 +869,68 @@ function App() {
                     // Get the corresponding dot products in the sorted order
                     const sortedDotProducts = sortedSoftmax.map(item => dotProducts[item.index]);
                     
+                    // Get the highest probability token (first one in sorted list)
+                    const topPredictedTokenIndex = sortedSoftmax[0].index;
+                    const topPredictedToken = tokenLabels[topPredictedTokenIndex];
+                    const topPredictedTokenEmbedding = ffnOutput[topPredictedTokenIndex];
+                    
                     return (
-                      <div className="grid grid-cols-2 w-full gap-1">
-                        {/* Dot Products */}
-                        <div>
-                          <h5 className="text-[0.6rem] font-medium mb-0.5 text-center">
-                            Dot Product
-                          </h5>
-                          {/* Show original unsorted dot products */}
-                          <MatrixDisplay
-                            data={dotProducts.map(dp => [dp])}
-                            rowLabels={tokenLabels}
-                            columnLabels={["dot"]}
-                            maxAbsValue={Math.max(...dotProducts.map(dp => Math.abs(dp))) || 0.3}
-                            cellSize="xs"
-                            selectable={false}
-                            matrixType="none"
-                          />
+                      <div className="flex flex-col w-full gap-1">
+                        <div className="grid grid-cols-2 w-full gap-1">
+                          {/* Dot Products */}
+                          <div>
+                            <h5 className="text-[0.6rem] font-medium mb-0.5 text-center">
+                              Dot Product
+                            </h5>
+                            {/* Show original unsorted dot products */}
+                            <MatrixDisplay
+                              data={dotProducts.map(dp => [dp])}
+                              rowLabels={tokenLabels}
+                              columnLabels={["dot"]}
+                              maxAbsValue={Math.max(...dotProducts.map(dp => Math.abs(dp))) || 0.3}
+                              cellSize="xs"
+                              selectable={false}
+                              matrixType="none"
+                            />
+                          </div>
+                          
+                          {/* Sorted Softmax Values */}
+                          <div>
+                            <h5 className="text-[0.6rem] font-medium mb-0.5 text-center">
+                              Softmax (Sorted)
+                            </h5>
+                            <MatrixDisplay
+                              data={sortedSoftmax.map(item => [item.value])}
+                              rowLabels={sortedTokenLabels}
+                              columnLabels={["p"]}
+                              maxAbsValue={1.0} // Softmax values are between 0 and 1
+                              cellSize="xs"
+                              selectable={false}
+                              matrixType="none"
+                            />
+                          </div>
                         </div>
                         
-                        {/* Sorted Softmax Values */}
-                        <div>
-                          <h5 className="text-[0.6rem] font-medium mb-0.5 text-center">
-                            Softmax (Sorted)
+                        {/* Most Likely Next Token Section */}
+                        <div className="mt-0.5 w-full">
+                          <h5 className="text-[0.65rem] font-medium mb-0.5 text-center border-t border-gray-200 pt-0.5">
+                            Most Likely Next Token: <span className="text-blue-600 font-semibold">{topPredictedToken}</span> (p={sortedSoftmax[0].value.toFixed(3)})
                           </h5>
-                          <MatrixDisplay
-                            data={sortedSoftmax.map(item => [item.value])}
-                            rowLabels={sortedTokenLabels}
-                            columnLabels={["p"]}
-                            maxAbsValue={1.0} // Softmax values are between 0 and 1
-                            cellSize="xs"
-                            selectable={false}
-                            matrixType="none"
-                          />
+                          <div className="w-full">
+                            <h6 className="text-[0.6rem] text-center mb-0.5">Token Embedding</h6>
+                            <MatrixDisplay
+                              data={[topPredictedTokenEmbedding]}
+                              rowLabels={[topPredictedToken]}
+                              columnLabels={Array.from(
+                                { length: embeddingDim },
+                                (_, i) => `d_${i + 1}`
+                              )}
+                              maxAbsValue={0.3}
+                              cellSize="xs"
+                              selectable={false}
+                              matrixType="none"
+                            />
+                          </div>
                         </div>
                       </div>
                     );
