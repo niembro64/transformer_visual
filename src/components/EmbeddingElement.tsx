@@ -88,12 +88,15 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
     startTimeRef.current = performance.now();
 
     const animate = (time: number) => {
-      // Calculate sine wave value (oscillating between -maxAbsValue and maxAbsValue)
+      // Calculate sine wave value (oscillating between -10 and 10)
       const elapsedTime = time - startTimeRef.current;
       // Complete one cycle every 3 seconds (3000ms)
       const frequency = 1000;
       const progress = (elapsedTime % frequency) / frequency;
-      const oscillatedValue = maxAbsValue * Math.sin(progress * Math.PI * 2);
+      
+      // Oscillate between -10 and 10 regardless of maxAbsValue
+      const TARGET_MAX_VALUE = 10;
+      const oscillatedValue = TARGET_MAX_VALUE * Math.sin(progress * Math.PI * 2);
 
       // Update the value
       onValueChange(oscillatedValue);
@@ -104,7 +107,7 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
 
     // Start animation
     animationFrameRef.current = requestAnimationFrame(animate);
-  }, [onValueChange, maxAbsValue]);
+  }, [onValueChange]);
 
   // Stop oscillation
   const stopOscillation = useCallback(() => {
@@ -153,45 +156,65 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
       stopOscillation();
     }
   }, [isSelected, stopOscillation]);
-  // Calculate the color based on the value
+  
+  // Calculate the color based on a sinusoidal mapping function that provides
+  // stronger visual differentiation near zero and asymptotically approaches
+  // pure blue/red at the extremes
   const { backgroundColor, textColor } = useMemo(() => {
-    // Clamp the value to the maximum range for color interpolation
-    const clampedValue = Math.max(-maxAbsValue, Math.min(maxAbsValue, value));
-
-    // Normalize to [-1, 1] range
-    const normalizedValue = clampedValue / maxAbsValue;
-
-    // Use a continuous color gradient from red (negative) to gray (zero) to blue (positive)
+    // Use arctangent function to create a smooth, non-linear mapping
+    // that approaches asymptotic limits but changes more dramatically near zero
+    
+    // Apply sigmoid-like transformation using atan function
+    // atan maps the entire real line to [-π/2, π/2], which we'll normalize to [-1, 1]
+    // We'll adjust the steepness of the curve with a scaling factor
+    const steepness = 0.3; // Controls how quickly values saturate to their color extremes
+    
+    // Get value between -1 and 1 using atan function
+    // This creates a sinusoidal-like curve that changes faster near 0
+    const normalizedValue = Math.atan(value * steepness) / (Math.PI / 2);
+    
+    // Base colors - neutral for zero, vibrant for extremes
+    const neutralColor = [240, 240, 240]; // Light gray for zero
+    const maxBlueColor = [20, 20, 255];   // Much more saturated blue
+    const maxRedColor = [255, 20, 20];    // Much more saturated red
+    
+    // Compute the color based on normalized value
+    let red, green, blue;
+    
     if (normalizedValue < 0) {
-      // Negative values: pink/red, using exponential intensity to emphasize values closer to zero
-      // Apply a power transformation to dramatically increase intensity for smaller values
-      const intensity = Math.pow(Math.min(1, -normalizedValue), 0.35) * 1.2;
+      // Negative values - interpolate between neutral and max red
+      const t = -normalizedValue; // How far toward max red (0 to 1)
+      red = neutralColor[0] * (1 - t) + maxRedColor[0] * t;
+      green = neutralColor[1] * (1 - t) + maxRedColor[1] * t;
+      blue = neutralColor[2] * (1 - t) + maxRedColor[2] * t;
+      
+      // For very negative values, make text white for better contrast
+      const textColorThreshold = -0.7; // Point at which to switch text color
       return {
-        backgroundColor: `rgb(${Math.round(240 + 15 * intensity)}, ${Math.round(
-          240 - 100 * intensity
-        )}, ${Math.round(240 - 100 * intensity)})`,
-        textColor: 'black', // Always black text
+        backgroundColor: `rgb(${Math.round(red)}, ${Math.round(green)}, ${Math.round(blue)})`,
+        textColor: normalizedValue < textColorThreshold ? 'white' : 'black',
       };
     } else if (normalizedValue > 0) {
-      // Positive values: blue, using exponential intensity to emphasize values closer to zero
-      // Apply a power transformation to dramatically increase intensity for smaller values
-      const intensity = Math.pow(Math.min(1, normalizedValue), 0.35) * 1.2;
+      // Positive values - interpolate between neutral and max blue
+      const t = normalizedValue; // How far toward max blue (0 to 1)
+      red = neutralColor[0] * (1 - t) + maxBlueColor[0] * t;
+      green = neutralColor[1] * (1 - t) + maxBlueColor[1] * t;
+      blue = neutralColor[2] * (1 - t) + maxBlueColor[2] * t;
+      
+      // For very positive values, make text white for better contrast
+      const textColorThreshold = 0.7; // Point at which to switch text color
       return {
-        backgroundColor: `rgb(${Math.round(
-          240 - 100 * intensity
-        )}, ${Math.round(240 - 100 * intensity)}, ${Math.round(
-          240 + 15 * intensity
-        )})`,
-        textColor: 'black', // Always black text
+        backgroundColor: `rgb(${Math.round(red)}, ${Math.round(green)}, ${Math.round(blue)})`,
+        textColor: normalizedValue > textColorThreshold ? 'white' : 'black',
       };
     } else {
-      // Exactly zero: light gray
+      // Exactly zero: neutral gray
       return {
-        backgroundColor: 'rgb(240, 240, 240)',
+        backgroundColor: `rgb(${neutralColor[0]}, ${neutralColor[1]}, ${neutralColor[2]})`,
         textColor: 'black',
       };
     }
-  }, [value, maxAbsValue]);
+  }, [value]);
 
   // Format the value in scientific notation and split into coefficient and exponent
   const { coefficient, exponent } = useMemo(() => {
@@ -311,16 +334,16 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
             <input
               title='"Drag to adjust value"'
               type="range"
-              min={-maxAbsValue}
-              max={maxAbsValue}
-              step={0.01}
+              min={-10}
+              max={10}
+              step={0.1}
               value={value}
               onChange={(e) => onValueChange(parseFloat(e.target.value))}
               className="w-full h-1.5 bg-gray-200 rounded-lg cursor-pointer"
             />
             <div className="flex justify-between text-[0.55rem] text-gray-500 mt-0.5">
-              <span>{-maxAbsValue.toFixed(1)}</span>
-              <span>{maxAbsValue.toFixed(1)}</span>
+              <span>-10.0</span>
+              <span>10.0</span>
             </div>
 
             <button
