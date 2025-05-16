@@ -375,7 +375,7 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
               } transition-colors`}
               title="Oscillate this value using sine waves (overrides training updates)"
             >
-              {isOscillating ? 'Stop' : 'Oscillate'}
+              {isOscillating ? 'Stop' : 'Wiggle'}
             </button>
           </div>,
           document.body
