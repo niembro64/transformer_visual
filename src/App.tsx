@@ -814,75 +814,72 @@ function App() {
             </h3>
             <div className="bg-white rounded p-0.5">
               <div className="grid grid-cols-12 gap-1">
-                {/* Left: Next Token Prediction Vector */}
-                <div className="col-span-6 flex flex-col items-center">
-                  <h4 className="text-[0.65rem] font-medium mb-0.5">
-                    Next Token Vector
-                  </h4>
-                  {/* Use the last token's embedding as the prediction for the next token */}
-                  <MatrixDisplay
-                    data={[ffnOutput[ffnOutput.length - 1]]} // Use the last token's embedding
-                    rowLabels={["Next Token"]}
-                    columnLabels={Array.from(
-                      { length: embeddingDim },
-                      (_, i) => `d_${i + 1}`
-                    )}
-                    maxAbsValue={0.3}
-                    cellSize="xs"
-                    selectable={false}
-                    matrixType="none"
-                  />
-                </div>
+                {/* Calculate token similarities and predictions */}
+                {(() => {
+                  // Get the next token prediction vector (last token's embedding)
+                  const nextTokenPrediction = ffnOutput[ffnOutput.length - 1];
+                  
+                  // Calculate dot product similarity with each token
+                  const dotProducts = ffnOutput.map(tokenEmbedding => 
+                    vectorDotProduct(nextTokenPrediction, tokenEmbedding)
+                  );
+                  
+                  // Apply softmax to the dot products to get probability-like values
+                  // First find the maximum for numerical stability
+                  const maxDotProduct = Math.max(...dotProducts);
+                  // Calculate exp(x - max) for each dot product
+                  const expValues = dotProducts.map(dp => Math.exp(dp - maxDotProduct));
+                  // Sum of all exp values
+                  const sumExp = expValues.reduce((a, b) => a + b, 0);
+                  // Normalize to get softmax values
+                  const softmaxValues = expValues.map(exp => exp / sumExp);
+                  
+                  // Create pairs of [index, softmax value] so we can sort them while keeping the original indices
+                  const indexedSoftmax = softmaxValues.map((value, index) => ({ index, value }));
+                  // Sort by softmax value in descending order
+                  const sortedSoftmax = [...indexedSoftmax].sort((a, b) => b.value - a.value);
+                  
+                  // Get corresponding token labels in the sorted order
+                  const sortedTokenLabels = sortedSoftmax.map(item => tokenLabels[item.index]);
+                  
+                  // Get the highest probability token (first one in sorted list)
+                  const topPredictedTokenIndex = sortedSoftmax[0].index;
+                  const topPredictedToken = tokenLabels[topPredictedTokenIndex];
+                  const topPredictedTokenEmbedding = ffnOutput[topPredictedTokenIndex];
+                  
+                  return (
+                    <>
+                      {/* Left: Next Token Prediction Vector */}
+                      <div className="col-span-4 flex flex-col items-center">
+                        <h4 className="text-[0.65rem] font-medium mb-0.5 text-center">
+                          Next Token Vector
+                        </h4>
+                        {/* Use the last token's embedding as the prediction for the next token */}
+                        <MatrixDisplay
+                          data={[nextTokenPrediction]} // Use the last token's embedding
+                          rowLabels={["Next Token"]}
+                          columnLabels={Array.from(
+                            { length: embeddingDim },
+                            (_, i) => `d_${i + 1}`
+                          )}
+                          maxAbsValue={0.3}
+                          cellSize="xs"
+                          selectable={false}
+                          matrixType="none"
+                        />
+                      </div>
 
-                {/* Right: Similarity with existing tokens */}
-                <div className="col-span-6 flex flex-col items-center">
-                  <h4 className="text-[0.65rem] font-medium mb-0.5">
-                    Similarity with Tokens
-                  </h4>
-                  {/* Calculate similarities between next token prediction and each token */}
-                  {(() => {
-                    // Get the next token prediction vector (last token's embedding)
-                    const nextTokenPrediction = ffnOutput[ffnOutput.length - 1];
-                    
-                    // Calculate dot product similarity with each token
-                    const dotProducts = ffnOutput.map(tokenEmbedding => 
-                      vectorDotProduct(nextTokenPrediction, tokenEmbedding)
-                    );
-                    
-                    // Apply softmax to the dot products to get probability-like values
-                    // First find the maximum for numerical stability
-                    const maxDotProduct = Math.max(...dotProducts);
-                    // Calculate exp(x - max) for each dot product
-                    const expValues = dotProducts.map(dp => Math.exp(dp - maxDotProduct));
-                    // Sum of all exp values
-                    const sumExp = expValues.reduce((a, b) => a + b, 0);
-                    // Normalize to get softmax values
-                    const softmaxValues = expValues.map(exp => exp / sumExp);
-                    
-                    // Create pairs of [index, softmax value] so we can sort them while keeping the original indices
-                    const indexedSoftmax = softmaxValues.map((value, index) => ({ index, value }));
-                    // Sort by softmax value in descending order
-                    const sortedSoftmax = [...indexedSoftmax].sort((a, b) => b.value - a.value);
-                    
-                    // Get corresponding token labels in the sorted order
-                    const sortedTokenLabels = sortedSoftmax.map(item => tokenLabels[item.index]);
-                    // Get the corresponding dot products in the sorted order
-                    const sortedDotProducts = sortedSoftmax.map(item => dotProducts[item.index]);
-                    
-                    // Get the highest probability token (first one in sorted list)
-                    const topPredictedTokenIndex = sortedSoftmax[0].index;
-                    const topPredictedToken = tokenLabels[topPredictedTokenIndex];
-                    const topPredictedTokenEmbedding = ffnOutput[topPredictedTokenIndex];
-                    
-                    return (
-                      <div className="flex flex-col w-full gap-1">
+                      {/* Middle: Similarity Scores */}
+                      <div className="col-span-4 flex flex-col items-center">
+                        <h4 className="text-[0.65rem] font-medium mb-0.5 text-center">
+                          Token Similarities
+                        </h4>
                         <div className="grid grid-cols-2 w-full gap-1">
                           {/* Dot Products */}
                           <div>
                             <h5 className="text-[0.6rem] font-medium mb-0.5 text-center">
                               Dot Product
                             </h5>
-                            {/* Show original unsorted dot products */}
                             <MatrixDisplay
                               data={dotProducts.map(dp => [dp])}
                               rowLabels={tokenLabels}
@@ -897,7 +894,7 @@ function App() {
                           {/* Sorted Softmax Values */}
                           <div>
                             <h5 className="text-[0.6rem] font-medium mb-0.5 text-center">
-                              Softmax (Sorted)
+                              Softmax
                             </h5>
                             <MatrixDisplay
                               data={sortedSoftmax.map(item => [item.value])}
@@ -910,32 +907,34 @@ function App() {
                             />
                           </div>
                         </div>
-                        
-                        {/* Most Likely Next Token Section */}
-                        <div className="mt-0.5 w-full">
-                          <h5 className="text-[0.65rem] font-medium mb-0.5 text-center border-t border-gray-200 pt-0.5">
-                            Most Likely Next Token: <span className="text-blue-600 font-semibold">{topPredictedToken}</span> (p={sortedSoftmax[0].value.toFixed(3)})
+                      </div>
+                      
+                      {/* Right: Most Likely Token */}
+                      <div className="col-span-4 flex flex-col items-center">
+                        <h4 className="text-[0.65rem] font-medium mb-0.5 text-center">
+                          Most Likely Next Token
+                        </h4>
+                        <div className="w-full">
+                          <h5 className="text-[0.6rem] font-semibold text-center mb-0.5 bg-blue-50 py-0.5 rounded text-blue-700">
+                            {topPredictedToken} (p={sortedSoftmax[0].value.toFixed(3)})
                           </h5>
-                          <div className="w-full">
-                            <h6 className="text-[0.6rem] text-center mb-0.5">Token Embedding</h6>
-                            <MatrixDisplay
-                              data={[topPredictedTokenEmbedding]}
-                              rowLabels={[topPredictedToken]}
-                              columnLabels={Array.from(
-                                { length: embeddingDim },
-                                (_, i) => `d_${i + 1}`
-                              )}
-                              maxAbsValue={0.3}
-                              cellSize="xs"
-                              selectable={false}
-                              matrixType="none"
-                            />
-                          </div>
+                          <MatrixDisplay
+                            data={[topPredictedTokenEmbedding]}
+                            rowLabels={[topPredictedToken]}
+                            columnLabels={Array.from(
+                              { length: embeddingDim },
+                              (_, i) => `d_${i + 1}`
+                            )}
+                            maxAbsValue={0.3}
+                            cellSize="xs"
+                            selectable={false}
+                            matrixType="none"
+                          />
                         </div>
                       </div>
-                    );
-                  })()}
-                </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </div>

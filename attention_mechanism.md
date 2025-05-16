@@ -245,9 +245,18 @@ In our visualization:
    - ReLU activation is applied after the first linear transformation
    - Dropout is applied after the ReLU activation (during training)
 
+4. **Next Token Prediction**:
+   - The last token's embedding is used to predict the next token in the sequence
+   - Dot product similarities measure how close each token is to the predicted next token
+   - Softmax converts these similarities into a probability distribution
+   - Tokens are sorted by probability to identify the most likely next tokens
+   - The highest probability token is highlighted with its embedding vector
+
 The complete flow visualization helps understand how:
 - Information flows between tokens through the attention mechanism
 - Each token's representation is transformed by the feed-forward network
+- Transformers predict the next token based on context from previous tokens
+- Dot products and softmax are used to convert embeddings to token probabilities
 - Residual connections help preserve information throughout the network
 - Layer normalization stabilizes the learning process
 - Dropout regularizes the model during training
@@ -275,24 +284,83 @@ To ensure compliance with the original "Attention Is All You Need" paper, we mad
    - Made activation function configurable to support alternative options
    - Updated visualization to clearly show the activation function in use
 
-4. **UI Improvements**:
+4. **Next Token Prediction**:
+   - Added a dedicated section for visualizing the process of next token prediction
+   - Implemented the use of the last token's embedding vector for predicting the next token
+   - Added dot product similarity calculations between the next token prediction and each token
+   - Applied softmax to dot products to convert similarities to probability distributions
+   - Sorted the softmax values to highlight the most likely next tokens
+   - Added a display of the most likely next token with its embedding
+
+5. **UI Improvements**:
    - Added a "Training Mode" toggle to show the effect of dropout
    - Fixed multiple slider issue to ensure only one element can be edited at a time
    - Updated all component interfaces to maintain proper type safety
    - Enhanced matrix value visualization with sinusoidal color mapping
    - Made UI colors more vibrant with pure blue at +10 and pure red at -10
+   - Created a balanced three-column layout for the Next Token Prediction section
 
-5. **Interactive Token Management**:
+6. **Interactive Token Management**:
    - Added controls to add, remove, and edit tokens
    - Support for dynamic token count with automatic recalculation of all matrices
    - Ensured proper handling of tokens in all visualization components
 
-6. **Dimension Adjustment**:
+7. **Dimension Adjustment**:
    - Added controls to increase/decrease embedding dimension
    - Automatic regeneration of all matrices when dimensions change
    - Real-time visualization updates when changing model dimensions
 
+8. **Mathematical Utilities**:
+   - Added `vectorDotProduct()` for computing dot products between vectors
+   - Added `cosineSimilarity()` for computing normalized similarity between vectors
+   - Implemented stable softmax computation with proper numerical treatment
+
 These changes ensure the implementation accurately follows the architecture described in the original transformer paper while providing an interactive, educational visualization that allows users to explore different transformer configurations.
+
+## Next Token Prediction in Transformers
+
+In language models based on the transformer architecture, predicting the next token in a sequence is a critical capability. Our visualization illustrates this process in detail.
+
+### Mathematical Foundation
+
+1. **Contextualized Representation**:
+   - After processing all tokens through the transformer layers (including attention and feed-forward networks), we get contextualized embeddings for each token
+   - The last token's contextualized embedding contains information about what token is likely to follow
+
+2. **Similarity Calculation**:
+   - The last token's embedding is compared with all token embeddings in the vocabulary
+   - Dot product is used as a similarity metric: `similarity(a, b) = Σ(a_i × b_i)`
+   - Higher dot product values indicate greater similarity between embeddings
+
+3. **Probability Distribution**:
+   - Dot products are converted to a probability distribution using the softmax function
+   - Softmax: `p(token_i) = exp(sim_i) / Σ_j(exp(sim_j))`
+   - This creates a probability distribution over all tokens, with higher values for more likely next tokens
+
+4. **Token Selection**:
+   - The token with the highest probability is the model's prediction for the next token
+   - In sampling approaches, a token may be randomly selected according to this probability distribution
+   - In beam search, multiple high-probability candidates are maintained
+
+### Visualization Components
+
+Our Next Token Prediction visualization section is divided into three equal parts:
+
+1. **Next Token Vector**:
+   - Shows the embedding of the last token, which is used for the prediction
+   - This vector encodes what the model "expects" to come next
+
+2. **Token Similarities**:
+   - **Dot Product**: Shows the raw similarity scores between the prediction vector and each token
+   - **Softmax**: Displays the probabilities derived from the similarities, sorted from highest to lowest
+   - This helps visualize how the model ranks different tokens by likelihood
+
+3. **Most Likely Next Token**:
+   - Highlights the token with the highest probability as the predicted next token
+   - Shows the probability value for this prediction
+   - Displays the embedding of the predicted token, which can be compared with the prediction vector
+
+This visualization approach helps understand the relationship between embedding similarity and next token prediction, making the inner workings of transformer language models more transparent.
 
 ## Interactive Controls Guide
 
@@ -305,6 +373,12 @@ These changes ensure the implementation accurately follows the architecture desc
 - **Embedding Dimension**: Use the +/- buttons to increase or decrease the embedding dimension (d_model)
 - The embedding dimension is kept even to ensure proper sinusoidal positional encodings
 - When changing dimensions, all weights and matrices are regenerated appropriately
+
+### Training Mode
+- Toggle "Training Mode" to enable/disable weight updates and dropout
+- When enabled, weights evolve over time using random walks
+- Dropout is applied to embeddings, attention outputs, and FFN activations
+- The training cycle updates every second in training mode
 
 ### Visualization Interaction
 - Click on any editable matrix element (highlighted with a border on hover) to select it
