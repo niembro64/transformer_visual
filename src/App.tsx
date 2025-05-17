@@ -21,8 +21,8 @@ import {
 export const dropoutUniveral = 0.03;
 
 function App() {
-  // Configurable dimension values
-  const [embeddingDim, setEmbeddingDim] = useState(8); // Dimension of token embeddings (d_model)
+  // Fixed dimension values
+  const embeddingDim = 8; // Dimension of token embeddings (d_model)
   const attentionHeadDim = 4; // Dimension of attention head (d_k/d_v)
   const mlpHiddenDim = 4; // Dimension of MLP hidden layer (d_ff = 8, typically 4x d_model)
 
@@ -34,20 +34,31 @@ function App() {
   // Training mode - determines if dropout is applied
   const [trainingMode, setTrainingMode] = useState(false);
 
-  // Editable token list
-  const [tokenLabels, setTokenLabels] = useState<string[]>([
-    'a',
-    'cat',
-    'sat',
-    'on',
-    'the',
-    'mat',
-  ]);
+  // Vocabulary of 25 common words
+  const vocabularyWords = [
+    'the', 'a', 'and', 'to', 'is', 'in', 'it', 'of', 'that', 'for',
+    'with', 'as', 'was', 'on', 'at', 'by', 'be', 'this', 'have', 'from',
+    'but', 'not', 'are', 'they', 'which'
+  ];
+
+  // Generate vocabulary embeddings - mutable state
+  const [vocabularyEmbeddings, setVocabularyEmbeddings] = useState(() => 
+    generateSampleEmbeddings(vocabularyWords.length, embeddingDim)
+  );
+
+  // Track selected tokens (indices into vocabulary)
+  const [selectedTokenIndices, setSelectedTokenIndices] = useState<number[]>([1, 4, 12, 13, 0, 6]); // 'a', 'is', 'was', 'on', 'the', 'it'
+
+  // Get token labels from selected indices
+  const tokenLabels = useMemo(
+    () => selectedTokenIndices.map(idx => vocabularyWords[idx]),
+    [selectedTokenIndices]
+  );
 
   // Maximum sequence length - based on current token count
   const maxSeqLength = useMemo(
-    () => tokenLabels.length * 2,
-    [tokenLabels.length]
+    () => selectedTokenIndices.length * 2,
+    [selectedTokenIndices.length]
   ); // Allow room for growth
 
   // Generate positional encodings - regenerate when embedding dimension changes
@@ -62,17 +73,17 @@ function App() {
     );
   }, [maxSeqLength, embeddingDim]);
 
-  // Generate raw embeddings - regenerate when tokens or dimensions change
-  const [rawEmbeddings, setRawEmbeddings] = useState(() =>
-    generateSampleEmbeddings(tokenLabels.length, embeddingDim)
-  );
+  // Get embeddings for selected tokens
+  const rawEmbeddings = useMemo(() => {
+    return selectedTokenIndices.map(idx => [...vocabularyEmbeddings[idx]]);
+  }, [selectedTokenIndices, vocabularyEmbeddings]);
 
-  // Regenerate embeddings when token count or dimensions change
+  // Update vocabulary embeddings when dimension changes
   useEffect(() => {
-    setRawEmbeddings(
-      generateSampleEmbeddings(tokenLabels.length, embeddingDim)
+    setVocabularyEmbeddings(
+      generateSampleEmbeddings(vocabularyWords.length, embeddingDim)
     );
-  }, [tokenLabels.length, embeddingDim]);
+  }, [embeddingDim]);
 
   // Apply positional encodings to embeddings
   const embeddings = useMemo(
@@ -118,39 +129,13 @@ function App() {
 
         // Apply random walks to all trainable weights when in training mode
         if (trainingMode) {
-          // Update raw embeddings (token embeddings) but exclude the selected element
-          setRawEmbeddings((prev) => {
-            // Skip random walk for the selected element if it's being oscillated
-            if (
-              selectedElement &&
-              selectedElement.matrixType === 'embeddings'
-            ) {
-              const { row, col } = selectedElement;
-              // Create a deep copy for modification
-              const newEmbeddings = prev.map((r) => [...r]);
-
-              // Apply random walk to all elements except the selected one
-              for (let i = 0; i < newEmbeddings.length; i++) {
-                for (let j = 0; j < newEmbeddings[i].length; j++) {
-                  // Skip the selected element
-                  if (i === row && j === col) continue;
-
-                  // Apply random walk to this element
-                  const change =
-                    Math.random() * 2 * weightUpdateStepSize -
-                    weightUpdateStepSize;
-                  newEmbeddings[i][j] += change;
-                }
-              }
-              return newEmbeddings;
-            } else {
-              // If no element is selected or it's not an embedding, apply random walk to all
-              return applyRandomWalk(
-                prev,
-                weightUpdateStepSize,
-                'embeddings_weights'
-              );
-            }
+          // Update vocabulary embeddings (all token embeddings in vocabulary)
+          setVocabularyEmbeddings((prev) => {
+            return applyRandomWalk(
+              prev,
+              weightUpdateStepSize,
+              'embeddings_weights'
+            );
           });
 
           // Update attention weights (Q, K, V projection matrices)
@@ -346,36 +331,36 @@ function App() {
   }, [embeddingDim, mlpHiddenDim, attentionHeadDim]);
 
   // Token manipulation functions
-  const addToken = useCallback(() => {
-    setTokenLabels((prevTokens) => [...prevTokens, '']);
+  const addTokenToSequence = useCallback((vocabularyIndex: number) => {
+    setSelectedTokenIndices((prev) => [...prev, vocabularyIndex]);
+    setSelectedElement(null); // Reset selection when changing tokens
   }, []);
 
-  const removeToken = useCallback((index: number) => {
-    setTokenLabels((prevTokens) => {
-      const newTokens = [...prevTokens];
-      newTokens.splice(index, 1);
-      return newTokens;
+  const removeTokenFromSequence = useCallback((sequenceIndex: number) => {
+    setSelectedTokenIndices((prev) => {
+      const newIndices = [...prev];
+      newIndices.splice(sequenceIndex, 1);
+      return newIndices;
     });
+    setSelectedElement(null); // Reset selection when changing tokens
   }, []);
 
-  const updateToken = useCallback((index: number, newText: string) => {
-    setTokenLabels((prevTokens) => {
-      const newTokens = [...prevTokens];
-      newTokens[index] = newText;
-      return newTokens;
-    });
+  // Drag and drop handlers
+  const handleDragStart = useCallback((e: React.DragEvent, vocabularyIndex: number) => {
+    e.dataTransfer.setData('vocabularyIndex', vocabularyIndex.toString());
   }, []);
 
-  // Embedding dimension adjustment
-  const increaseEmbeddingDim = useCallback(() => {
-    setEmbeddingDim((prev) => prev + 2); // Increase by 2 to keep it even for positional encodings
-    setSelectedElement(null); // Reset selection when changing dimensions
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
   }, []);
 
-  const decreaseEmbeddingDim = useCallback(() => {
-    setEmbeddingDim((prev) => Math.max(2, prev - 2)); // Decrease by 2, but ensure minimum of 2
-    setSelectedElement(null); // Reset selection when changing dimensions
-  }, []);
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    const vocabularyIndex = parseInt(e.dataTransfer.getData('vocabularyIndex'));
+    addTokenToSequence(vocabularyIndex);
+  }, [addTokenToSequence]);
+
+  // No need for dimension adjustment functions anymore
 
   // State to hold the attention output context vectors
   const [attentionContext, setAttentionContext] = useState<number[][]>([]);
@@ -398,9 +383,9 @@ function App() {
 
   const initialElement: ElementObject | null = useMemo(() => {
     // Initialize selectedElement to the second-to-last token's 4th embedding
-    if (rawEmbeddings.length > 0 && rawEmbeddings[0].length > 0) {
-      const tokenIndex = Math.max(0, rawEmbeddings.length - 2); // Second-to-last token
-      const embIndex = Math.min(3, rawEmbeddings[0].length - 1); // 4th embedding (index 3) or last if fewer
+    if (selectedTokenIndices.length > 0 && embeddingDim > 0) {
+      const tokenIndex = Math.max(0, selectedTokenIndices.length - 2); // Second-to-last token
+      const embIndex = Math.min(3, embeddingDim - 1); // 4th embedding (index 3) or last if fewer
 
       return {
         matrixType: 'embeddings',
@@ -409,7 +394,7 @@ function App() {
       };
     }
     return null;
-  }, [rawEmbeddings]);
+  }, [selectedTokenIndices, embeddingDim]);
 
   // Only have one selectedElement for the entire application to prevent multiple sliders
   const [selectedElement, setSelectedElement] = useState<ElementObject | null>(
@@ -425,7 +410,12 @@ function App() {
       const { matrixType, row, col } = selectedElement;
 
       if (matrixType === 'embeddings') {
-        setSelectedValue(rawEmbeddings[row][col]); // Show original embedding values before positional encoding
+        // Check if row is within current selection
+        if (row < rawEmbeddings.length && col < rawEmbeddings[0].length) {
+          setSelectedValue(rawEmbeddings[row][col]); // Show original embedding values before positional encoding
+        } else {
+          setSelectedValue(null);
+        }
       } else if (matrixType === 'weightQ') {
         setSelectedValue(attentionWeights.weightQ[row][col]);
       } else if (matrixType === 'weightK') {
@@ -500,13 +490,14 @@ function App() {
         const { matrixType, row, col } = selectedElement;
 
         if (matrixType === 'embeddings') {
-          // Only update if row and col are within bounds (they may not be if we've removed tokens or changed dim)
-          if (row < rawEmbeddings.length && col < rawEmbeddings[0].length) {
-            // Create a new copy of embeddings with the updated value
-            const newRawEmbeddings = rawEmbeddings.map((r, i) =>
-              i === row ? r.map((v, j) => (j === col ? newValue : v)) : [...r]
+          // Update the vocabulary embedding for the specific token
+          if (row < selectedTokenIndices.length && col < embeddingDim) {
+            const tokenVocabIdx = selectedTokenIndices[row];
+            // Create a new copy of vocabulary embeddings with the updated value
+            const newVocabEmbeddings = vocabularyEmbeddings.map((r, i) =>
+              i === tokenVocabIdx ? r.map((v, j) => (j === col ? newValue : v)) : [...r]
             );
-            setRawEmbeddings(newRawEmbeddings);
+            setVocabularyEmbeddings(newVocabEmbeddings);
           }
         } else if (
           matrixType === 'weightQ' ||
@@ -597,171 +588,137 @@ function App() {
               <h2 className="text-lg font-bold">Transformer Visualization</h2>
             </div>
 
-            {/* Content area - Responsive layout for portrait and landscape modes */}
-            <div className="p-2 md:p-4 flex flex-col md:flex-row justify-between items-start gap-4">
-              {/* Left: Token controls - Full width in portrait, 1/2 in landscape on mobile, 2/3 on desktop */}
-              <div className={`${isPortrait ? 'w-full' : 'w-1/2'} md:w-2/3`}>
-                <div className="bg-white rounded-md shadow-sm p-3">
-                  <h3 className="text-sm font-semibold mb-3 text-gray-800 border-b pb-2 flex items-center">
-                    <svg
-                      className="w-4 h-4 mr-1 text-blue-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"
-                      />
-                    </svg>
-                    Edit Tokens
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {tokenLabels.map((token, index) => (
-                      <div key={index} className="relative group">
-                        {/* Delete button appears on hover or always visible on touch devices */}
-                        <button
-                          className="absolute -top-2.5 -right-2.5 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-medium shadow-sm md:opacity-0 md:group-hover:opacity-100 transition-opacity z-10"
-                          onClick={() => removeToken(index)}
-                          title="Remove token"
-                        >
-                          ×
-                        </button>
+            {/* Top control - just training mode without embedding dim */}
+            <div className="p-2 md:p-4 flex justify-center">
+              <div className="bg-white rounded-md shadow-sm p-3 w-full md:w-48">
+                <h3 className="text-sm font-semibold mb-3 text-gray-800 border-b pb-2 flex items-center">
+                  <svg
+                    className="w-4 h-4 mr-1 text-blue-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
+                    />
+                  </svg>
+                  Training
+                </h3>
 
-                        {/* Editable token input */}
-                        <input
-                          type="text"
-                          value={token}
-                          onChange={(e) => updateToken(index, e.target.value)}
-                          className="px-3 py-1.5 border border-gray-300 rounded text-sm min-w-[3.5rem] h-9 text-center shadow-sm hover:border-blue-300 focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 transition-colors font-medium"
-                          placeholder="Token"
-                        />
-                      </div>
-                    ))}
-
-                    {/* Add token button */}
+                <div className="flex items-center justify-center">
+                  <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden shadow-sm w-full md:w-36 mx-auto">
                     <button
-                      className="px-3 py-1.5 border border-gray-300 rounded min-w-[3.5rem] h-9 text-center bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors shadow-sm flex items-center justify-center font-medium"
-                      onClick={addToken}
-                      title="Add token"
+                      onClick={() => setTrainingMode(false)}
+                      className={`flex-1 h-9 flex items-center justify-center font-medium transition-colors border-r border-gray-300 ${
+                        !trainingMode
+                          ? 'bg-gray-200 text-gray-800 font-semibold'
+                          : 'bg-white text-gray-500 hover:bg-gray-50'
+                      }`}
                     >
-                      +
+                      <span className="block">Off</span>
+                    </button>
+                    <button
+                      onClick={() => setTrainingMode(true)}
+                      className={`flex-1 h-9 flex items-center justify-center font-medium transition-colors ${
+                        trainingMode
+                          ? 'bg-blue-500 text-white font-semibold'
+                          : 'bg-white text-gray-500 hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className="block">On</span>
                     </button>
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
 
-              {/* Right: Settings controls - Full width in portrait, 1/2 in landscape on mobile, 1/3 on desktop */}
-              <div className={`${isPortrait ? 'w-full' : 'w-1/2'} md:w-1/3`}>
-                {/* Controls in a row for horizontal layout, column for portrait */}
-                <div
-                  className={`flex ${
-                    isPortrait ? 'flex-row' : 'flex-row'
-                  }  gap-4`}
-                >
-                  {/* Embedding dimension controls */}
+          {/* Tokenizer section */}
+          <div className="mb-0.5 bg-white rounded p-0.5">
+            <h3 className="text-sm font-semibold mb-0.5 border-b pb-0.5">
+              Tokenizer
+            </h3>
+            <div className="p-2">
+              <p className="text-xs text-gray-600 mb-2">Drag tokens into the input sequence below</p>
+              <div className="flex flex-wrap gap-2">
+                {vocabularyWords.map((word, idx) => (
                   <div
-                    className={`bg-white rounded-md shadow-sm p-3 ${
-                      isPortrait ? 'w-1/2' : 'w-full'
-                    }`}
+                    key={idx}
+                    draggable
+                    onDragStart={(e) => {
+                      handleDragStart(e, idx);
+                      // Create a clone of the token box
+                      const dragImage = e.currentTarget.cloneNode(true) as HTMLElement;
+                      dragImage.classList.remove('group'); // Remove hover effects from drag image
+                      const hover = dragImage.querySelector('.group-hover\\:opacity-100');
+                      if (hover) hover.remove(); // Remove the hover element from drag image
+                      dragImage.style.position = 'absolute';
+                      dragImage.style.top = '-9999px';
+                      dragImage.style.width = e.currentTarget.getBoundingClientRect().width + 'px';
+                      document.body.appendChild(dragImage);
+                      e.dataTransfer.setDragImage(dragImage, e.nativeEvent.offsetX, e.nativeEvent.offsetY);
+                      setTimeout(() => document.body.removeChild(dragImage), 0);
+                    }}
+                    className="px-3 py-1.5 border border-gray-300 rounded text-sm min-w-[3.5rem] text-center shadow-sm bg-gray-100 hover:bg-gray-200 cursor-move font-medium transition-colors group relative"
                   >
-                    <h3 className="text-sm font-semibold mb-3 text-gray-800 border-b pb-2 flex items-center">
-                      <svg
-                        className="w-4 h-4 mr-1 text-blue-600"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                        />
-                      </svg>
-                      Embedding Dim
-                    </h3>
-                    <div className="flex items-center justify-center">
-                      <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden shadow-sm w-full md:w-36 mx-auto">
+                    {word}
+                    {/* Show embedding as matrix on hover */}
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 p-3 bg-white border border-gray-200 text-gray-700 text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                      <div className="mb-2 text-gray-600 text-center font-medium">
+                        {word} embedding
+                      </div>
+                      <MatrixDisplay
+                        data={[vocabularyEmbeddings[idx]]}
+                        rowLabels={['']}
+                        columnLabels={Array.from({ length: embeddingDim }, (_, i) => `d${i + 1}`)}
+                        maxAbsValue={0.2}
+                        cellSize="xs"
+                        selectable={false}
+                        matrixType="none"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Input Sequence section */}
+          <div className="mb-0.5 bg-white rounded p-0.5">
+            <h3 className="text-sm font-semibold mb-0.5 border-b pb-0.5">
+              Input Sequence
+            </h3>
+            <div className="p-2">
+              {/* Drop zone for tokens */}
+              <div 
+                className="min-h-[50px] border-2 border-dashed border-gray-300 rounded-lg p-2 bg-gray-50 transition-colors hover:border-blue-400 hover:bg-blue-50"
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+              >
+                {selectedTokenIndices.length === 0 ? (
+                  <p className="text-gray-400 text-center text-sm italic">Drag tokens here...</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {selectedTokenIndices.map((tokenIdx, seqIdx) => (
+                      <div key={seqIdx} className="relative group">
                         <button
-                          className="flex-none w-10 h-9 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-800 text-base font-semibold transition-colors border-r border-gray-300"
-                          onClick={decreaseEmbeddingDim}
-                          disabled={embeddingDim <= 2}
-                          style={{
-                            cursor:
-                              embeddingDim <= 2 ? 'not-allowed' : 'pointer',
-                            opacity: embeddingDim <= 2 ? 0.5 : 1,
-                          }}
+                          className="absolute -top-2.5 -right-2.5 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-medium shadow-sm md:opacity-0 md:group-hover:opacity-100 transition-opacity z-10"
+                          onClick={() => removeTokenFromSequence(seqIdx)}
+                          title="Remove token"
                         >
-                          <span className="block">−</span>
+                          ×
                         </button>
-                        <div className="flex-grow h-9 flex items-center justify-center font-mono font-semibold bg-white px-3 text-gray-800">
-                          {embeddingDim}
+                        <div className="px-3 py-1.5 border border-gray-400 rounded text-sm min-w-[3.5rem] h-9 text-center shadow-sm bg-white font-medium">
+                          {vocabularyWords[tokenIdx]}
                         </div>
-                        <button
-                          className="flex-none w-10 h-9 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-800 text-base font-semibold transition-colors border-l border-gray-300"
-                          onClick={increaseEmbeddingDim}
-                        >
-                          <span className="block">+</span>
-                        </button>
                       </div>
-                    </div>
+                    ))}
                   </div>
-
-                  {/* Training mode toggle */}
-                  <div
-                    className={`bg-white rounded-md shadow-sm p-3 ${
-                      isPortrait ? 'w-1/2' : 'w-full'
-                    }`}
-                  >
-                    <h3 className="text-sm font-semibold mb-3 text-gray-800 border-b pb-2 flex items-center">
-                      <svg
-                        className="w-4 h-4 mr-1 text-blue-600"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
-                        />
-                      </svg>
-                      Training
-                    </h3>
-
-                    <div className="flex items-center justify-center">
-                      <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden shadow-sm w-full md:w-36 mx-auto">
-                        <button
-                          onClick={() => setTrainingMode(false)}
-                          className={`flex-1 h-9 flex items-center justify-center font-medium transition-colors border-r border-gray-300 ${
-                            !trainingMode
-                              ? 'bg-gray-200 text-gray-800 font-semibold'
-                              : 'bg-white text-gray-500 hover:bg-gray-50'
-                          }`}
-                        >
-                          <span className="block">Off</span>
-                        </button>
-                        <button
-                          onClick={() => setTrainingMode(true)}
-                          className={`flex-1 h-9 flex items-center justify-center font-medium transition-colors ${
-                            trainingMode
-                              ? 'bg-blue-500 text-white font-semibold'
-                              : 'bg-white text-gray-500 hover:bg-gray-50'
-                          }`}
-                        >
-                          <span className="block">On</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           </div>
@@ -938,9 +895,9 @@ function App() {
                   // Get the next token prediction vector (last token's embedding)
                   const nextTokenPrediction = ffnOutput[ffnOutput.length - 1];
 
-                  // Calculate dot product similarity with each token
-                  const dotProducts = ffnOutput.map((tokenEmbedding) =>
-                    vectorDotProduct(nextTokenPrediction, tokenEmbedding)
+                  // Calculate dot product similarity with each vocabulary token
+                  const dotProducts = vocabularyEmbeddings.map((vocabEmbedding) =>
+                    vectorDotProduct(nextTokenPrediction, vocabEmbedding)
                   );
 
                   // Apply softmax to the dot products to get probability-like values
@@ -967,14 +924,14 @@ function App() {
 
                   // Get corresponding token labels in the sorted order
                   const sortedTokenLabels = sortedSoftmax.map(
-                    (item) => tokenLabels[item.index]
+                    (item) => vocabularyWords[item.index]
                   );
 
                   // Get the highest probability token (first one in sorted list)
                   const topPredictedTokenIndex = sortedSoftmax[0].index;
-                  const topPredictedToken = tokenLabels[topPredictedTokenIndex];
+                  const topPredictedToken = vocabularyWords[topPredictedTokenIndex];
                   const topPredictedTokenEmbedding =
-                    ffnOutput[topPredictedTokenIndex];
+                    vocabularyEmbeddings[topPredictedTokenIndex];
 
                   return (
                     <>
@@ -982,7 +939,7 @@ function App() {
                       <div
                         className={`${
                           isPortrait ? 'w-full' : 'md:col-span-1'
-                        } lg:col-span-4 flex flex-col items-center`}
+                        } lg:col-span-3 flex flex-col items-center`}
                       >
                         <h4 className="text-[0.65rem] font-medium mb-0.5 text-center">
                           Next Token Vector
@@ -1006,46 +963,50 @@ function App() {
                       <div
                         className={`${
                           isPortrait ? 'w-full' : 'md:col-span-1'
-                        } lg:col-span-4 flex flex-col items-center`}
+                        } lg:col-span-6 flex flex-col items-center`}
                       >
                         <h4 className="text-[0.65rem] font-medium mb-0.5 text-center">
                           Token Similarities
                         </h4>
-                        <div className={`${isPortrait ? 'grid grid-cols-2' : 'grid grid-cols-2'} w-full gap-1`}>
+                        <div className="w-full">
                           {/* Dot Products */}
-                          <div>
+                          <div className="mb-2">
                             <h5 className="text-[0.6rem] font-medium mb-0.5 text-center">
                               Dot Product
                             </h5>
-                            <MatrixDisplay
-                              data={dotProducts.map((dp) => [dp])}
-                              rowLabels={tokenLabels}
-                              columnLabels={['dot']}
-                              maxAbsValue={
-                                Math.max(
-                                  ...dotProducts.map((dp) => Math.abs(dp))
-                                ) || 0.3
-                              }
-                              cellSize="xs"
-                              selectable={false}
-                              matrixType="none"
-                            />
+                            <div className="overflow-x-auto">
+                              <MatrixDisplay
+                                data={[dotProducts]}
+                                rowLabels={['']}
+                                columnLabels={vocabularyWords}
+                                maxAbsValue={
+                                  Math.max(
+                                    ...dotProducts.map((dp) => Math.abs(dp))
+                                  ) || 0.3
+                                }
+                                cellSize="xs"
+                                selectable={false}
+                                matrixType="none"
+                              />
+                            </div>
                           </div>
 
-                          {/* Sorted Softmax Values */}
+                          {/* Softmax Values (sorted by value, largest first) */}
                           <div>
                             <h5 className="text-[0.6rem] font-medium mb-0.5 text-center">
                               Softmax
                             </h5>
-                            <MatrixDisplay
-                              data={sortedSoftmax.map((item) => [item.value])}
-                              rowLabels={sortedTokenLabels}
-                              columnLabels={['p']}
-                              maxAbsValue={1.0} // Softmax values are between 0 and 1
-                              cellSize="xs"
-                              selectable={false}
-                              matrixType="none"
-                            />
+                            <div className="overflow-x-auto">
+                              <MatrixDisplay
+                                data={[sortedSoftmax.map(item => item.value)]}
+                                rowLabels={['']}
+                                columnLabels={sortedTokenLabels}
+                                maxAbsValue={1.0} // Softmax values are between 0 and 1
+                                cellSize="xs"
+                                selectable={false}
+                                matrixType="none"
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1054,28 +1015,24 @@ function App() {
                       <div
                         className={`${
                           isPortrait ? 'w-full' : 'md:col-span-1'
-                        } lg:col-span-4 flex flex-col items-center`}
+                        } lg:col-span-3 flex flex-col items-center`}
                       >
                         <h4 className="text-[0.65rem] font-medium mb-2 text-center">
                           Most Likely Next Token
                         </h4>
                         <div className="w-full flex flex-col items-center">
                           <div className="bg-gray-100 py-2 px-3 rounded shadow-inner mb-1 w-full border border-gray-200">
-                            <div className="grid grid-cols-1 gap-1.5">
-                              {/* Token name */}
-                              <div className="flex justify-center items-center">
-                                <div className="font-mono bg-white px-4 py-1.5 rounded-md shadow-sm border border-gray-200 min-w-[100px] text-center">
-                                  <span className="font-semibold text-[0.8rem] text-blue-700 tracking-wide">
-                                    {topPredictedToken}
-                                  </span>
-                                </div>
+                            <div className="flex justify-center">
+                              {/* Token styled like tokenizer tokens */}
+                              <div className="px-3 py-1.5 border border-gray-300 rounded text-sm min-w-[3.5rem] text-center shadow-sm bg-gray-100 font-medium">
+                                {topPredictedToken}
                               </div>
+                            </div>
 
-                              {/* Probability value */}
-                              <div className="flex justify-center">
-                                <div className="text-[0.65rem] font-mono text-blue-600 bg-blue-50 px-3 py-0.5 rounded-md border border-blue-100 min-w-[60px] text-center">
-                                  p={sortedSoftmax[0].value.toFixed(4)}
-                                </div>
+                            {/* Probability value */}
+                            <div className="flex justify-center mt-2">
+                              <div className="text-[0.65rem] font-mono text-blue-600 bg-blue-50 px-3 py-0.5 rounded-md border border-blue-100 min-w-[60px] text-center">
+                                p={sortedSoftmax[0].value.toFixed(4)}
                               </div>
                             </div>
                           </div>
@@ -1085,7 +1042,7 @@ function App() {
                             Raw Token Embedding
                           </h5>
                           <MatrixDisplay
-                            data={[rawEmbeddings[topPredictedTokenIndex]]}
+                            data={[vocabularyEmbeddings[topPredictedTokenIndex]]}
                             rowLabels={[topPredictedToken]}
                             columnLabels={Array.from(
                               { length: embeddingDim },

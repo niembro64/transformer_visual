@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(npm start)",
+      "Bash(npm run build:*)",
+      "Bash(screencapture:*)",
+      "Bash(osascript:*)",
+      "Bash(open:*)"
     ],
     "deny": []
   }
