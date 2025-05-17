@@ -602,7 +602,7 @@ function App() {
               {/* Left: Token controls - Full width in portrait, 1/2 in landscape on mobile, 2/3 on desktop */}
               <div className={`${isPortrait ? 'w-full' : 'w-1/2'} md:w-2/3`}>
                 <div className="bg-white rounded-md shadow-sm p-3">
-                  <h3 className="text-sm font-bold mb-3 text-gray-800 border-b pb-2 flex items-center">
+                  <h3 className="text-sm font-semibold mb-3 text-gray-800 border-b pb-2 flex items-center">
                     <svg
                       className="w-4 h-4 mr-1 text-blue-600"
                       fill="none"
@@ -636,7 +636,7 @@ function App() {
                           type="text"
                           value={token}
                           onChange={(e) => updateToken(index, e.target.value)}
-                          className="px-3 py-1.5 border rounded text-sm min-w-[3.5rem] h-[34px] text-center shadow-sm hover:border-blue-300 focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 transition-colors"
+                          className="px-3 py-1.5 border border-gray-300 rounded text-sm min-w-[3.5rem] h-9 text-center shadow-sm hover:border-blue-300 focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 transition-colors font-medium"
                           placeholder="Token"
                         />
                       </div>
@@ -644,7 +644,7 @@ function App() {
 
                     {/* Add token button */}
                     <button
-                      className="px-3 py-1.5 border rounded min-w-[3.5rem] h-[34px] text-center bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors shadow-sm flex items-center justify-center"
+                      className="px-3 py-1.5 border border-gray-300 rounded min-w-[3.5rem] h-9 text-center bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors shadow-sm flex items-center justify-center font-medium"
                       onClick={addToken}
                       title="Add token"
                     >
@@ -668,7 +668,7 @@ function App() {
                       isPortrait ? 'w-1/2' : 'w-full'
                     }`}
                   >
-                    <h3 className="text-sm font-bold mb-3 text-gray-800 border-b pb-2 flex items-center">
+                    <h3 className="text-sm font-semibold mb-3 text-gray-800 border-b pb-2 flex items-center">
                       <svg
                         className="w-4 h-4 mr-1 text-blue-600"
                         fill="none"
@@ -699,7 +699,7 @@ function App() {
                         >
                           <span className="block">−</span>
                         </button>
-                        <div className="flex-grow h-9 flex items-center justify-center font-mono font-bold bg-white px-3 text-lg">
+                        <div className="flex-grow h-9 flex items-center justify-center font-mono font-semibold bg-white px-3 text-gray-800">
                           {embeddingDim}
                         </div>
                         <button
@@ -718,7 +718,7 @@ function App() {
                       isPortrait ? 'w-1/2' : 'w-full'
                     }`}
                   >
-                    <h3 className="text-sm font-bold mb-3 text-gray-800 border-b pb-2 flex items-center">
+                    <h3 className="text-sm font-semibold mb-3 text-gray-800 border-b pb-2 flex items-center">
                       <svg
                         className="w-4 h-4 mr-1 text-blue-600"
                         fill="none"
