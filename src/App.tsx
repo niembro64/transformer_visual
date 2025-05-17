@@ -1,29 +1,28 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import './App.css';
 import AttentionHead from './components/AttentionHead';
 import FeedForward from './components/FeedForward';
 import MatrixDisplay from './components/MatrixDisplay';
 import {
-  generateSampleEmbeddings,
-  generateSampleAttentionWeights,
-  generateSampleMLPWeights,
-  generatePositionalEncodings,
   addPositionalEncodings,
   applyDropout,
   applyRandomWalk,
   applyRandomWalkToVector,
+  generatePositionalEncodings,
+  generateSampleAttentionWeights,
+  generateSampleEmbeddings,
+  generateSampleMLPWeights,
+  isPortraitOrientation,
   relu,
   vectorDotProduct,
-  cosineSimilarity,
-  isPortraitOrientation,
 } from './utils/matrixOperations';
 
 export const dropoutUniveral = 0.03;
 
 function App() {
   // Fixed dimension values
-  const embeddingDim = 8; // Dimension of token embeddings (d_model)
-  const attentionHeadDim = 4; // Dimension of attention head (d_k/d_v)
+  const embeddingDim = isPortraitOrientation() ? 4 : 8; // Dimension of embeddings (d_model)
+  const attentionHeadDim = isPortraitOrientation() ? 2 : 4; // Dimension of attention heads (d_k = d_v = d_model / num_heads)
   const mlpHiddenDim = 4; // Dimension of MLP hidden layer (d_ff = 8, typically 4x d_model)
 
   // Dropout rates
@@ -35,7 +34,8 @@ function App() {
   const [trainingMode, setTrainingMode] = useState(false);
 
   // Vocabulary of 25 common words
-  const vocabularyWords = [
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const vocabularyWords: string[] = [
     'the', // 0
     'a', // 1
     'and', // 2
@@ -46,15 +46,6 @@ function App() {
     'of', // 7
     'that', // 8
     'boy', // 9
-    'cat',
-    'for',
-    'with',
-    'as',
-    'was',
-    'on',
-    'at',
-    'by',
-    'be',
   ];
 
   // Generate vocabulary embeddings - mutable state
@@ -67,15 +58,12 @@ function App() {
     1, // a
     9, // boy
     5, // with
-    1, // a
-    10, // cat
-    4, // is
-  ]); // 'a', 'boy', 'with', 'a', 'cat', 'is'
+  ]);
 
   // Get token labels from selected indices
   const tokenLabels = useMemo(
     () => selectedTokenIndices.map((idx) => vocabularyWords[idx]),
-    [selectedTokenIndices]
+    [selectedTokenIndices, vocabularyWords]
   );
 
   // Maximum sequence length - based on current token count
@@ -117,13 +105,13 @@ function App() {
   // For forcing re-renders on dropout timer cycles and weight updates
   const [trainingCycle, setTrainingCycle] = useState(0);
 
-  // Track device orientation (portrait vs. landscape)
-  const [isPortrait, setIsPortrait] = useState(isPortraitOrientation);
+  // Track if device is in mobile mode (height > width)
+  const [isMobile, setIsMobile] = useState(isPortraitOrientation);
 
-  // Listen for orientation changes
+  // Listen for orientation/size changes
   useEffect(() => {
     const handleResize = () => {
-      setIsPortrait(isPortraitOrientation());
+      setIsMobile(isPortraitOrientation());
     };
 
     // Set initial value
@@ -355,166 +343,26 @@ function App() {
 
   // No need for these functions anymore - handled by drag and drop
 
-  // Drag and drop state
-  const [draggedData, setDraggedData] = useState<{
-    source: 'tokenizer' | 'sequence';
-    index: number;
-  } | null>(null);
-  const [dropTarget, setDropTarget] = useState<{
-    type: 'between' | 'remove';
-    index?: number;
-  } | null>(null);
-
-  // Drag handlers for tokenizer
-  const handleTokenizerDragStart = useCallback(
-    (e: React.DragEvent<HTMLDivElement>, index: number) => {
-      const data = { source: 'tokenizer' as const, index };
-      e.dataTransfer.setData('application/json', JSON.stringify(data));
-      e.dataTransfer.effectAllowed = 'copy';
-      setDraggedData(data);
-    },
-    []
+  // Click interaction state
+  const [recentlyAddedIndex, setRecentlyAddedIndex] = useState<number | null>(
+    null
   );
 
-  // Drag handlers for sequence
-  const handleSequenceDragStart = useCallback(
-    (e: React.DragEvent<HTMLDivElement>, index: number) => {
-      const data = { source: 'sequence' as const, index };
-      e.dataTransfer.setData('application/json', JSON.stringify(data));
-      e.dataTransfer.effectAllowed = 'move';
-      setDraggedData(data);
-    },
-    []
-  );
+  // Handler to add a token from tokenizer to input sequence
+  const handleTokenizerClick = useCallback((index: number) => {
+    setSelectedTokenIndices((prev) => [...prev, index]);
+    setRecentlyAddedIndex(index);
 
-  // Common drag end handler
-  const handleDragEnd = useCallback(() => {
-    setDraggedData(null);
-    setDropTarget(null);
+    // Clear the highlight after a brief delay
+    setTimeout(() => {
+      setRecentlyAddedIndex(null);
+    }, 500);
   }, []);
 
-  // Drop zone handlers
-  const handleDropZoneDragOver = useCallback(
-    (e: React.DragEvent<HTMLDivElement>) => {
-      e.preventDefault();
-
-      if (!draggedData) return;
-
-      // For empty drop zone, always allow drop at the end
-      if (selectedTokenIndices.length === 0) {
-        e.dataTransfer.dropEffect = 'copy';
-        setDropTarget({ type: 'between', index: 0 });
-        return;
-      }
-
-      // For non-empty drop zone, calculate insertion point
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-
-      // Find the closest gap between tokens
-      const tokenElements =
-        e.currentTarget.querySelectorAll('[data-token-index]');
-      let closestIndex = selectedTokenIndices.length;
-      let closestDistance = Infinity;
-
-      tokenElements.forEach((elem, i) => {
-        const tokenRect = elem.getBoundingClientRect();
-        const tokenCenter = tokenRect.left + tokenRect.width / 2 - rect.left;
-        const distance = Math.abs(x - tokenCenter);
-
-        if (distance < closestDistance) {
-          closestDistance = distance;
-          closestIndex = x < tokenCenter ? i : i + 1;
-        }
-      });
-
-      e.dataTransfer.dropEffect =
-        draggedData.source === 'tokenizer' ? 'copy' : 'move';
-      setDropTarget({ type: 'between', index: closestIndex });
-    },
-    [draggedData, selectedTokenIndices.length]
-  );
-
-  const handleDropZoneDrop = useCallback(
-    (e: React.DragEvent<HTMLDivElement>) => {
-      e.preventDefault();
-
-      const dataStr = e.dataTransfer.getData('application/json');
-      if (!dataStr) return;
-
-      const data = JSON.parse(dataStr) as {
-        source: 'tokenizer' | 'sequence';
-        index: number;
-      };
-
-      if (data.source === 'tokenizer' && dropTarget?.type === 'between') {
-        // Copy from tokenizer
-        const newIndices = [...selectedTokenIndices];
-        newIndices.splice(dropTarget.index!, 0, data.index);
-        setSelectedTokenIndices(newIndices);
-      } else if (data.source === 'sequence' && dropTarget?.type === 'between') {
-        // Move within sequence
-        const newIndices = [...selectedTokenIndices];
-        const [moved] = newIndices.splice(data.index, 1);
-
-        let insertIndex = dropTarget.index!;
-        if (data.index < insertIndex) insertIndex--;
-
-        newIndices.splice(insertIndex, 0, moved);
-        setSelectedTokenIndices(newIndices);
-      }
-
-      setDraggedData(null);
-      setDropTarget(null);
-    },
-    [dropTarget, selectedTokenIndices]
-  );
-
-  const handleDropZoneDragLeave = useCallback(
-    (e: React.DragEvent<HTMLDivElement>) => {
-      // Only clear if we're leaving the entire drop zone
-      if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-        setDropTarget(null);
-      }
-    },
-    []
-  );
-
-  // Handle dropping outside to remove
-  const handlePageDragOver = useCallback(
-    (e: React.DragEvent<HTMLDivElement>) => {
-      if (draggedData?.source === 'sequence') {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        setDropTarget({ type: 'remove' });
-      }
-    },
-    [draggedData]
-  );
-
-  const handlePageDrop = useCallback(
-    (e: React.DragEvent<HTMLDivElement>) => {
-      const dataStr = e.dataTransfer.getData('application/json');
-      if (!dataStr) return;
-
-      const data = JSON.parse(dataStr) as {
-        source: 'tokenizer' | 'sequence';
-        index: number;
-      };
-
-      if (data.source === 'sequence' && dropTarget?.type === 'remove') {
-        e.preventDefault();
-        const newIndices = selectedTokenIndices.filter(
-          (_, i) => i !== data.index
-        );
-        setSelectedTokenIndices(newIndices);
-      }
-
-      setDraggedData(null);
-      setDropTarget(null);
-    },
-    [dropTarget, selectedTokenIndices]
-  );
+  // Handler to remove a token from the input sequence
+  const handleSequenceTokenClick = useCallback((index: number) => {
+    setSelectedTokenIndices((prev) => prev.filter((_, i) => i !== index));
+  }, []);
 
   // No need for dimension adjustment functions anymore
 
@@ -736,64 +584,45 @@ function App() {
   };
 
   return (
-    <div
-      className="min-h-screen bg-gray-50"
-      onDragOver={handlePageDragOver}
-      onDrop={handlePageDrop}
-    >
+    <div className="min-h-screen bg-gray-50">
       <main className="w-full p-0.5 md:p-2">
         <div className="bg-white rounded p-0.5 mb-0.5">
           {/* Main control panel */}
-          <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-sm overflow-hidden">
+          <div className="mb-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-sm overflow-hidden">
             {/* Header bar */}
-            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4 py-2 flex justify-between items-center">
-              <h2 className="text-lg font-bold">Transformer Visualization</h2>
+            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-2 sm:px-4 py-2 flex justify-between items-center">
+              <h2 className="text-base sm:text-lg font-bold">
+                Transformer Visualization
+              </h2>
             </div>
 
-            {/* Top control - just training mode without embedding dim */}
-            <div className="p-2 md:p-4 flex justify-center">
-              <div className="bg-white rounded-md shadow-sm p-3 w-full md:w-48">
-                <h3 className="text-sm font-semibold mb-3 text-gray-800 border-b pb-2 flex items-center">
-                  <svg
-                    className="w-4 h-4 mr-1 text-blue-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
+            {/* Top control - training mode toggle */}
+            <div className="p-2 flex justify-center items-center">
+              <div className="flex items-center gap-2">
+                <span className="text-xs sm:text-sm font-medium text-gray-700">
+                  Training:
+                </span>
+                <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden shadow-sm w-28 sm:w-32">
+                  <button
+                    onClick={() => setTrainingMode(false)}
+                    className={`flex-1 h-8 flex items-center justify-center text-xs sm:text-sm font-medium transition-colors border-r border-gray-300 ${
+                      !trainingMode
+                        ? 'bg-gray-200 text-gray-800 font-semibold'
+                        : 'bg-white text-gray-500 hover:bg-gray-50'
+                    }`}
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
-                    />
-                  </svg>
-                  Training
-                </h3>
-
-                <div className="flex items-center justify-center">
-                  <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden shadow-sm w-full md:w-36 mx-auto">
-                    <button
-                      onClick={() => setTrainingMode(false)}
-                      className={`flex-1 h-9 flex items-center justify-center font-medium transition-colors border-r border-gray-300 ${
-                        !trainingMode
-                          ? 'bg-gray-200 text-gray-800 font-semibold'
-                          : 'bg-white text-gray-500 hover:bg-gray-50'
-                      }`}
-                    >
-                      <span className="block">Off</span>
-                    </button>
-                    <button
-                      onClick={() => setTrainingMode(true)}
-                      className={`flex-1 h-9 flex items-center justify-center font-medium transition-colors ${
-                        trainingMode
-                          ? 'bg-blue-500 text-white font-semibold'
-                          : 'bg-white text-gray-500 hover:bg-gray-50'
-                      }`}
-                    >
-                      <span className="block">On</span>
-                    </button>
-                  </div>
+                    <span className="block">Off</span>
+                  </button>
+                  <button
+                    onClick={() => setTrainingMode(true)}
+                    className={`flex-1 h-8 flex items-center justify-center text-xs sm:text-sm font-medium transition-colors ${
+                      trainingMode
+                        ? 'bg-blue-500 text-white font-semibold'
+                        : 'bg-white text-gray-500 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="block">On</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -801,26 +630,29 @@ function App() {
 
           {/* Tokenizer section */}
           <div className="mb-0.5 bg-white rounded p-0.5">
-            <h3 className="text-sm font-semibold mb-0.5 border-b pb-0.5">
+            <h3 className="text-xs sm:text-sm font-semibold mb-0.5 border-b pb-0.5">
               Tokenizer
             </h3>
-            <div className="p-2">
-              <p className="text-xs text-gray-600 mb-2">
-                Drag tokens into the input sequence below
+            <div className="p-1 sm:p-2">
+              <p className="text-[10px] sm:text-xs text-gray-600 mb-1 sm:mb-2">
+                Click tokens to add to input sequence below (hover to see
+                embeddings)
               </p>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1 sm:gap-2">
                 {vocabularyWords.map((word, idx) => (
                   <div
                     key={idx}
-                    draggable
-                    onDragStart={(e) => handleTokenizerDragStart(e, idx)}
-                    onDragEnd={handleDragEnd}
-                    className="px-3 py-1.5 border border-gray-300 rounded text-sm min-w-[3.5rem] text-center shadow-sm bg-gray-100 hover:bg-gray-200 cursor-move font-medium transition-colors group relative"
+                    onClick={() => handleTokenizerClick(idx)}
+                    className={`px-2 sm:px-3 py-1 sm:py-1.5 border ${
+                      idx === recentlyAddedIndex
+                        ? 'border-blue-500'
+                        : 'border-gray-300'
+                    } rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] text-center shadow-sm bg-gray-100 hover:bg-gray-200 cursor-pointer font-mono transition-colors group relative`}
                   >
                     {word}
                     {/* Show embedding as matrix on hover */}
-                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 p-3 bg-white border border-gray-200 text-gray-700 text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                      <div className="mb-2 text-gray-600 text-center font-medium">
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 p-2 bg-white border border-gray-200 text-gray-700 text-[10px] rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                      <div className="mb-1 text-gray-600 text-center font-medium">
                         {word} embedding
                       </div>
                       <MatrixDisplay
@@ -844,62 +676,49 @@ function App() {
 
           {/* Input Sequence section */}
           <div className="mb-0.5 bg-white rounded p-0.5">
-            <h3 className="text-sm font-semibold mb-0.5 border-b pb-0.5">
+            <h3 className="text-xs sm:text-sm font-semibold mb-0.5 border-b pb-0.5">
               Input Sequence
             </h3>
-            <div className="p-2">
-              <p className="text-xs text-gray-600 mb-2">
-                Drag tokens to reorder • Drag out to remove
+            <div className="p-1 sm:p-2">
+              <p className="text-[10px] sm:text-xs text-gray-600 mb-1 sm:mb-2">
+                Click a token to remove it (hover to see embeddings)
               </p>
-              {/* Drop zone for tokens */}
-              <div
-                className={`min-h-[50px] border-2 border-dashed rounded-lg p-2 transition-colors ${
-                  dropTarget?.type === 'between'
-                    ? 'border-blue-400 bg-blue-50'
-                    : 'border-gray-300 bg-gray-50 hover:border-gray-400'
-                }`}
-                onDragOver={handleDropZoneDragOver}
-                onDrop={handleDropZoneDrop}
-                onDragLeave={handleDropZoneDragLeave}
-              >
+              {/* Input sequence area */}
+              <div className="min-h-[40px] sm:min-h-[50px] border-2 border-dashed rounded-lg p-1 sm:p-2 transition-colors border-gray-300 bg-gray-50">
                 {selectedTokenIndices.length === 0 ? (
-                  <p className="text-gray-400 text-center text-sm italic">
+                  <p className="text-gray-400 text-center text-xs sm:text-sm italic">
                     Drag tokens here...
                   </p>
                 ) : (
-                  <div className="flex flex-wrap gap-2 relative">
+                  <div className="flex flex-wrap gap-1 sm:gap-2 relative">
                     {selectedTokenIndices.map((tokenIdx, seqIdx) => (
-                      <React.Fragment key={seqIdx}>
-                        {/* Drop indicator before token */}
-                        {dropTarget?.type === 'between' &&
-                          dropTarget.index === seqIdx && (
-                            <div className="w-0.5 h-8 bg-blue-500 self-center animate-pulse" />
-                          )}
-
-                        <div
-                          data-token-index={seqIdx}
-                          draggable
-                          onDragStart={(e) =>
-                            handleSequenceDragStart(e, seqIdx)
-                          }
-                          onDragEnd={handleDragEnd}
-                          className={`px-3 py-1.5 border border-gray-400 rounded text-sm min-w-[3.5rem] h-9 text-center shadow-sm bg-white font-medium cursor-move transition-all ${
-                            draggedData?.source === 'sequence' &&
-                            draggedData.index === seqIdx
-                              ? 'opacity-50'
-                              : ''
-                          }`}
-                        >
-                          {vocabularyWords[tokenIdx]}
+                      <div
+                        key={seqIdx}
+                        data-token-index={seqIdx}
+                        onClick={() => handleSequenceTokenClick(seqIdx)}
+                        className="px-2 sm:px-3 py-1 sm:py-1.5 border border-gray-400 rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] h-7 sm:h-9 text-center shadow-sm bg-white font-mono cursor-pointer transition-all hover:bg-red-50 hover:border-red-300 group relative"
+                      >
+                        {vocabularyWords[tokenIdx]}
+                        {/* Show embedding as matrix on hover */}
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 p-2 bg-white border border-gray-200 text-gray-700 text-[10px] rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                          <div className="mb-1 text-gray-600 text-center font-medium">
+                            {vocabularyWords[tokenIdx]} embedding
+                          </div>
+                          <MatrixDisplay
+                            data={[vocabularyEmbeddings[tokenIdx]]}
+                            rowLabels={['']}
+                            columnLabels={Array.from(
+                              { length: embeddingDim },
+                              (_, i) => `d${i + 1}`
+                            )}
+                            maxAbsValue={0.2}
+                            cellSize="xs"
+                            selectable={false}
+                            matrixType="none"
+                          />
                         </div>
-                      </React.Fragment>
+                      </div>
                     ))}
-
-                    {/* Drop indicator after all tokens */}
-                    {dropTarget?.type === 'between' &&
-                      dropTarget.index === selectedTokenIndices.length && (
-                        <div className="w-0.5 h-8 bg-blue-500 self-center animate-pulse" />
-                      )}
                   </div>
                 )}
               </div>
@@ -907,21 +726,21 @@ function App() {
           </div>
 
           <div className="mb-0.5">
-            <h3 className="text-sm font-semibold mb-0.5 border-b pb-0.5">
+            <h3 className="text-xs sm:text-sm font-semibold mb-0.5 border-b pb-0.5">
               Embeddings with Positional Encoding
             </h3>
             <div
-              className={`${
-                isPortrait ? 'flex flex-col' : 'grid grid-cols-3'
-              } md:grid md:grid-cols-3 lg:grid lg:grid-cols-12 gap-4 lg:gap-1`}
+              className={`flex ${
+                isMobile ? 'flex-col' : 'grid grid-cols-3'
+              } lg:grid-cols-3 xl:grid-cols-12 gap-2 sm:gap-4 lg:gap-1`}
             >
               {/* Left: Raw Embeddings */}
               <div
                 className={`${
-                  isPortrait ? 'w-full' : 'col-span-1'
-                } md:col-span-1 lg:col-span-4 flex flex-col items-center`}
+                  isMobile ? 'w-full' : 'col-span-1'
+                } xl:col-span-4 flex flex-col items-center`}
               >
-                <h4 className="text-[0.65rem] font-medium mb-1 sm:mb-0.5 text-center">
+                <h4 className="text-[0.6rem] sm:text-[0.65rem] font-medium mb-1 sm:mb-0.5 text-center">
                   Raw Token Embeddings
                 </h4>
                 <div className="w-full overflow-x-auto pb-2">
@@ -952,10 +771,10 @@ function App() {
               {/* Middle: Positional Encodings */}
               <div
                 className={`${
-                  isPortrait ? 'w-full' : 'col-span-1'
-                } md:col-span-1 lg:col-span-4 flex flex-col items-center`}
+                  isMobile ? 'w-full' : 'col-span-1'
+                } xl:col-span-4 flex flex-col items-center`}
               >
-                <h4 className="text-[0.65rem] font-medium mb-1 sm:mb-0.5 text-center">
+                <h4 className="text-[0.6rem] sm:text-[0.65rem] font-medium mb-1 sm:mb-0.5 text-center">
                   Positional Encodings
                 </h4>
                 <div className="w-full overflow-x-auto pb-2">
@@ -980,10 +799,10 @@ function App() {
               {/* Right: Combined embeddings with positional encoding */}
               <div
                 className={`${
-                  isPortrait ? 'w-full' : 'col-span-1'
-                } md:col-span-1 lg:col-span-4 flex flex-col items-center`}
+                  isMobile ? 'w-full' : 'col-span-1'
+                } xl:col-span-4 flex flex-col items-center`}
               >
-                <h4 className="text-[0.65rem] font-medium mb-1 sm:mb-0.5 text-center">
+                <h4 className="text-[0.6rem] sm:text-[0.65rem] font-medium mb-1 sm:mb-0.5 text-center">
                   Embeddings + Pos. Encoding
                   {trainingMode ? ` + Dropout(${embeddingDropoutRate})` : ''}
                 </h4>
@@ -1006,7 +825,7 @@ function App() {
           </div>
 
           <div className="mb-0.5">
-            <h3 className="text-sm font-semibold mb-0.5 border-b pb-0.5">
+            <h3 className="text-xs sm:text-sm font-semibold mb-0.5 border-b pb-0.5">
               Self-Attention
             </h3>
 
@@ -1028,7 +847,7 @@ function App() {
           </div>
 
           <div className="mt-0.5">
-            <h3 className="text-sm font-semibold mb-0.5 border-b pb-0.5">
+            <h3 className="text-xs sm:text-sm font-semibold mb-0.5 border-b pb-0.5">
               Feed-Forward Network
             </h3>
 
@@ -1053,7 +872,7 @@ function App() {
               />
             ) : (
               <div className="p-0.5 bg-gray-100 rounded">
-                <p className="text-gray-600 italic text-[0.6rem]">
+                <p className="text-gray-600 italic text-[0.5rem] sm:text-[0.6rem] text-center py-1">
                   Waiting for attention computation...
                 </p>
               </div>
@@ -1064,14 +883,14 @@ function App() {
         {/* Next Token Prediction Section */}
         {ffnOutput.length > 0 && (
           <div className="mt-0.5 mb-0.5">
-            <h3 className="text-sm font-semibold mb-0.5 border-b pb-0.5">
+            <h3 className="text-xs sm:text-sm font-semibold mb-0.5 border-b pb-0.5">
               Next Token Prediction
             </h3>
             <div className="bg-white rounded p-0.5">
               <div
-                className={`${
-                  isPortrait ? 'flex flex-col' : 'grid grid-cols-3'
-                } md:grid md:grid-cols-3 lg:grid lg:grid-cols-12 gap-3 lg:gap-1`}
+                className={`flex ${
+                  isMobile ? 'flex-col' : 'grid grid-cols-3'
+                } lg:grid-cols-3 xl:grid-cols-12 gap-2 sm:gap-3 lg:gap-1`}
               >
                 {/* Calculate token similarities and predictions */}
                 {(() => {
@@ -1123,10 +942,10 @@ function App() {
                       {/* Next Token Prediction Vector */}
                       <div
                         className={`${
-                          isPortrait ? 'w-full' : 'md:col-span-1'
-                        } lg:col-span-3 flex flex-col items-center`}
+                          isMobile ? 'w-full' : 'col-span-1'
+                        } xl:col-span-3 flex flex-col items-center`}
                       >
-                        <h4 className="text-[0.65rem] font-medium mb-0.5 text-center">
+                        <h4 className="text-[0.6rem] sm:text-[0.65rem] font-medium mb-0.5 text-center">
                           Next Token Vector
                         </h4>
                         {/* Use the last token's embedding as the prediction for the next token */}
@@ -1147,16 +966,16 @@ function App() {
                       {/* Similarity Scores */}
                       <div
                         className={`${
-                          isPortrait ? 'w-full' : 'md:col-span-1'
-                        } lg:col-span-6 flex flex-col items-center`}
+                          isMobile ? 'w-full' : 'col-span-1'
+                        } xl:col-span-6 flex flex-col items-center`}
                       >
-                        <h4 className="text-[0.65rem] font-medium mb-0.5 text-center">
+                        <h4 className="text-[0.6rem] sm:text-[0.65rem] font-medium mb-0.5 text-center">
                           Token Similarities
                         </h4>
                         <div className="w-full">
                           {/* Dot Products */}
                           <div className="mb-2">
-                            <h5 className="text-[0.6rem] font-medium mb-0.5 text-center">
+                            <h5 className="text-[0.55rem] sm:text-[0.6rem] font-medium mb-0.5 text-center">
                               Dot Product
                             </h5>
                             <div className="overflow-x-auto">
@@ -1178,7 +997,7 @@ function App() {
 
                           {/* Softmax Values (sorted by value, largest first) */}
                           <div>
-                            <h5 className="text-[0.6rem] font-medium mb-0.5 text-center">
+                            <h5 className="text-[0.55rem] sm:text-[0.6rem] font-medium mb-0.5 text-center">
                               Softmax
                             </h5>
                             <div className="overflow-x-auto">
@@ -1199,31 +1018,43 @@ function App() {
                       {/* Most Likely Token */}
                       <div
                         className={`${
-                          isPortrait ? 'w-full' : 'md:col-span-1'
-                        } lg:col-span-3 flex flex-col items-center`}
+                          isMobile ? 'w-full' : 'col-span-1'
+                        } xl:col-span-3 flex flex-col items-center`}
                       >
-                        <h4 className="text-[0.65rem] font-medium mb-2 text-center">
+                        <h4 className="text-[0.6rem] sm:text-[0.65rem] font-medium mb-1 sm:mb-2 text-center">
                           Most Likely Next Token
                         </h4>
                         <div className="w-full flex flex-col items-center">
-                          <div className="bg-gray-100 py-2 px-3 rounded shadow-inner mb-1 w-full border border-gray-200">
-                            <div className="flex justify-center">
-                              {/* Token styled like tokenizer tokens */}
-                              <div className="px-3 py-1.5 border border-gray-300 rounded text-sm min-w-[3.5rem] text-center shadow-sm bg-gray-100 font-medium">
-                                {topPredictedToken}
-                              </div>
-                            </div>
-
-                            {/* Probability value */}
-                            <div className="flex justify-center mt-2">
-                              <div className="text-[0.65rem] font-mono text-blue-600 bg-blue-50 px-3 py-0.5 rounded-md border border-blue-100 min-w-[60px] text-center">
-                                p={sortedSoftmax[0].value.toFixed(4)}
+                          <div className="flex justify-center">
+                            {/* Token styled like tokenizer tokens */}
+                            <div className="px-2 sm:px-3 py-1 sm:py-1.5 border border-gray-300 rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] text-center shadow-sm bg-gray-100 font-mono cursor-pointer group relative hover:bg-gray-200 transition-colors">
+                              {topPredictedToken}
+                              {/* Show embedding as matrix on hover */}
+                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 p-2 bg-white border border-gray-200 text-gray-700 text-[10px] rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                                <div className="mb-1 text-gray-600 text-center font-medium">
+                                  {topPredictedToken} embedding
+                                </div>
+                                <MatrixDisplay
+                                  data={[topPredictedTokenEmbedding]}
+                                  rowLabels={['']}
+                                  columnLabels={Array.from(
+                                    { length: embeddingDim },
+                                    (_, i) => `d${i + 1}`
+                                  )}
+                                  maxAbsValue={0.2}
+                                  cellSize="xs"
+                                  selectable={false}
+                                  matrixType="none"
+                                />
                               </div>
                             </div>
                           </div>
+                          <div className="text-[0.6rem] sm:text-[0.65rem] font-mono text-blue-600 bg-blue-50 px-2 sm:px-3 py-0.5 rounded-md border border-blue-100 min-w-[55px] sm:min-w-[60px] text-center">
+                            p={sortedSoftmax[0].value.toFixed(4)}
+                          </div>
 
                           {/* Raw embedding for the predicted token */}
-                          <h5 className="text-[0.65rem] font-medium mt-2 mb-1 text-center text-gray-700 pt-1.5 w-full">
+                          <h5 className="text-[0.6rem] sm:text-[0.65rem] font-medium mt-1 sm:mt-2 mb-1 text-center text-gray-700 pt-1 sm:pt-1.5 w-full">
                             Raw Token Embedding
                           </h5>
                           <MatrixDisplay
@@ -1250,7 +1081,7 @@ function App() {
           </div>
         )}
 
-        <div className="bg-white rounded p-0.5 mt-8 text-[0.6rem]">
+        <div className="bg-white rounded p-0.5 mt-4 sm:mt-8 text-[0.55rem] sm:text-[0.6rem]">
           <div className="flex flex-col gap-1">
             <p className="text-gray-700">
               Blue: positive, Red: negative. Click a value to edit (magenta
@@ -1259,7 +1090,7 @@ function App() {
                 ' Training mode enabled: weights evolve and dropout is applied.'}
             </p>
 
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-wrap gap-2 sm:gap-4">
               <div className="flex items-center">
                 <span className="font-semibold mr-1">Tokens:</span>
                 <span>{tokenLabels.length}</span>

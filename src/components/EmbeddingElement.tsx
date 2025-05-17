@@ -197,13 +197,17 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
   // stronger visual differentiation near zero and asymptotically approaches
   // pure blue/red at the extremes
   const { backgroundColor, textColor } = useMemo(() => {
+    // Check if we're dealing with a positional encoding or softmax value that should use a different scale
+    // We'll determine this based on the maxAbsValue - if it's 1.0, we're dealing with positional/softmax
+    const isPosEncodingOrSoftmax = maxAbsValue === 1.0;
+    
     // Use arctangent function to create a smooth, non-linear mapping
     // that approaches asymptotic limits but changes more dramatically near zero
     
     // Apply sigmoid-like transformation using atan function
     // atan maps the entire real line to [-π/2, π/2], which we'll normalize to [-1, 1]
     // We'll adjust the steepness of the curve with a scaling factor
-    const steepness = 0.3; // Controls how quickly values saturate to their color extremes
+    const steepness = isPosEncodingOrSoftmax ? 2.0 : 0.3; // Higher steepness for pos encoding/softmax
     
     // Get value between -1 and 1 using atan function
     // This creates a sinusoidal-like curve that changes faster near 0
@@ -211,8 +215,8 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
     
     // Base colors - neutral for zero, vibrant for extremes
     const neutralColor = [240, 240, 240]; // Light gray for zero
-    const maxBlueColor = [20, 20, 255];   // Much more saturated blue
-    const maxRedColor = [255, 20, 20];    // Much more saturated red
+    const maxBlueColor = isPosEncodingOrSoftmax ? [0, 80, 255] : [20, 20, 255]; // Brighter blue for pos encodings
+    const maxRedColor = isPosEncodingOrSoftmax ? [255, 60, 60] : [255, 20, 20]; // Brighter red for pos encodings
     
     // Compute the color based on normalized value
     let red, green, blue;
@@ -225,7 +229,7 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
       blue = neutralColor[2] * (1 - t) + maxRedColor[2] * t;
       
       // For very negative values, make text white for better contrast
-      const textColorThreshold = -0.7; // Point at which to switch text color
+      const textColorThreshold = isPosEncodingOrSoftmax ? -0.5 : -0.7; // Lower threshold for pos encodings
       return {
         backgroundColor: `rgb(${Math.round(red)}, ${Math.round(green)}, ${Math.round(blue)})`,
         textColor: normalizedValue < textColorThreshold ? 'white' : 'black',
@@ -238,7 +242,7 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
       blue = neutralColor[2] * (1 - t) + maxBlueColor[2] * t;
       
       // For very positive values, make text white for better contrast
-      const textColorThreshold = 0.7; // Point at which to switch text color
+      const textColorThreshold = isPosEncodingOrSoftmax ? 0.5 : 0.7; // Lower threshold for pos encodings
       return {
         backgroundColor: `rgb(${Math.round(red)}, ${Math.round(green)}, ${Math.round(blue)})`,
         textColor: normalizedValue > textColorThreshold ? 'white' : 'black',
@@ -250,7 +254,7 @@ const EmbeddingElement: React.FC<EmbeddingElementProps> = ({
         textColor: 'black',
       };
     }
-  }, [value]);
+  }, [value, maxAbsValue]);
 
   // Format the value in scientific notation and split into coefficient and exponent
   const { coefficient, exponent } = useMemo(() => {

@@ -6,7 +6,9 @@
       "Bash(npm run build:*)",
       "Bash(screencapture:*)",
       "Bash(osascript:*)",
-      "Bash(open:*)"
+      "Bash(open:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run:*)"
     ],
     "deny": []
   }
