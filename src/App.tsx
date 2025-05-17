@@ -36,22 +36,45 @@ function App() {
 
   // Vocabulary of 25 common words
   const vocabularyWords = [
-    'the', 'a', 'and', 'to', 'is', 'in', 'it', 'of', 'that', 'for',
-    'with', 'as', 'was', 'on', 'at', 'by', 'be', 'this', 'have', 'from',
-    'but', 'not', 'are', 'they', 'which'
+    'the', // 0
+    'a', // 1
+    'and', // 2
+    'to', // 3
+    'is', // 4
+    'in', // 5
+    'it', // 6
+    'of', // 7
+    'that', // 8
+    'boy', // 9
+    'cat',
+    'for',
+    'with',
+    'as',
+    'was',
+    'on',
+    'at',
+    'by',
+    'be',
   ];
 
   // Generate vocabulary embeddings - mutable state
-  const [vocabularyEmbeddings, setVocabularyEmbeddings] = useState(() => 
+  const [vocabularyEmbeddings, setVocabularyEmbeddings] = useState(() =>
     generateSampleEmbeddings(vocabularyWords.length, embeddingDim)
   );
 
   // Track selected tokens (indices into vocabulary)
-  const [selectedTokenIndices, setSelectedTokenIndices] = useState<number[]>([1, 4, 12, 13, 0, 6]); // 'a', 'is', 'was', 'on', 'the', 'it'
+  const [selectedTokenIndices, setSelectedTokenIndices] = useState<number[]>([
+    1, // a
+    9, // boy
+    5, // with
+    1, // a
+    10, // cat
+    4, // is
+  ]); // 'a', 'boy', 'with', 'a', 'cat', 'is'
 
   // Get token labels from selected indices
   const tokenLabels = useMemo(
-    () => selectedTokenIndices.map(idx => vocabularyWords[idx]),
+    () => selectedTokenIndices.map((idx) => vocabularyWords[idx]),
     [selectedTokenIndices]
   );
 
@@ -75,7 +98,7 @@ function App() {
 
   // Get embeddings for selected tokens
   const rawEmbeddings = useMemo(() => {
-    return selectedTokenIndices.map(idx => [...vocabularyEmbeddings[idx]]);
+    return selectedTokenIndices.map((idx) => [...vocabularyEmbeddings[idx]]);
   }, [selectedTokenIndices, vocabularyEmbeddings]);
 
   // Update vocabulary embeddings when dimension changes
@@ -330,35 +353,168 @@ function App() {
     );
   }, [embeddingDim, mlpHiddenDim, attentionHeadDim]);
 
-  // Token manipulation functions
-  const addTokenToSequence = useCallback((vocabularyIndex: number) => {
-    setSelectedTokenIndices((prev) => [...prev, vocabularyIndex]);
-    setSelectedElement(null); // Reset selection when changing tokens
+  // No need for these functions anymore - handled by drag and drop
+
+  // Drag and drop state
+  const [draggedData, setDraggedData] = useState<{
+    source: 'tokenizer' | 'sequence';
+    index: number;
+  } | null>(null);
+  const [dropTarget, setDropTarget] = useState<{
+    type: 'between' | 'remove';
+    index?: number;
+  } | null>(null);
+
+  // Drag handlers for tokenizer
+  const handleTokenizerDragStart = useCallback(
+    (e: React.DragEvent<HTMLDivElement>, index: number) => {
+      const data = { source: 'tokenizer' as const, index };
+      e.dataTransfer.setData('application/json', JSON.stringify(data));
+      e.dataTransfer.effectAllowed = 'copy';
+      setDraggedData(data);
+    },
+    []
+  );
+
+  // Drag handlers for sequence
+  const handleSequenceDragStart = useCallback(
+    (e: React.DragEvent<HTMLDivElement>, index: number) => {
+      const data = { source: 'sequence' as const, index };
+      e.dataTransfer.setData('application/json', JSON.stringify(data));
+      e.dataTransfer.effectAllowed = 'move';
+      setDraggedData(data);
+    },
+    []
+  );
+
+  // Common drag end handler
+  const handleDragEnd = useCallback(() => {
+    setDraggedData(null);
+    setDropTarget(null);
   }, []);
 
-  const removeTokenFromSequence = useCallback((sequenceIndex: number) => {
-    setSelectedTokenIndices((prev) => {
-      const newIndices = [...prev];
-      newIndices.splice(sequenceIndex, 1);
-      return newIndices;
-    });
-    setSelectedElement(null); // Reset selection when changing tokens
-  }, []);
+  // Drop zone handlers
+  const handleDropZoneDragOver = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
 
-  // Drag and drop handlers
-  const handleDragStart = useCallback((e: React.DragEvent, vocabularyIndex: number) => {
-    e.dataTransfer.setData('vocabularyIndex', vocabularyIndex.toString());
-  }, []);
+      if (!draggedData) return;
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-  }, []);
+      // For empty drop zone, always allow drop at the end
+      if (selectedTokenIndices.length === 0) {
+        e.dataTransfer.dropEffect = 'copy';
+        setDropTarget({ type: 'between', index: 0 });
+        return;
+      }
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    const vocabularyIndex = parseInt(e.dataTransfer.getData('vocabularyIndex'));
-    addTokenToSequence(vocabularyIndex);
-  }, [addTokenToSequence]);
+      // For non-empty drop zone, calculate insertion point
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+
+      // Find the closest gap between tokens
+      const tokenElements =
+        e.currentTarget.querySelectorAll('[data-token-index]');
+      let closestIndex = selectedTokenIndices.length;
+      let closestDistance = Infinity;
+
+      tokenElements.forEach((elem, i) => {
+        const tokenRect = elem.getBoundingClientRect();
+        const tokenCenter = tokenRect.left + tokenRect.width / 2 - rect.left;
+        const distance = Math.abs(x - tokenCenter);
+
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestIndex = x < tokenCenter ? i : i + 1;
+        }
+      });
+
+      e.dataTransfer.dropEffect =
+        draggedData.source === 'tokenizer' ? 'copy' : 'move';
+      setDropTarget({ type: 'between', index: closestIndex });
+    },
+    [draggedData, selectedTokenIndices.length]
+  );
+
+  const handleDropZoneDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+
+      const dataStr = e.dataTransfer.getData('application/json');
+      if (!dataStr) return;
+
+      const data = JSON.parse(dataStr) as {
+        source: 'tokenizer' | 'sequence';
+        index: number;
+      };
+
+      if (data.source === 'tokenizer' && dropTarget?.type === 'between') {
+        // Copy from tokenizer
+        const newIndices = [...selectedTokenIndices];
+        newIndices.splice(dropTarget.index!, 0, data.index);
+        setSelectedTokenIndices(newIndices);
+      } else if (data.source === 'sequence' && dropTarget?.type === 'between') {
+        // Move within sequence
+        const newIndices = [...selectedTokenIndices];
+        const [moved] = newIndices.splice(data.index, 1);
+
+        let insertIndex = dropTarget.index!;
+        if (data.index < insertIndex) insertIndex--;
+
+        newIndices.splice(insertIndex, 0, moved);
+        setSelectedTokenIndices(newIndices);
+      }
+
+      setDraggedData(null);
+      setDropTarget(null);
+    },
+    [dropTarget, selectedTokenIndices]
+  );
+
+  const handleDropZoneDragLeave = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      // Only clear if we're leaving the entire drop zone
+      if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+        setDropTarget(null);
+      }
+    },
+    []
+  );
+
+  // Handle dropping outside to remove
+  const handlePageDragOver = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      if (draggedData?.source === 'sequence') {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        setDropTarget({ type: 'remove' });
+      }
+    },
+    [draggedData]
+  );
+
+  const handlePageDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      const dataStr = e.dataTransfer.getData('application/json');
+      if (!dataStr) return;
+
+      const data = JSON.parse(dataStr) as {
+        source: 'tokenizer' | 'sequence';
+        index: number;
+      };
+
+      if (data.source === 'sequence' && dropTarget?.type === 'remove') {
+        e.preventDefault();
+        const newIndices = selectedTokenIndices.filter(
+          (_, i) => i !== data.index
+        );
+        setSelectedTokenIndices(newIndices);
+      }
+
+      setDraggedData(null);
+      setDropTarget(null);
+    },
+    [dropTarget, selectedTokenIndices]
+  );
 
   // No need for dimension adjustment functions anymore
 
@@ -495,7 +651,9 @@ function App() {
             const tokenVocabIdx = selectedTokenIndices[row];
             // Create a new copy of vocabulary embeddings with the updated value
             const newVocabEmbeddings = vocabularyEmbeddings.map((r, i) =>
-              i === tokenVocabIdx ? r.map((v, j) => (j === col ? newValue : v)) : [...r]
+              i === tokenVocabIdx
+                ? r.map((v, j) => (j === col ? newValue : v))
+                : [...r]
             );
             setVocabularyEmbeddings(newVocabEmbeddings);
           }
@@ -578,7 +736,11 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div
+      className="min-h-screen bg-gray-50"
+      onDragOver={handlePageDragOver}
+      onDrop={handlePageDrop}
+    >
       <main className="w-full p-0.5 md:p-2">
         <div className="bg-white rounded p-0.5 mb-0.5">
           {/* Main control panel */}
@@ -643,26 +805,16 @@ function App() {
               Tokenizer
             </h3>
             <div className="p-2">
-              <p className="text-xs text-gray-600 mb-2">Drag tokens into the input sequence below</p>
+              <p className="text-xs text-gray-600 mb-2">
+                Drag tokens into the input sequence below
+              </p>
               <div className="flex flex-wrap gap-2">
                 {vocabularyWords.map((word, idx) => (
                   <div
                     key={idx}
                     draggable
-                    onDragStart={(e) => {
-                      handleDragStart(e, idx);
-                      // Create a clone of the token box
-                      const dragImage = e.currentTarget.cloneNode(true) as HTMLElement;
-                      dragImage.classList.remove('group'); // Remove hover effects from drag image
-                      const hover = dragImage.querySelector('.group-hover\\:opacity-100');
-                      if (hover) hover.remove(); // Remove the hover element from drag image
-                      dragImage.style.position = 'absolute';
-                      dragImage.style.top = '-9999px';
-                      dragImage.style.width = e.currentTarget.getBoundingClientRect().width + 'px';
-                      document.body.appendChild(dragImage);
-                      e.dataTransfer.setDragImage(dragImage, e.nativeEvent.offsetX, e.nativeEvent.offsetY);
-                      setTimeout(() => document.body.removeChild(dragImage), 0);
-                    }}
+                    onDragStart={(e) => handleTokenizerDragStart(e, idx)}
+                    onDragEnd={handleDragEnd}
                     className="px-3 py-1.5 border border-gray-300 rounded text-sm min-w-[3.5rem] text-center shadow-sm bg-gray-100 hover:bg-gray-200 cursor-move font-medium transition-colors group relative"
                   >
                     {word}
@@ -674,7 +826,10 @@ function App() {
                       <MatrixDisplay
                         data={[vocabularyEmbeddings[idx]]}
                         rowLabels={['']}
-                        columnLabels={Array.from({ length: embeddingDim }, (_, i) => `d${i + 1}`)}
+                        columnLabels={Array.from(
+                          { length: embeddingDim },
+                          (_, i) => `d${i + 1}`
+                        )}
                         maxAbsValue={0.2}
                         cellSize="xs"
                         selectable={false}
@@ -693,30 +848,58 @@ function App() {
               Input Sequence
             </h3>
             <div className="p-2">
+              <p className="text-xs text-gray-600 mb-2">
+                Drag tokens to reorder • Drag out to remove
+              </p>
               {/* Drop zone for tokens */}
-              <div 
-                className="min-h-[50px] border-2 border-dashed border-gray-300 rounded-lg p-2 bg-gray-50 transition-colors hover:border-blue-400 hover:bg-blue-50"
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
+              <div
+                className={`min-h-[50px] border-2 border-dashed rounded-lg p-2 transition-colors ${
+                  dropTarget?.type === 'between'
+                    ? 'border-blue-400 bg-blue-50'
+                    : 'border-gray-300 bg-gray-50 hover:border-gray-400'
+                }`}
+                onDragOver={handleDropZoneDragOver}
+                onDrop={handleDropZoneDrop}
+                onDragLeave={handleDropZoneDragLeave}
               >
                 {selectedTokenIndices.length === 0 ? (
-                  <p className="text-gray-400 text-center text-sm italic">Drag tokens here...</p>
+                  <p className="text-gray-400 text-center text-sm italic">
+                    Drag tokens here...
+                  </p>
                 ) : (
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2 relative">
                     {selectedTokenIndices.map((tokenIdx, seqIdx) => (
-                      <div key={seqIdx} className="relative group">
-                        <button
-                          className="absolute -top-2.5 -right-2.5 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-medium shadow-sm md:opacity-0 md:group-hover:opacity-100 transition-opacity z-10"
-                          onClick={() => removeTokenFromSequence(seqIdx)}
-                          title="Remove token"
+                      <React.Fragment key={seqIdx}>
+                        {/* Drop indicator before token */}
+                        {dropTarget?.type === 'between' &&
+                          dropTarget.index === seqIdx && (
+                            <div className="w-0.5 h-8 bg-blue-500 self-center animate-pulse" />
+                          )}
+
+                        <div
+                          data-token-index={seqIdx}
+                          draggable
+                          onDragStart={(e) =>
+                            handleSequenceDragStart(e, seqIdx)
+                          }
+                          onDragEnd={handleDragEnd}
+                          className={`px-3 py-1.5 border border-gray-400 rounded text-sm min-w-[3.5rem] h-9 text-center shadow-sm bg-white font-medium cursor-move transition-all ${
+                            draggedData?.source === 'sequence' &&
+                            draggedData.index === seqIdx
+                              ? 'opacity-50'
+                              : ''
+                          }`}
                         >
-                          ×
-                        </button>
-                        <div className="px-3 py-1.5 border border-gray-400 rounded text-sm min-w-[3.5rem] h-9 text-center shadow-sm bg-white font-medium">
                           {vocabularyWords[tokenIdx]}
                         </div>
-                      </div>
+                      </React.Fragment>
                     ))}
+
+                    {/* Drop indicator after all tokens */}
+                    {dropTarget?.type === 'between' &&
+                      dropTarget.index === selectedTokenIndices.length && (
+                        <div className="w-0.5 h-8 bg-blue-500 self-center animate-pulse" />
+                      )}
                   </div>
                 )}
               </div>
@@ -896,8 +1079,9 @@ function App() {
                   const nextTokenPrediction = ffnOutput[ffnOutput.length - 1];
 
                   // Calculate dot product similarity with each vocabulary token
-                  const dotProducts = vocabularyEmbeddings.map((vocabEmbedding) =>
-                    vectorDotProduct(nextTokenPrediction, vocabEmbedding)
+                  const dotProducts = vocabularyEmbeddings.map(
+                    (vocabEmbedding) =>
+                      vectorDotProduct(nextTokenPrediction, vocabEmbedding)
                   );
 
                   // Apply softmax to the dot products to get probability-like values
@@ -929,7 +1113,8 @@ function App() {
 
                   // Get the highest probability token (first one in sorted list)
                   const topPredictedTokenIndex = sortedSoftmax[0].index;
-                  const topPredictedToken = vocabularyWords[topPredictedTokenIndex];
+                  const topPredictedToken =
+                    vocabularyWords[topPredictedTokenIndex];
                   const topPredictedTokenEmbedding =
                     vocabularyEmbeddings[topPredictedTokenIndex];
 
@@ -998,7 +1183,7 @@ function App() {
                             </h5>
                             <div className="overflow-x-auto">
                               <MatrixDisplay
-                                data={[sortedSoftmax.map(item => item.value)]}
+                                data={[sortedSoftmax.map((item) => item.value)]}
                                 rowLabels={['']}
                                 columnLabels={sortedTokenLabels}
                                 maxAbsValue={1.0} // Softmax values are between 0 and 1
@@ -1042,7 +1227,9 @@ function App() {
                             Raw Token Embedding
                           </h5>
                           <MatrixDisplay
-                            data={[vocabularyEmbeddings[topPredictedTokenIndex]]}
+                            data={[
+                              vocabularyEmbeddings[topPredictedTokenIndex],
+                            ]}
                             rowLabels={[topPredictedToken]}
                             columnLabels={Array.from(
                               { length: embeddingDim },
