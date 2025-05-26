@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import './App.css';
 import AttentionHead from './components/AttentionHead';
 import FeedForward from './components/FeedForward';
+import HistoryGraph from './components/HistoryGraph';
 import MatrixDisplay from './components/MatrixDisplay';
+import SoftmaxHistoryGraph from './components/SoftmaxHistoryGraph';
 import {
   addPositionalEncodings,
   generatePositionalEncodings,
@@ -14,17 +16,23 @@ import {
   vectorDotProduct,
 } from './utils/matrixOperations';
 
-export type HistoryEntry = {
+export type HistoryTrainingEntry = {
   loss: number;
   targetToken: string;
   predictedToken: string;
   targetProb: string;
 };
 
+export type HistorySoftMaxEntry = {
+  softmaxValues: { token: string; probability: number }[];
+  timestamp: number;
+};
+
 // Training configuration constants
 const LEARNING_RATE = 0.001; // Reduced from 0.1 for more stable training
 const TRAINING_INTERVAL_MS = 1; // Update every 200ms (5 times per second) instead of 1000ms
 const EXPONENTIAL_DECIMALS = 4; // Number of decimal places for exponential values
+const HISTORY_DISPLAY_STEPS = 1000; // Number of training steps to show in history graph
 const DIM_EMBEDDING = isPortraitOrientation() ? 8 : 8; // Dimension of embeddings (d_model)
 const DIM_ATTENTION_HEAD = isPortraitOrientation() ? 4 : 4; // Dimension of attention heads (d_k = d_v = d_model / num_heads)
 const DIM_MLP_HIDDEN = 6; // Dimension of MLP hidden layer (d_ff = 8, typically 4x d_model)
@@ -37,7 +45,13 @@ function App() {
   // Target output token for training (what we're trying to predict)
   const [targetTokenIndex, setTargetTokenIndex] = useState<number | null>(null);
 
-  const [history, setHistory] = useState<HistoryEntry[]>([]); // History of training logs
+  const [historyTraining, setHistoryTraining] = useState<
+    HistoryTrainingEntry[]
+  >([]); // History of training logs
+
+  const [historySoftMax, setHistorySoftMax] = useState<HistorySoftMaxEntry[]>(
+    []
+  ); // History of softmax probabilities
 
   // Vocabulary of 25 common words
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -204,17 +218,32 @@ function App() {
             Math.max(...dotProducts)
           );
 
-          const historyItem: HistoryEntry = {
+          const historyItem: HistoryTrainingEntry = {
             loss: loss,
             targetToken: vocabularyWords[targetTokenIndex],
             predictedToken: vocabularyWords[predictedTokenIndex],
             targetProb: targetProb.toFixed(EXPONENTIAL_DECIMALS),
           };
 
-          // Add to history
-          setHistory((prev: HistoryEntry[]) => {
+          // Add to training history
+          setHistoryTraining((prev: HistoryTrainingEntry[]) => {
             const newHistory = [...prev, historyItem];
-            // Limit history to last 100 entries
+            // Limit history to last 1000 entries
+            return newHistory.slice(-1000);
+          });
+
+          // Save softmax probabilities to history
+          const softmaxEntry: HistorySoftMaxEntry = {
+            softmaxValues: vocabularyWords.map((word, idx) => ({
+              token: word,
+              probability: probabilities[idx]
+            })),
+            timestamp: Date.now()
+          };
+          
+          setHistorySoftMax((prev: HistorySoftMaxEntry[]) => {
+            const newHistory = [...prev, softmaxEntry];
+            // Limit history to last 1000 entries
             return newHistory.slice(-1000);
           });
 
@@ -703,6 +732,21 @@ function App() {
             </div>
           </div>
 
+          {/* History Graphs */}
+          {trainingMode && (
+            <>
+              <HistoryGraph
+                history={historyTraining}
+                maxPoints={HISTORY_DISPLAY_STEPS}
+              />
+              <SoftmaxHistoryGraph
+                history={historySoftMax}
+                maxPoints={HISTORY_DISPLAY_STEPS}
+                vocabularyWords={vocabularyWords}
+              />
+            </>
+          )}
+
           {/* Tokenizer section */}
           <div className="mb-0.5 bg-white rounded p-0.5">
             <h3 className="text-xs sm:text-sm font-semibold mb-0.5 border-b pb-0.5">
@@ -1117,6 +1161,23 @@ function App() {
                   const sumExp = expValues.reduce((a, b) => a + b, 0);
                   // Normalize to get softmax values
                   const softmaxValues = expValues.map((exp) => exp / sumExp);
+                  
+                  // Save softmax to history when in training mode and we have ffnOutput
+                  if (trainingMode && ffnOutput.length > 0) {
+                    const softmaxEntry: HistorySoftMaxEntry = {
+                      softmaxValues: vocabularyWords.map((word, idx) => ({
+                        token: word,
+                        probability: softmaxValues[idx]
+                      })),
+                      timestamp: Date.now()
+                    };
+                    
+                    setHistorySoftMax((prev: HistorySoftMaxEntry[]) => {
+                      const newHistory = [...prev, softmaxEntry];
+                      // Limit history to last 1000 entries
+                      return newHistory.slice(-1000);
+                    });
+                  }
 
                   // Create pairs of [index, softmax value] so we can sort them while keeping the original indices
                   const indexedSoftmax = softmaxValues.map((value, index) => ({
