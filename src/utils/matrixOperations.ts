@@ -314,58 +314,6 @@ export function generatePositionalEncodings(
   }
   return encodings;
 }
-// Store dropout masks and their generation times for each component
-const dropoutMaskCache = new Map<string, { 
-  mask: boolean[][], 
-  timestamp: number 
-}>();
-
-/**
- * Apply dropout to a matrix
- * @param matrix - Input matrix
- * @param dropoutRate - Dropout rate (0-1), probability of dropping an element
- * @param training - Whether we're in training mode (apply dropout) or inference mode (no dropout)
- * @param dropoutId - Optional identifier for this dropout instance (for consistent caching)
- * @returns Matrix with dropout applied
- */
-export function applyDropout(
-  matrix: number[][],
-  dropoutRate: number,
-  training: boolean = false,
-  dropoutId: string = 'default'
-): number[][] {
-  // During inference (training=false), we don't apply dropout
-  if (!training) return matrix;
-
-  const now = Date.now();
-  const cacheKey = `${dropoutId}_${matrix.length}_${matrix[0]?.length || 0}`;
-  
-  // Check if we need to generate a new dropout mask (once per second)
-  if (!dropoutMaskCache.has(cacheKey) || 
-      now - dropoutMaskCache.get(cacheKey)!.timestamp >= 1000) {
-    
-    // Generate a new dropout mask - true means keep the value, false means drop it
-    const newMask = matrix.map(row => 
-      row.map(() => Math.random() >= dropoutRate)
-    );
-    
-    // Cache the mask with the current timestamp
-    dropoutMaskCache.set(cacheKey, {
-      mask: newMask,
-      timestamp: now
-    });
-  }
-  
-  // Get the current mask from cache
-  const { mask } = dropoutMaskCache.get(cacheKey)!;
-  
-  // Apply the mask to the matrix with proper scaling
-  return matrix.map((row, i) =>
-    row.map((val, j) => 
-      mask[i][j] ? val / (1 - dropoutRate) : 0
-    )
-  );
-}
 
 /**
  * Add positional encodings to token embeddings

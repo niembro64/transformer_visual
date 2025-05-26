@@ -5,7 +5,6 @@ import FeedForward from './components/FeedForward';
 import MatrixDisplay from './components/MatrixDisplay';
 import {
   addPositionalEncodings,
-  applyDropout,
   applyRandomWalk,
   applyRandomWalkToVector,
   generatePositionalEncodings,
@@ -21,7 +20,6 @@ import {
   updateVectorWeights,
 } from './utils/matrixOperations';
 
-export const dropoutUniveral = 0.03;
 
 function App() {
   // Fixed dimension values
@@ -29,10 +27,6 @@ function App() {
   const attentionHeadDim = isPortraitOrientation() ? 2 : 4; // Dimension of attention heads (d_k = d_v = d_model / num_heads)
   const mlpHiddenDim = 4; // Dimension of MLP hidden layer (d_ff = 8, typically 4x d_model)
 
-  // Dropout rates
-  const embeddingDropoutRate = dropoutUniveral; // Dropout rate after embeddings + positional encodings
-  const attentionDropoutRate = dropoutUniveral; // Dropout rate after attention
-  const ffnDropoutRate = dropoutUniveral; // Dropout rate in feed-forward network
 
   // Training mode - determines if dropout is applied and weights are updated
   const [trainingMode, setTrainingMode] = useState(false);
@@ -381,12 +375,6 @@ function App() {
           });
         }
       }, 1000);
-    } else if (trainingMode && targetTokenIndex === null) {
-      // No updates when no target is selected - pure gradient descent needs a target
-      // Just update the training cycle for dropout mask updates
-      timerId = window.setInterval(() => {
-        setTrainingCycle((prev) => prev + 1); // Increment counter to trigger re-renders for dropout
-      }, 1000);
     }
 
     return () => {
@@ -396,18 +384,8 @@ function App() {
     };
   }, [trainingMode, weightUpdateStepSize, targetTokenIndex, ffnOutput, vocabularyEmbeddings, learningRate, selectedElement]);
 
-  // Apply dropout to embeddings (only during training) with a unique ID
-  // Include trainingCycle in dependencies to ensure recalculation when timer ticks
-  const embeddingsWithDropout = useMemo(
-    () =>
-      applyDropout(
-        embeddings,
-        embeddingDropoutRate,
-        trainingMode,
-        'embeddings_dropout'
-      ),
-    [embeddings, embeddingDropoutRate, trainingMode, trainingCycle]
-  );
+  // Use embeddings directly (no dropout)
+  const embeddingsWithDropout = embeddings;
 
   // Sample data generation for attention weights - regenerate when dimensions change
   const [attentionWeights, setAttentionWeights] = useState(() =>
@@ -927,7 +905,6 @@ function App() {
               >
                 <h4 className="text-[0.6rem] sm:text-[0.65rem] font-medium mb-1 sm:mb-0.5 text-center">
                   Embeddings + Pos. Encoding
-                  {trainingMode ? ` + Dropout(${embeddingDropoutRate})` : ''}
                 </h4>
                 <div className="w-full overflow-x-auto pb-2">
                   <MatrixDisplay
@@ -963,9 +940,6 @@ function App() {
               selectedElement={selectedElement}
               onElementClick={handleElementClick}
               onValueChange={handleValueChange}
-              dropoutRate={attentionDropoutRate}
-              applyTrainingDropout={trainingMode}
-              dropoutCycle={trainingCycle} // Pass the training cycle to force updates
             />
           </div>
 
@@ -986,11 +960,8 @@ function App() {
                 selectedElement={selectedElement}
                 onElementClick={handleElementClick}
                 onValueChange={handleValueChange}
-                dropoutRate={ffnDropoutRate}
-                applyTrainingDropout={trainingMode}
                 activationFn={relu} // ReLU activation as default
                 activationFnName="ReLU"
-                dropoutCycle={trainingCycle} // Pass the training cycle to force updates
                 onOutputComputed={handleFfnOutputComputed}
               />
             ) : (
@@ -1241,28 +1212,6 @@ function App() {
                 <span>{mlpHiddenDim}</span>
               </div>
 
-              {trainingMode && (
-                <>
-                  <div className="flex items-center">
-                    <span className="font-semibold mr-1">
-                      Embedding Dropout:
-                    </span>
-                    <span>{(embeddingDropoutRate * 100).toFixed(0)}%</span>
-                  </div>
-
-                  <div className="flex items-center">
-                    <span className="font-semibold mr-1">
-                      Attention Dropout:
-                    </span>
-                    <span>{(attentionDropoutRate * 100).toFixed(0)}%</span>
-                  </div>
-
-                  <div className="flex items-center">
-                    <span className="font-semibold mr-1">FFN Dropout:</span>
-                    <span>{(ffnDropoutRate * 100).toFixed(0)}%</span>
-                  </div>
-                </>
-              )}
             </div>
           </div>
         </div>

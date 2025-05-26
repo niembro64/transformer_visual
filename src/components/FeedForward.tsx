@@ -5,7 +5,6 @@ import {
   addBias, 
   applyFn, 
   relu, 
-  applyDropout,
   isPortraitOrientation 
 } from '../utils/matrixOperations';
 
@@ -36,14 +35,8 @@ interface FeedForwardProps {
   activationFn?: (x: number) => number;
   // Name of the activation function for display
   activationFnName?: string;
-  // Dropout rate for first linear layer (after activation)
-  dropoutRate?: number;
-  // Whether to apply dropout (simulates training)
-  applyTrainingDropout?: boolean;
   // Label for value editing
   valueLabel?: string;
-  // Current dropout cycle for timed updates
-  dropoutCycle?: number;
   // Optional callback when output is computed
   onOutputComputed?: (output: number[][]) => void;
 }
@@ -67,10 +60,7 @@ const FeedForward: React.FC<FeedForwardProps> = ({
   onValueChange,
   activationFn = relu,
   activationFnName = 'ReLU',
-  dropoutRate = 0.1,
-  applyTrainingDropout = false,
   valueLabel,
-  dropoutCycle,
   onOutputComputed
 }) => {
   // Number of tokens and dimensionality
@@ -110,11 +100,8 @@ const FeedForward: React.FC<FeedForwardProps> = ({
     [firstLayerOutput, activationFn]
   );
   
-  // Apply dropout after first activation (only during training) with a unique ID
-  const activationsWithDropout = useMemo(() =>
-    applyDropout(activations, dropoutRate, applyTrainingDropout, 'ffn_dropout'),
-    [activations, dropoutRate, applyTrainingDropout, dropoutCycle]
-  );
+  // Use activations directly (no dropout)
+  const activationsWithDropout = activations;
 
   // Second layer computation: activations × W2 + b2
   const output = useMemo(() => {
@@ -209,10 +196,9 @@ const FeedForward: React.FC<FeedForwardProps> = ({
               <div className="flex flex-col items-center justify-center">
                 <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700 w-full">
                   {activationFnName}
-                  {applyTrainingDropout ? ` + Dropout(${dropoutRate})` : ''}
                 </h4>
                 <MatrixDisplay
-                  data={applyTrainingDropout ? activationsWithDropout : activations}
+                  data={activations}
                   rowLabels={[]} // Removed token labels as they don't make sense for hidden layer
                   columnLabels={ffnDimLabels}
                   maxAbsValue={0.5}

@@ -63,13 +63,6 @@ The positional encodings are added to the embeddings:
 X' = X + PE
 ```
 
-### Input Dropout
-
-Dropout is applied after adding positional encodings:
-
-```
-X'' = Dropout(X')
-```
 
 ## Multi-Head Attention Mechanism
 
@@ -131,13 +124,6 @@ MultiHead(X) = Concat(Z_1, Z_2, ..., Z_h)W^O
 
 Where `W^O ∈ ℝ^(h×d_v×d_model)` is the output projection matrix.
 
-#### 5. Attention Dropout
-
-Dropout is applied to the attention output before the residual connection:
-
-```
-Z' = Dropout(MultiHead(X))
-```
 
 ### Self-Attention vs. Cross-Attention
 
@@ -170,13 +156,12 @@ For each position in the sequence:
 FFN(x) = max(0, xW_1 + b_1)W_2 + b_2
 ```
 
-More specifically with dropout:
+More specifically:
 
 ```
 F1 = xW_1 + b_1
 F2 = ReLU(F1)
-F3 = Dropout(F2)
-FFN(x) = F3W_2 + b_2
+FFN(x) = F2W_2 + b_2
 ```
 
 Where:
@@ -191,35 +176,32 @@ The FFN can be viewed as a two-layer neural network with a ReLU activation.
 
 ### Encoder Layer Flow
 
-1. **Input**: Sequence of token embeddings + positional encodings with dropout `X`
+1. **Input**: Sequence of token embeddings + positional encodings `X`
 
 2. **Self-Attention Sublayer**:
    - Apply multi-head self-attention: `Z = MultiHeadAttention(X, X, X)`
-   - Apply dropout: `Z_dropout = Dropout(Z)`
-   - Add residual connection: `Z' = LayerNorm(X + Z_dropout)`
+   - Add residual connection: `Z' = LayerNorm(X + Z)`
 
 3. **Feed-Forward Sublayer**:
-   - Apply position-wise FFN: `F = FFN(Z')` (includes internal dropout after ReLU)
+   - Apply position-wise FFN: `F = FFN(Z')`
    - Add residual connection: `F' = LayerNorm(Z' + F)`
 
 4. **Output**: `F'` becomes the input to the next encoder layer or the final encoder output
 
 ### Decoder Layer Flow
 
-1. **Input**: Sequence of token embeddings + positional encodings with dropout `Y` and encoder outputs `E`
+1. **Input**: Sequence of token embeddings + positional encodings `Y` and encoder outputs `E`
 
 2. **Masked Self-Attention Sublayer**:
    - Apply masked multi-head self-attention: `Z_1 = MaskedMultiHeadAttention(Y, Y, Y)`
-   - Apply dropout: `Z_1_dropout = Dropout(Z_1)`
-   - Add residual connection: `Z_1' = LayerNorm(Y + Z_1_dropout)`
+   - Add residual connection: `Z_1' = LayerNorm(Y + Z_1)`
 
 3. **Cross-Attention Sublayer**:
    - Apply multi-head cross-attention: `Z_2 = MultiHeadAttention(Z_1', E, E)`
-   - Apply dropout: `Z_2_dropout = Dropout(Z_2)`
-   - Add residual connection: `Z_2' = LayerNorm(Z_1' + Z_2_dropout)`
+   - Add residual connection: `Z_2' = LayerNorm(Z_1' + Z_2)`
 
 4. **Feed-Forward Sublayer**:
-   - Apply position-wise FFN: `F = FFN(Z_2')` (includes internal dropout after ReLU)
+   - Apply position-wise FFN: `F = FFN(Z_2')`
    - Add residual connection: `F' = LayerNorm(Z_2' + F)`
 
 5. **Output**: `F'` becomes the input to the next decoder layer or the final decoder output
@@ -231,19 +213,16 @@ In our visualization:
 1. **Token Embeddings + Positional Encodings**:
    - Token embeddings are represented as vectors in the embedding space
    - Sinusoidal positional encodings are added to incorporate position information
-   - Dropout is applied after adding positional encodings (during training)
 
 2. **Attention Mechanism**:
    - Attention weights are shown as links between tokens
    - The brightness/thickness of links indicates attention strength
    - Multiple attention heads are visualized separately to show their different focus patterns
-   - Dropout is applied to attention outputs (during training)
 
 3. **Feed-Forward Network**:
    - Visualized as transformations applied to each token individually
    - Input and output projections are shown with their weights
    - ReLU activation is applied after the first linear transformation
-   - Dropout is applied after the ReLU activation (during training)
 
 4. **Next Token Prediction**:
    - The last token's embedding is used to predict the next token in the sequence
@@ -259,7 +238,6 @@ The complete flow visualization helps understand how:
 - Dot products and softmax are used to convert embeddings to token probabilities
 - Residual connections help preserve information throughout the network
 - Layer normalization stabilizes the learning process
-- Dropout regularizes the model during training
 
 This visualization demonstrates how transformers process relationships between tokens and how different components work together to enable the model's powerful capabilities in understanding and generating sequences.
 
@@ -272,12 +250,6 @@ To ensure compliance with the original "Attention Is All You Need" paper, we mad
    - Added `addPositionalEncodings()` to combine token embeddings with positional information
    - Added a visualization section showing raw embeddings, positional encodings, and their sum
 
-2. **Dropout Layers**:
-   - Added `applyDropout()` function with proper scaling during training
-   - Implemented dropout after positional encodings are added to embeddings
-   - Added dropout after the attention output before the residual connection
-   - Added dropout after ReLU in the feed-forward network
-   - Added a training mode toggle to enable/disable dropout visualization
 
 3. **Feed-Forward Activation**:
    - Ensured ReLU is the default activation for feed-forward networks
@@ -293,7 +265,7 @@ To ensure compliance with the original "Attention Is All You Need" paper, we mad
    - Added a display of the most likely next token with its embedding
 
 5. **UI Improvements**:
-   - Added a "Training Mode" toggle to show the effect of dropout
+   - Added a "Training Mode" toggle for weight updates during training
    - Fixed multiple slider issue to ensure only one element can be edited at a time
    - Updated all component interfaces to maintain proper type safety
    - Enhanced matrix value visualization with sinusoidal color mapping
@@ -375,9 +347,8 @@ This visualization approach helps understand the relationship between embedding 
 - When changing dimensions, all weights and matrices are regenerated appropriately
 
 ### Training Mode
-- Toggle "Training Mode" to enable/disable weight updates and dropout
+- Toggle "Training Mode" to enable/disable weight updates
 - When enabled, weights evolve over time using random walks
-- Dropout is applied to embeddings, attention outputs, and FFN activations
 - The training cycle updates every second in training mode
 
 ### Visualization Interaction

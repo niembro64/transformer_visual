@@ -5,7 +5,6 @@ import {
   transpose,
   softmax,
   scaleMatrix,
-  applyDropout,
   isPortraitOrientation
 } from '../utils/matrixOperations';
 
@@ -32,14 +31,8 @@ interface AttentionHeadProps {
   onElementClick?: (matrixType: 'embeddings' | 'weightQ' | 'weightK' | 'weightV' | 'weightW1' | 'weightW2' | 'none', row: number, col: number) => void;
   // Callback when element value changes via slider
   onValueChange?: (newValue: number) => void;
-  // Dropout rate for attention output
-  dropoutRate?: number;
-  // Whether to apply dropout (simulates training)
-  applyTrainingDropout?: boolean;
   // Label for value editing
   valueLabel?: string;
-  // Current dropout cycle for timed updates
-  dropoutCycle?: number;
 }
 
 /**
@@ -60,10 +53,7 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
   selectedElement = null,
   onElementClick,
   onValueChange,
-  dropoutRate = 0.1,
-  applyTrainingDropout = false,
-  valueLabel,
-  dropoutCycle
+  valueLabel
 }) => {
   // Number of tokens and dimensionality
   const numTokens = embeddings.length;
@@ -92,11 +82,8 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
     [attentionWeights, V]
   );
   
-  // Apply dropout to attention output (only during training) with a unique ID
-  const attentionOutput = useMemo(() => 
-    applyDropout(rawAttentionOutput, dropoutRate, applyTrainingDropout, 'attention_dropout'),
-    [rawAttentionOutput, dropoutRate, applyTrainingDropout, dropoutCycle]
-  );
+  // Use raw attention output directly (no dropout)
+  const attentionOutput = rawAttentionOutput;
 
   // Use useEffect to call the callback after render
   useEffect(() => {
@@ -291,7 +278,6 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
             <div className="flex flex-col items-center justify-center w-full">
               <h4 className="text-[0.5rem] font-medium mb-0.5 text-center text-gray-700">
                 Output
-                {applyTrainingDropout ? ` + Dropout(${dropoutRate})` : ''}
               </h4>
               <MatrixDisplay
                 data={attentionOutput}
