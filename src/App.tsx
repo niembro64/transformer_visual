@@ -711,6 +711,110 @@ function App() {
             </div>
           </div>
 
+          {/* Tokenizer section */}
+          <div className="mb-0.5 bg-white rounded p-0.5">
+            <h3 className="text-xs sm:text-sm font-semibold mb-0.5 border-b pb-0.5">
+              Tokenizer
+            </h3>
+            <div className="p-1 sm:p-2">
+              <p className="text-[10px] sm:text-xs text-gray-600 mb-1 sm:mb-2">
+                Click tokens to{' '}
+                {trainingMode
+                  ? 'set as target output'
+                  : 'add to input sequence'}{' '}
+                (hover to see embeddings)
+              </p>
+              <div className="flex flex-wrap gap-1 sm:gap-2">
+                {vocabularyWords.map((word, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => handleTokenizerClick(idx)}
+                    className={`px-2 sm:px-3 py-1 sm:py-1.5 border ${
+                      idx === recentlyAddedIndex
+                        ? 'border-blue-500'
+                        : idx === targetTokenIndex
+                        ? 'border-green-400'
+                        : 'border-gray-300'
+                    } rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] text-center shadow-sm ${
+                      idx === targetTokenIndex ? 'bg-green-50' : 'bg-gray-100'
+                    } hover:bg-gray-200 cursor-pointer font-mono transition-colors group relative`}
+                  >
+                    {word}
+                    {/* Show embedding as matrix on hover */}
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 p-2 bg-white border border-gray-200 text-gray-700 text-[10px] rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                      <div className="mb-1 text-gray-600 text-center font-medium">
+                        {word} embedding
+                      </div>
+                      <MatrixDisplay
+                        data={[vocabularyEmbeddings[idx]]}
+                        rowLabels={['']}
+                        columnLabels={Array.from(
+                          { length: embeddingDim },
+                          (_, i) => `d${i + 1}`
+                        )}
+                        maxAbsValue={0.2}
+                        cellSize="xs"
+                        selectable={false}
+                        matrixType="none"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Input Sequence section */}
+          <div className="mb-0.5 bg-white rounded p-0.5">
+            <h3 className="text-xs sm:text-sm font-semibold mb-0.5 border-b pb-0.5">
+              Input Sequence
+            </h3>
+            <div className="p-1 sm:p-2">
+              <p className="text-[10px] sm:text-xs text-gray-600 mb-1 sm:mb-2">
+                Click a token to remove it (hover to see embeddings)
+              </p>
+              {/* Input sequence area */}
+              <div className="min-h-[40px] sm:min-h-[50px] border-2 border-dashed rounded-lg p-1 sm:p-2 transition-colors border-gray-300 bg-gray-50">
+                {selectedTokenIndices.length === 0 ? (
+                  <p className="text-gray-400 text-center text-xs sm:text-sm italic">
+                    Drag tokens here...
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-1 sm:gap-2 relative">
+                    {selectedTokenIndices.map((tokenIdx, seqIdx) => (
+                      <div
+                        key={seqIdx}
+                        data-token-index={seqIdx}
+                        onClick={() => handleSequenceTokenClick(seqIdx)}
+                        className="px-2 sm:px-3 py-1 sm:py-1.5 border border-gray-400 rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] h-7 sm:h-9 text-center shadow-sm bg-white font-mono cursor-pointer transition-all hover:bg-red-50 hover:border-red-300 group relative"
+                      >
+                        {vocabularyWords[tokenIdx]}
+                        {/* Show embedding as matrix on hover */}
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 p-2 bg-white border border-gray-200 text-gray-700 text-[10px] rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                          <div className="mb-1 text-gray-600 text-center font-medium">
+                            {vocabularyWords[tokenIdx]} embedding
+                          </div>
+                          <MatrixDisplay
+                            data={[vocabularyEmbeddings[tokenIdx]]}
+                            rowLabels={['']}
+                            columnLabels={Array.from(
+                              { length: embeddingDim },
+                              (_, i) => `d${i + 1}`
+                            )}
+                            maxAbsValue={0.2}
+                            cellSize="xs"
+                            selectable={false}
+                            matrixType="none"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Output Token section */}
           <div className="mb-0.5 bg-white rounded p-0.5">
             <h3 className="text-xs sm:text-sm font-semibold mb-0.5 border-b pb-0.5">
@@ -835,110 +939,6 @@ function App() {
                   Click a token in the tokenizer to set as target output
                 </p>
               )}
-            </div>
-          </div>
-
-          {/* Tokenizer section */}
-          <div className="mb-0.5 bg-white rounded p-0.5">
-            <h3 className="text-xs sm:text-sm font-semibold mb-0.5 border-b pb-0.5">
-              Tokenizer
-            </h3>
-            <div className="p-1 sm:p-2">
-              <p className="text-[10px] sm:text-xs text-gray-600 mb-1 sm:mb-2">
-                Click tokens to{' '}
-                {trainingMode
-                  ? 'set as target output'
-                  : 'add to input sequence'}{' '}
-                (hover to see embeddings)
-              </p>
-              <div className="flex flex-wrap gap-1 sm:gap-2">
-                {vocabularyWords.map((word, idx) => (
-                  <div
-                    key={idx}
-                    onClick={() => handleTokenizerClick(idx)}
-                    className={`px-2 sm:px-3 py-1 sm:py-1.5 border ${
-                      idx === recentlyAddedIndex
-                        ? 'border-blue-500'
-                        : idx === targetTokenIndex
-                        ? 'border-green-400'
-                        : 'border-gray-300'
-                    } rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] text-center shadow-sm ${
-                      idx === targetTokenIndex ? 'bg-green-50' : 'bg-gray-100'
-                    } hover:bg-gray-200 cursor-pointer font-mono transition-colors group relative`}
-                  >
-                    {word}
-                    {/* Show embedding as matrix on hover */}
-                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 p-2 bg-white border border-gray-200 text-gray-700 text-[10px] rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                      <div className="mb-1 text-gray-600 text-center font-medium">
-                        {word} embedding
-                      </div>
-                      <MatrixDisplay
-                        data={[vocabularyEmbeddings[idx]]}
-                        rowLabels={['']}
-                        columnLabels={Array.from(
-                          { length: embeddingDim },
-                          (_, i) => `d${i + 1}`
-                        )}
-                        maxAbsValue={0.2}
-                        cellSize="xs"
-                        selectable={false}
-                        matrixType="none"
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Input Sequence section */}
-          <div className="mb-0.5 bg-white rounded p-0.5">
-            <h3 className="text-xs sm:text-sm font-semibold mb-0.5 border-b pb-0.5">
-              Input Sequence
-            </h3>
-            <div className="p-1 sm:p-2">
-              <p className="text-[10px] sm:text-xs text-gray-600 mb-1 sm:mb-2">
-                Click a token to remove it (hover to see embeddings)
-              </p>
-              {/* Input sequence area */}
-              <div className="min-h-[40px] sm:min-h-[50px] border-2 border-dashed rounded-lg p-1 sm:p-2 transition-colors border-gray-300 bg-gray-50">
-                {selectedTokenIndices.length === 0 ? (
-                  <p className="text-gray-400 text-center text-xs sm:text-sm italic">
-                    Drag tokens here...
-                  </p>
-                ) : (
-                  <div className="flex flex-wrap gap-1 sm:gap-2 relative">
-                    {selectedTokenIndices.map((tokenIdx, seqIdx) => (
-                      <div
-                        key={seqIdx}
-                        data-token-index={seqIdx}
-                        onClick={() => handleSequenceTokenClick(seqIdx)}
-                        className="px-2 sm:px-3 py-1 sm:py-1.5 border border-gray-400 rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] h-7 sm:h-9 text-center shadow-sm bg-white font-mono cursor-pointer transition-all hover:bg-red-50 hover:border-red-300 group relative"
-                      >
-                        {vocabularyWords[tokenIdx]}
-                        {/* Show embedding as matrix on hover */}
-                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 p-2 bg-white border border-gray-200 text-gray-700 text-[10px] rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                          <div className="mb-1 text-gray-600 text-center font-medium">
-                            {vocabularyWords[tokenIdx]} embedding
-                          </div>
-                          <MatrixDisplay
-                            data={[vocabularyEmbeddings[tokenIdx]]}
-                            rowLabels={['']}
-                            columnLabels={Array.from(
-                              { length: embeddingDim },
-                              (_, i) => `d${i + 1}`
-                            )}
-                            maxAbsValue={0.2}
-                            cellSize="xs"
-                            selectable={false}
-                            matrixType="none"
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
             </div>
           </div>
 
