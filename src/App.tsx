@@ -1,12 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import './App.css';
 import AttentionHead from './components/AttentionHead';
 import FeedForward from './components/FeedForward';
 import MatrixDisplay from './components/MatrixDisplay';
 import {
   addPositionalEncodings,
-  applyRandomWalk,
-  applyRandomWalkToVector,
   generatePositionalEncodings,
   generateSampleAttentionWeights,
   generateSampleEmbeddings,
@@ -14,26 +12,32 @@ import {
   isPortraitOrientation,
   relu,
   vectorDotProduct,
-  mseLoss,
-  mseGradient,
-  updateWeights,
-  updateVectorWeights,
 } from './utils/matrixOperations';
 
+export type HistoryEntry = {
+  loss: number;
+  targetToken: string;
+  predictedToken: string;
+  targetProb: string;
+};
+
 // Training configuration constants
-const LEARNING_RATE = 0.01; // Reduced from 0.1 for more stable training
+const LEARNING_RATE = 0.001; // Reduced from 0.1 for more stable training
 const TRAINING_INTERVAL_MS = 1; // Update every 200ms (5 times per second) instead of 1000ms
+const EXPONENTIAL_DECIMALS = 4; // Number of decimal places for exponential values
+const DIM_EMBEDDING = isPortraitOrientation() ? 8 : 8; // Dimension of embeddings (d_model)
+const DIM_ATTENTION_HEAD = isPortraitOrientation() ? 4 : 4; // Dimension of attention heads (d_k = d_v = d_model / num_heads)
+const DIM_MLP_HIDDEN = 6; // Dimension of MLP hidden layer (d_ff = 8, typically 4x d_model)
 
 function App() {
   // Fixed dimension values
-  const embeddingDim = isPortraitOrientation() ? 4 : 8; // Dimension of embeddings (d_model)
-  const attentionHeadDim = isPortraitOrientation() ? 2 : 4; // Dimension of attention heads (d_k = d_v = d_model / num_heads)
-  const mlpHiddenDim = 4; // Dimension of MLP hidden layer (d_ff = 8, typically 4x d_model)
 
   // Training mode - determines if dropout is applied and weights are updated
   const [trainingMode, setTrainingMode] = useState(false);
   // Target output token for training (what we're trying to predict)
   const [targetTokenIndex, setTargetTokenIndex] = useState<number | null>(null);
+
+  const [history, setHistory] = useState<HistoryEntry[]>([]); // History of training logs
 
   // Vocabulary of 25 common words
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -52,7 +56,7 @@ function App() {
 
   // Generate vocabulary embeddings - mutable state
   const [vocabularyEmbeddings, setVocabularyEmbeddings] = useState(() =>
-    generateSampleEmbeddings(vocabularyWords.length, embeddingDim)
+    generateSampleEmbeddings(vocabularyWords.length, DIM_EMBEDDING)
   );
 
   // Track selected tokens (indices into vocabulary)
@@ -74,15 +78,15 @@ function App() {
 
   // Generate positional encodings - regenerate when embedding dimension changes
   const [positionalEncodings, setPositionalEncodings] = useState(() =>
-    generatePositionalEncodings(maxSeqLength, embeddingDim)
+    generatePositionalEncodings(maxSeqLength, DIM_EMBEDDING)
   );
 
   // Update positional encodings when dimensions change
   useEffect(() => {
     setPositionalEncodings(
-      generatePositionalEncodings(maxSeqLength, embeddingDim)
+      generatePositionalEncodings(maxSeqLength, DIM_EMBEDDING)
     );
-  }, [maxSeqLength, embeddingDim]);
+  }, [maxSeqLength, DIM_EMBEDDING]);
 
   // Get embeddings for selected tokens
   const rawEmbeddings = useMemo(() => {
@@ -92,9 +96,9 @@ function App() {
   // Update vocabulary embeddings when dimension changes
   useEffect(() => {
     setVocabularyEmbeddings(
-      generateSampleEmbeddings(vocabularyWords.length, embeddingDim)
+      generateSampleEmbeddings(vocabularyWords.length, DIM_EMBEDDING)
     );
-  }, [embeddingDim]);
+  }, [DIM_EMBEDDING]);
 
   // Apply positional encodings to embeddings
   const embeddings = useMemo(
@@ -189,13 +193,6 @@ function App() {
           const loss = -Math.log(Math.max(targetProb, 1e-7)); // Avoid log(0)
           setTrainingLoss(loss);
 
-          // Gradient for cross-entropy with softmax
-          // For the correct class: gradient = predicted_prob - 1
-          // For other classes: gradient = predicted_prob
-          const gradients = probabilities.map((prob, idx) =>
-            idx === targetTokenIndex ? prob - 1 : prob
-          );
-
           // Convert gradient to embedding space
           // We need to push the output embedding towards the target embedding
           const targetEmbedding = vocabularyEmbeddings[targetTokenIndex];
@@ -203,16 +200,22 @@ function App() {
             (val, i) => val - targetEmbedding[i]
           );
 
-          // Debug logging
           const predictedTokenIndex = dotProducts.indexOf(
             Math.max(...dotProducts)
           );
-          console.log('Training update:', {
-            loss: loss.toFixed(4),
+
+          const historyItem: HistoryEntry = {
+            loss: loss,
             targetToken: vocabularyWords[targetTokenIndex],
             predictedToken: vocabularyWords[predictedTokenIndex],
-            targetProb: targetProb.toFixed(4),
-            LEARNING_RATE,
+            targetProb: targetProb.toFixed(EXPONENTIAL_DECIMALS),
+          };
+
+          // Add to history
+          setHistory((prev: HistoryEntry[]) => {
+            const newHistory = [...prev, historyItem];
+            // Limit history to last 100 entries
+            return newHistory.slice(-1000);
           });
 
           // Apply gradient-based updates to all layers
@@ -388,27 +391,31 @@ function App() {
 
   // Sample data generation for attention weights - regenerate when dimensions change
   const [attentionWeights, setAttentionWeights] = useState(() =>
-    generateSampleAttentionWeights(embeddingDim, attentionHeadDim)
+    generateSampleAttentionWeights(DIM_EMBEDDING, DIM_ATTENTION_HEAD)
   );
 
   // Update attention weights when dimensions change
   useEffect(() => {
     setAttentionWeights(
-      generateSampleAttentionWeights(embeddingDim, attentionHeadDim)
+      generateSampleAttentionWeights(DIM_EMBEDDING, DIM_ATTENTION_HEAD)
     );
-  }, [embeddingDim, attentionHeadDim]);
+  }, [DIM_EMBEDDING, DIM_ATTENTION_HEAD]);
 
   // Generate MLP weights that are compatible with attention head output dimensions
   const [mlpWeights, setMlpWeights] = useState(() =>
-    generateSampleMLPWeights(embeddingDim, mlpHiddenDim, attentionHeadDim)
+    generateSampleMLPWeights(DIM_EMBEDDING, DIM_MLP_HIDDEN, DIM_ATTENTION_HEAD)
   );
 
   // Update MLP weights when dimensions change
   useEffect(() => {
     setMlpWeights(
-      generateSampleMLPWeights(embeddingDim, mlpHiddenDim, attentionHeadDim)
+      generateSampleMLPWeights(
+        DIM_EMBEDDING,
+        DIM_MLP_HIDDEN,
+        DIM_ATTENTION_HEAD
+      )
     );
-  }, [embeddingDim, mlpHiddenDim, attentionHeadDim]);
+  }, [DIM_EMBEDDING, DIM_MLP_HIDDEN, DIM_ATTENTION_HEAD]);
 
   // No need for these functions anymore - handled by drag and drop
 
@@ -446,9 +453,9 @@ function App() {
 
   const initialElement: ElementObject | null = useMemo(() => {
     // Initialize selectedElement to the second-to-last token's 4th embedding
-    if (selectedTokenIndices.length > 0 && embeddingDim > 0) {
+    if (selectedTokenIndices.length > 0 && DIM_EMBEDDING > 0) {
       const tokenIndex = Math.max(0, selectedTokenIndices.length - 2); // Second-to-last token
-      const embIndex = Math.min(3, embeddingDim - 1); // 4th embedding (index 3) or last if fewer
+      const embIndex = Math.min(3, DIM_EMBEDDING - 1); // 4th embedding (index 3) or last if fewer
 
       return {
         matrixType: 'embeddings',
@@ -457,7 +464,7 @@ function App() {
       };
     }
     return null;
-  }, [selectedTokenIndices, embeddingDim]);
+  }, [selectedTokenIndices, DIM_EMBEDDING]);
 
   // State for the current value of the selected element
   const [selectedValue, setSelectedValue] = useState<number | null>(null);
@@ -549,7 +556,7 @@ function App() {
 
         if (matrixType === 'embeddings') {
           // Update the vocabulary embedding for the specific token
-          if (row < selectedTokenIndices.length && col < embeddingDim) {
+          if (row < selectedTokenIndices.length && col < DIM_EMBEDDING) {
             const tokenVocabIdx = selectedTokenIndices[row];
             // Create a new copy of vocabulary embeddings with the updated value
             const newVocabEmbeddings = vocabularyEmbeddings.map((r, i) =>
@@ -734,7 +741,7 @@ function App() {
                         data={[vocabularyEmbeddings[idx]]}
                         rowLabels={['']}
                         columnLabels={Array.from(
-                          { length: embeddingDim },
+                          { length: DIM_EMBEDDING },
                           (_, i) => `d${i + 1}`
                         )}
                         maxAbsValue={0.2}
@@ -783,7 +790,7 @@ function App() {
                             data={[vocabularyEmbeddings[tokenIdx]]}
                             rowLabels={['']}
                             columnLabels={Array.from(
-                              { length: embeddingDim },
+                              { length: DIM_EMBEDDING },
                               (_, i) => `d${i + 1}`
                             )}
                             maxAbsValue={0.2}
@@ -848,7 +855,7 @@ function App() {
                                 ]}
                                 rowLabels={['']}
                                 columnLabels={Array.from(
-                                  { length: embeddingDim },
+                                  { length: DIM_EMBEDDING },
                                   (_, i) => `d${i + 1}`
                                 )}
                                 maxAbsValue={0.2}
@@ -859,7 +866,8 @@ function App() {
                             </div>
                           </div>
                           <span className="text-[10px] sm:text-xs text-gray-600 font-mono">
-                            p: {predictedProb.toFixed(4)}
+                            p: {predictedProb >= 0 ? '+' : ''}
+                            {predictedProb.toExponential(EXPONENTIAL_DECIMALS)}
                           </span>
                         </div>
                       );
@@ -891,7 +899,7 @@ function App() {
                                 data={[vocabularyEmbeddings[targetTokenIndex]]}
                                 rowLabels={['']}
                                 columnLabels={Array.from(
-                                  { length: embeddingDim },
+                                  { length: DIM_EMBEDDING },
                                   (_, i) => `d${i + 1}`
                                 )}
                                 maxAbsValue={0.2}
@@ -903,7 +911,8 @@ function App() {
                           </div>
                           {trainingLoss !== null && (
                             <span className="text-[10px] sm:text-xs text-gray-600 font-mono">
-                              Loss: {trainingLoss.toFixed(4)}
+                              Loss: {trainingLoss >= 0 ? '+' : ''}
+                              {trainingLoss.toExponential(EXPONENTIAL_DECIMALS)}
                             </span>
                           )}
                         </div>
@@ -949,7 +958,7 @@ function App() {
                     data={rawEmbeddings}
                     rowLabels={tokenLabels}
                     columnLabels={Array.from(
-                      { length: embeddingDim },
+                      { length: DIM_EMBEDDING },
                       (_, i) => `d_${i + 1}`
                     )}
                     maxAbsValue={0.2}
@@ -986,7 +995,7 @@ function App() {
                       (_, i) => `Pos ${i}`
                     )}
                     columnLabels={Array.from(
-                      { length: embeddingDim },
+                      { length: DIM_EMBEDDING },
                       (_, i) => `d_${i + 1}`
                     )}
                     maxAbsValue={0.2}
@@ -1011,7 +1020,7 @@ function App() {
                     data={embeddingsWithDropout}
                     rowLabels={tokenLabels}
                     columnLabels={Array.from(
-                      { length: embeddingDim },
+                      { length: DIM_EMBEDDING },
                       (_, i) => `d_${i + 1}`
                     )}
                     maxAbsValue={0.2}
@@ -1147,7 +1156,7 @@ function App() {
                           data={[nextTokenPrediction]} // Use the last token's embedding
                           rowLabels={['']}
                           columnLabels={Array.from(
-                            { length: embeddingDim },
+                            { length: DIM_EMBEDDING },
                             (_, i) => `d_${i + 1}`
                           )}
                           maxAbsValue={0.3}
@@ -1232,7 +1241,7 @@ function App() {
                                   data={[topPredictedTokenEmbedding]}
                                   rowLabels={['']}
                                   columnLabels={Array.from(
-                                    { length: embeddingDim },
+                                    { length: DIM_EMBEDDING },
                                     (_, i) => `d${i + 1}`
                                   )}
                                   maxAbsValue={0.2}
@@ -1244,7 +1253,11 @@ function App() {
                             </div>
                           </div>
                           <div className="text-[0.6rem] sm:text-[0.65rem] font-mono text-gray-600 px-2 sm:px-3 py-0.5 min-w-[55px] sm:min-w-[60px] text-center">
-                            p: {sortedSoftmax[0].value.toFixed(4)}
+                            p:{' '}
+                            {sortedSoftmax[0]?.value
+                              ? (sortedSoftmax[0].value >= 0 ? '+' : '') +
+                                sortedSoftmax[0].value.toExponential(2)
+                              : '+0.00e+0'}
                           </div>
 
                           {/* Raw embedding for the predicted token */}
@@ -1257,7 +1270,7 @@ function App() {
                             ]}
                             rowLabels={[topPredictedToken]}
                             columnLabels={Array.from(
-                              { length: embeddingDim },
+                              { length: DIM_EMBEDDING },
                               (_, i) => `d_${i + 1}`
                             )}
                             maxAbsValue={0.2}
@@ -1290,17 +1303,17 @@ function App() {
 
               <div className="flex items-center">
                 <span className="font-semibold mr-1">Embedding Dim:</span>
-                <span>{embeddingDim}</span>
+                <span>{DIM_EMBEDDING}</span>
               </div>
 
               <div className="flex items-center">
                 <span className="font-semibold mr-1">Attention Head Dim:</span>
-                <span>{attentionHeadDim}</span>
+                <span>{DIM_ATTENTION_HEAD}</span>
               </div>
 
               <div className="flex items-center">
                 <span className="font-semibold mr-1">FFN Hidden Dim:</span>
-                <span>{mlpHiddenDim}</span>
+                <span>{DIM_MLP_HIDDEN}</span>
               </div>
             </div>
           </div>

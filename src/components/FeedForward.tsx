@@ -119,23 +119,8 @@ const FeedForward: React.FC<FeedForwardProps> = ({
   return (
     <div className="flex flex-col gap-0.5 p-0.5 bg-white rounded">
       {/* Main Container - Responsive layout based on orientation */}
-      <div className={`flex flex-col ${!isPortraitOrientation() ? 'md:grid md:grid-cols-4' : ''} lg:grid lg:grid-cols-12 gap-3 lg:gap-1`}>
-        {/* Input - Full width in portrait, 1/4 in landscape on mobile, 3/12 on desktop */}
-        <div className={`${!isPortraitOrientation() ? 'md:col-span-1' : ''} lg:col-span-3 flex flex-col items-center justify-center`}>
-          <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Input</h3>
-          <MatrixDisplay
-            data={inputs}
-            label="Attention Output"
-            rowLabels={labels}
-            columnLabels={modelDimLabels}
-            maxAbsValue={0.2}
-            cellSize="xs"
-            selectable={false} // Not editable
-            matrixType="none"   // Set to none to prevent selection
-          />
-        </div>
-
-        {/* Weights and biases - Full width in portrait, 1/4 in landscape on mobile, 3/12 on desktop */}
+      <div className={`flex flex-col ${!isPortraitOrientation() ? 'md:grid md:grid-cols-3' : ''} lg:grid lg:grid-cols-9 gap-3 lg:gap-1`}>
+        {/* Weights and biases - Full width in portrait, 1/3 in landscape on mobile, 3/9 on desktop */}
         {showSteps && (
           <div className={`${!isPortraitOrientation() ? 'md:col-span-1' : ''} lg:col-span-3 flex flex-col items-center justify-center`}>
             <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Weights</h3>
@@ -176,7 +161,7 @@ const FeedForward: React.FC<FeedForwardProps> = ({
           </div>
         )}
 
-        {/* Intermediate results - Full width in portrait, 1/4 in landscape on mobile, 3/12 on desktop */}
+        {/* Intermediate results - Full width in portrait, 1/3 in landscape on mobile, 3/9 on desktop */}
         {showSteps && (
           <div className={`${!isPortraitOrientation() ? 'md:col-span-1' : ''} lg:col-span-3 flex flex-col items-center justify-center`}>
             <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Steps</h3>
@@ -211,7 +196,7 @@ const FeedForward: React.FC<FeedForwardProps> = ({
           </div>
         )}
 
-        {/* Output - Full width in portrait, 1/4 in landscape on mobile, 3/12 on desktop */}
+        {/* Output - Full width in portrait, 1/3 in landscape on mobile, 3/9 on desktop */}
         <div className={`${!isPortraitOrientation() ? 'md:col-span-1' : ''} lg:col-span-3 flex flex-col items-center justify-center`}>
           <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Output</h3>
           <MatrixDisplay

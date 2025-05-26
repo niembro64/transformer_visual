@@ -115,24 +115,8 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
   return (
     <div className="flex flex-col gap-0.5 p-0.5 bg-white rounded">
       {/* Main Container - Responsive layout based on orientation */}
-      <div className={`flex flex-col ${!isPortraitOrientation() ? 'md:grid md:grid-cols-3' : ''} lg:grid lg:grid-cols-12 gap-3 lg:gap-1`}>
-        {/* Input Embeddings - Full width in portrait, 1/3 in landscape on mobile, 3/12 on desktop */}
-        <div className={`${!isPortraitOrientation() ? 'md:col-span-1' : ''} lg:col-span-3 flex flex-col items-center justify-center`}>
-          <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Input Embeddings</h3>
-          <MatrixDisplay
-            data={embeddings}
-            label="Tokens"
-            rowLabels={labels}
-            columnLabels={modelDimLabels}
-            maxAbsValue={0.2}
-            className="mb-1"
-            cellSize="xs"
-            selectable={false} // Set to false - not editable
-            matrixType="none" // Set to none to prevent selection
-          />
-        </div>
-
-        {/* Projection Matrices - Full width in portrait, 1/3 in landscape on mobile, 4/12 on desktop */}
+      <div className={`flex flex-col ${!isPortraitOrientation() ? 'md:grid md:grid-cols-2' : ''} lg:grid lg:grid-cols-9 gap-3 lg:gap-1`}>
+        {/* Projection Matrices - Full width in portrait, 1/2 in landscape on mobile, 4/9 on desktop */}
         {showSteps && (
           <div className={`${!isPortraitOrientation() ? 'md:col-span-1' : ''} lg:col-span-4 flex flex-col items-center justify-center`}>
             <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Weights</h3>
@@ -189,7 +173,7 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
           </div>
         )}
 
-        {/* Q, K, V Matrices - Full width in portrait, 1/3 in landscape on mobile, 5/12 on desktop */}
+        {/* Q, K, V Matrices - Full width in portrait, 1/2 in landscape on mobile, 5/9 on desktop */}
         {showSteps && (
           <div className={`${!isPortraitOrientation() ? 'md:col-span-1' : ''} lg:col-span-5 flex flex-col items-center justify-center`}>
             <h3 className="text-[0.65rem] font-semibold mb-0.5 text-gray-700 text-center w-full">Projected Matrices</h3>
