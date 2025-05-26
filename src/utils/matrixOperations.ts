@@ -507,3 +507,72 @@ export function isPortraitOrientation(): boolean {
   if (typeof window === 'undefined') return false; // Default to landscape for SSR
   return window.innerHeight > window.innerWidth;
 }
+
+/**
+ * Calculate mean squared error loss between predicted and target
+ * @param predicted - Predicted values
+ * @param target - Target values
+ * @returns MSE loss
+ */
+export function mseLoss(predicted: number[], target: number[]): number {
+  if (predicted.length !== target.length) {
+    throw new Error('Predicted and target must have same length');
+  }
+  let sum = 0;
+  for (let i = 0; i < predicted.length; i++) {
+    const diff = predicted[i] - target[i];
+    sum += diff * diff;
+  }
+  return sum / predicted.length;
+}
+
+/**
+ * Calculate gradient for MSE loss
+ * @param predicted - Predicted values
+ * @param target - Target values
+ * @returns Gradient vector
+ */
+export function mseGradient(predicted: number[], target: number[]): number[] {
+  if (predicted.length !== target.length) {
+    throw new Error('Predicted and target must have same length');
+  }
+  return predicted.map((p, i) => 2 * (p - target[i]) / predicted.length);
+}
+
+/**
+ * Update matrix weights using gradient descent
+ * @param weights - Current weights
+ * @param gradients - Gradients for each weight
+ * @param learningRate - Learning rate
+ * @returns Updated weights
+ */
+export function updateWeights(
+  weights: number[][],
+  gradients: number[][],
+  learningRate: number
+): number[][] {
+  if (weights.length !== gradients.length || weights[0].length !== gradients[0].length) {
+    throw new Error('Weights and gradients must have same dimensions');
+  }
+  return weights.map((row, i) =>
+    row.map((w, j) => w - learningRate * gradients[i][j])
+  );
+}
+
+/**
+ * Update vector weights using gradient descent
+ * @param weights - Current weights
+ * @param gradients - Gradients for each weight
+ * @param learningRate - Learning rate
+ * @returns Updated weights
+ */
+export function updateVectorWeights(
+  weights: number[],
+  gradients: number[],
+  learningRate: number
+): number[] {
+  if (weights.length !== gradients.length) {
+    throw new Error('Weights and gradients must have same length');
+  }
+  return weights.map((w, i) => w - learningRate * gradients[i]);
+}

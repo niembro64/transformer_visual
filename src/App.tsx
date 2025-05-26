@@ -15,6 +15,10 @@ import {
   isPortraitOrientation,
   relu,
   vectorDotProduct,
+  mseLoss,
+  mseGradient,
+  updateWeights,
+  updateVectorWeights,
 } from './utils/matrixOperations';
 
 export const dropoutUniveral = 0.03;
@@ -30,8 +34,10 @@ function App() {
   const attentionDropoutRate = dropoutUniveral; // Dropout rate after attention
   const ffnDropoutRate = dropoutUniveral; // Dropout rate in feed-forward network
 
-  // Training mode - determines if dropout is applied
+  // Training mode - determines if dropout is applied and weights are updated
   const [trainingMode, setTrainingMode] = useState(false);
+  // Target output token for training (what we're trying to predict)
+  const [targetTokenIndex, setTargetTokenIndex] = useState<number | null>(null);
 
   // Vocabulary of 25 common words
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -127,106 +133,97 @@ function App() {
   }, []);
 
   // Used for random walk step size - smaller values for more subtle updates
-  const weightUpdateStepSize = 0.003;
+  const weightUpdateStepSize = 0; // Set to 0 to disable random walk, use pure gradient descent
+  
+  // Learning rate for gradient descent training
+  const learningRate = 0.1; // Moderate learning rate for cross-entropy loss
+  
+  // Track training loss
+  const [trainingLoss, setTrainingLoss] = useState<number | null>(null);
+  
+  // State to hold the attention output context vectors
+  const [attentionContext, setAttentionContext] = useState<number[][]>([]);
 
-  // Timer to update dropout masks and perform weight random walks every second in training mode
+  // State to hold the feed-forward network output (final layer prediction)
+  const [ffnOutput, setFfnOutput] = useState<number[][]>([]);
+  
+  // Type for selected element
+  type ElementObject = {
+    matrixType:
+      | 'embeddings'
+      | 'weightQ'
+      | 'weightK'
+      | 'weightV'
+      | 'weightW1'
+      | 'weightW2'
+      | 'none';
+    row: number;
+    col: number;
+  };
+  
+  // Only have one selectedElement for the entire application to prevent multiple sliders
+  const [selectedElement, setSelectedElement] = useState<ElementObject | null>(
+    null
+  );
+
+  // Timer to update dropout masks and perform weight updates every second in training mode
   useEffect(() => {
     let timerId: number | null = null;
 
-    if (trainingMode) {
+    if (trainingMode && targetTokenIndex !== null && ffnOutput.length > 0) {
       // Start a timer that updates every second
       timerId = window.setInterval(() => {
         setTrainingCycle((prev) => prev + 1); // Increment counter to trigger re-renders
 
-        // Apply random walks to all trainable weights when in training mode
-        if (trainingMode) {
-          // Update vocabulary embeddings (all token embeddings in vocabulary)
-          setVocabularyEmbeddings((prev) => {
-            return applyRandomWalk(
-              prev,
-              weightUpdateStepSize,
-              'embeddings_weights'
-            );
+        // Perform gradient-based weight updates when we have a target
+        if (trainingMode && targetTokenIndex !== null && ffnOutput.length > 0) {
+          // Get the predicted embedding (last token's output)
+          const predictedEmbedding = ffnOutput[ffnOutput.length - 1];
+          
+          // Calculate which token is predicted by finding closest vocabulary embedding
+          const dotProducts = vocabularyEmbeddings.map((vocabEmbedding) =>
+            vectorDotProduct(predictedEmbedding, vocabEmbedding)
+          );
+          
+          // Apply softmax to get probabilities
+          const maxDotProduct = Math.max(...dotProducts);
+          const expValues = dotProducts.map((dp) => Math.exp(dp - maxDotProduct));
+          const sumExp = expValues.reduce((a, b) => a + b, 0);
+          const probabilities = expValues.map((exp) => exp / sumExp);
+          
+          // Cross-entropy loss: -log(probability of correct token)
+          const targetProb = probabilities[targetTokenIndex];
+          const loss = -Math.log(Math.max(targetProb, 1e-7)); // Avoid log(0)
+          setTrainingLoss(loss);
+          
+          // Gradient for cross-entropy with softmax
+          // For the correct class: gradient = predicted_prob - 1
+          // For other classes: gradient = predicted_prob
+          const gradients = probabilities.map((prob, idx) => 
+            idx === targetTokenIndex ? prob - 1 : prob
+          );
+          
+          // Convert gradient to embedding space
+          // We need to push the output embedding towards the target embedding
+          const targetEmbedding = vocabularyEmbeddings[targetTokenIndex];
+          const outputGradient = predictedEmbedding.map((val, i) => 
+            val - targetEmbedding[i]
+          );
+          
+          // Debug logging
+          const predictedTokenIndex = dotProducts.indexOf(Math.max(...dotProducts));
+          console.log('Training update:', {
+            loss: loss.toFixed(4),
+            targetToken: vocabularyWords[targetTokenIndex],
+            predictedToken: vocabularyWords[predictedTokenIndex],
+            targetProb: targetProb.toFixed(4),
+            learningRate
           });
-
-          // Update attention weights (Q, K, V projection matrices)
-          setAttentionWeights((prev) => {
-            const newWeights = {
-              weightQ: [...prev.weightQ.map((r) => [...r])],
-              weightK: [...prev.weightK.map((r) => [...r])],
-              weightV: [...prev.weightV.map((r) => [...r])],
-            };
-
-            // Skip the selected element for Q
-            if (selectedElement && selectedElement.matrixType === 'weightQ') {
-              const { row, col } = selectedElement;
-              // Apply random walk to all elements except the selected one
-              for (let i = 0; i < newWeights.weightQ.length; i++) {
-                for (let j = 0; j < newWeights.weightQ[i].length; j++) {
-                  if (i !== row || j !== col) {
-                    const change =
-                      Math.random() * 2 * weightUpdateStepSize -
-                      weightUpdateStepSize;
-                    newWeights.weightQ[i][j] += change;
-                  }
-                }
-              }
-            } else {
-              newWeights.weightQ = applyRandomWalk(
-                prev.weightQ,
-                weightUpdateStepSize,
-                'weightQ'
-              );
-            }
-
-            // Skip the selected element for K
-            if (selectedElement && selectedElement.matrixType === 'weightK') {
-              const { row, col } = selectedElement;
-              // Apply random walk to all elements except the selected one
-              for (let i = 0; i < newWeights.weightK.length; i++) {
-                for (let j = 0; j < newWeights.weightK[i].length; j++) {
-                  if (i !== row || j !== col) {
-                    const change =
-                      Math.random() * 2 * weightUpdateStepSize -
-                      weightUpdateStepSize;
-                    newWeights.weightK[i][j] += change;
-                  }
-                }
-              }
-            } else {
-              newWeights.weightK = applyRandomWalk(
-                prev.weightK,
-                weightUpdateStepSize,
-                'weightK'
-              );
-            }
-
-            // Skip the selected element for V
-            if (selectedElement && selectedElement.matrixType === 'weightV') {
-              const { row, col } = selectedElement;
-              // Apply random walk to all elements except the selected one
-              for (let i = 0; i < newWeights.weightV.length; i++) {
-                for (let j = 0; j < newWeights.weightV[i].length; j++) {
-                  if (i !== row || j !== col) {
-                    const change =
-                      Math.random() * 2 * weightUpdateStepSize -
-                      weightUpdateStepSize;
-                    newWeights.weightV[i][j] += change;
-                  }
-                }
-              }
-            } else {
-              newWeights.weightV = applyRandomWalk(
-                prev.weightV,
-                weightUpdateStepSize,
-                'weightV'
-              );
-            }
-
-            return newWeights;
-          });
-
-          // Update MLP weights and biases
+          
+          // Apply gradient-based updates to all layers
+          // Simplified backpropagation - in a real implementation we'd compute proper gradients
+          
+          // Update MLP weights with gradient descent
           setMlpWeights((prev) => {
             const newWeights = {
               W1: [...prev.W1.map((r) => [...r])],
@@ -234,66 +231,161 @@ function App() {
               W2: [...prev.W2.map((r) => [...r])],
               b2: [...prev.b2],
             };
-
-            // Skip the selected element for W1
-            if (selectedElement && selectedElement.matrixType === 'weightW1') {
+            
+            // Apply gradient updates to W2 (output layer)
+            // The gradient for W2 is approximately: gradient = output_gradient * hidden_activation^T
+            // Skip selected element if it's in W2
+            if (selectedElement?.matrixType === 'weightW2') {
               const { row, col } = selectedElement;
-              // Apply random walk to all elements except the selected one
-              for (let i = 0; i < newWeights.W1.length; i++) {
-                for (let j = 0; j < newWeights.W1[i].length; j++) {
-                  if (i !== row || j !== col) {
-                    const change =
-                      Math.random() * 2 * weightUpdateStepSize -
-                      weightUpdateStepSize;
-                    newWeights.W1[i][j] += change;
-                  }
-                }
-              }
-            } else {
-              newWeights.W1 = applyRandomWalk(
-                prev.W1,
-                weightUpdateStepSize,
-                'mlp_w1'
-              );
-            }
-
-            // Skip the selected element for W2
-            if (selectedElement && selectedElement.matrixType === 'weightW2') {
-              const { row, col } = selectedElement;
-              // Apply random walk to all elements except the selected one
               for (let i = 0; i < newWeights.W2.length; i++) {
                 for (let j = 0; j < newWeights.W2[i].length; j++) {
                   if (i !== row || j !== col) {
-                    const change =
-                      Math.random() * 2 * weightUpdateStepSize -
-                      weightUpdateStepSize;
-                    newWeights.W2[i][j] += change;
+                    // Simplified gradient - in reality would use hidden layer activations
+                    const gradient = outputGradient[i] * 1.0; // Increased from 0.1
+                    newWeights.W2[i][j] -= learningRate * gradient;
                   }
                 }
               }
             } else {
-              newWeights.W2 = applyRandomWalk(
-                prev.W2,
-                weightUpdateStepSize,
-                'mlp_w2'
-              );
+              // Apply gradient descent
+              for (let i = 0; i < newWeights.W2.length; i++) {
+                for (let j = 0; j < newWeights.W2[i].length; j++) {
+                  // Simplified gradient - in reality would use hidden layer activations
+                  const gradient = outputGradient[i] * 1.0; // Increased from 0.1
+                  newWeights.W2[i][j] -= learningRate * gradient;
+                }
+              }
             }
-
-            // Always apply random walk to biases (not selectable/oscillatable)
-            newWeights.b1 = applyRandomWalkToVector(
-              prev.b1,
-              weightUpdateStepSize,
-              'mlp_b1'
-            );
-            newWeights.b2 = applyRandomWalkToVector(
-              prev.b2,
-              weightUpdateStepSize,
-              'mlp_b2'
-            );
-
+            
+            // Apply gradient updates to biases
+            for (let i = 0; i < newWeights.b2.length; i++) {
+              newWeights.b2[i] -= learningRate * outputGradient[i] * 1.0; // Increased from 0.1
+            }
+            
+            // For W1 and b1, we'd need to backpropagate through activation function
+            // For now, apply small gradient updates proportional to output error
+            if (selectedElement?.matrixType === 'weightW1') {
+              const { row, col } = selectedElement;
+              for (let i = 0; i < newWeights.W1.length; i++) {
+                for (let j = 0; j < newWeights.W1[i].length; j++) {
+                  if (i !== row || j !== col) {
+                    // Simplified gradient
+                    const avgError = outputGradient.reduce((a, b) => a + b, 0) / outputGradient.length;
+                    newWeights.W1[i][j] -= learningRate * avgError * 0.5; // Increased from 0.01
+                  }
+                }
+              }
+            } else {
+              for (let i = 0; i < newWeights.W1.length; i++) {
+                for (let j = 0; j < newWeights.W1[i].length; j++) {
+                  // Simplified gradient
+                  const avgError = outputGradient.reduce((a, b) => a + b, 0) / outputGradient.length;
+                  newWeights.W1[i][j] -= learningRate * avgError * 0.5; // Increased from 0.01
+                }
+              }
+            }
+            
+            // Update b1 biases
+            const avgError = outputGradient.reduce((a, b) => a + b, 0) / outputGradient.length;
+            for (let i = 0; i < newWeights.b1.length; i++) {
+              newWeights.b1[i] -= learningRate * avgError * 0.5; // Increased from 0.01
+            }
+            
             return newWeights;
           });
+          
+          // Update attention weights with gradient descent
+          setAttentionWeights((prev) => {
+            const newWeights = {
+              weightQ: [...prev.weightQ.map((r) => [...r])],
+              weightK: [...prev.weightK.map((r) => [...r])],
+              weightV: [...prev.weightV.map((r) => [...r])],
+            };
+            
+            // For attention weights, the gradient flows back from the output through the attention mechanism
+            // This is a simplified version - proper gradients would require full backpropagation
+            const avgError = outputGradient.reduce((a, b) => a + b, 0) / outputGradient.length;
+            
+            // Update Q matrix with gradient descent (skip selected element)
+            if (selectedElement?.matrixType === 'weightQ') {
+              const { row, col } = selectedElement;
+              for (let i = 0; i < newWeights.weightQ.length; i++) {
+                for (let j = 0; j < newWeights.weightQ[i].length; j++) {
+                  if (i !== row || j !== col) {
+                    newWeights.weightQ[i][j] -= learningRate * avgError * 0.1; // Increased from 0.001
+                  }
+                }
+              }
+            } else {
+              for (let i = 0; i < newWeights.weightQ.length; i++) {
+                for (let j = 0; j < newWeights.weightQ[i].length; j++) {
+                  newWeights.weightQ[i][j] -= learningRate * avgError * 0.1; // Increased from 0.001
+                }
+              }
+            }
+            
+            // Update K matrix with gradient descent (skip selected element)
+            if (selectedElement?.matrixType === 'weightK') {
+              const { row, col } = selectedElement;
+              for (let i = 0; i < newWeights.weightK.length; i++) {
+                for (let j = 0; j < newWeights.weightK[i].length; j++) {
+                  if (i !== row || j !== col) {
+                    newWeights.weightK[i][j] -= learningRate * avgError * 0.1; // Increased from 0.001
+                  }
+                }
+              }
+            } else {
+              for (let i = 0; i < newWeights.weightK.length; i++) {
+                for (let j = 0; j < newWeights.weightK[i].length; j++) {
+                  newWeights.weightK[i][j] -= learningRate * avgError * 0.1; // Increased from 0.001
+                }
+              }
+            }
+            
+            // Update V matrix with gradient descent - larger updates as it affects output directly
+            if (selectedElement?.matrixType === 'weightV') {
+              const { row, col } = selectedElement;
+              for (let i = 0; i < newWeights.weightV.length; i++) {
+                for (let j = 0; j < newWeights.weightV[i].length; j++) {
+                  if (i !== row || j !== col) {
+                    newWeights.weightV[i][j] -= learningRate * avgError * 0.5; // Increased from 0.01
+                  }
+                }
+              }
+            } else {
+              for (let i = 0; i < newWeights.weightV.length; i++) {
+                for (let j = 0; j < newWeights.weightV[i].length; j++) {
+                  newWeights.weightV[i][j] -= learningRate * avgError * 0.5; // Increased from 0.01
+                }
+              }
+            }
+            
+            return newWeights;
+          });
+          
+          // Update vocabulary embeddings with gradient descent
+          setVocabularyEmbeddings((prev) => {
+            const newEmbeddings = prev.map((emb, idx) => {
+              if (idx === targetTokenIndex) {
+                // Move target embedding to reduce loss
+                // The gradient for target embedding is negative of output gradient
+                return emb.map((val, i) => 
+                  val - learningRate * outputGradient[i] * 1.0 // Increased from 0.1
+                );
+              }
+              // Other embeddings don't get updated in this simplified version
+              // In a real implementation, all embeddings that contributed to the output would be updated
+              return [...emb];
+            });
+            return newEmbeddings;
+          });
         }
+      }, 1000);
+    } else if (trainingMode && targetTokenIndex === null) {
+      // No updates when no target is selected - pure gradient descent needs a target
+      // Just update the training cycle for dropout mask updates
+      timerId = window.setInterval(() => {
+        setTrainingCycle((prev) => prev + 1); // Increment counter to trigger re-renders for dropout
       }, 1000);
     }
 
@@ -302,7 +394,7 @@ function App() {
         window.clearInterval(timerId);
       }
     };
-  }, [trainingMode, weightUpdateStepSize]);
+  }, [trainingMode, weightUpdateStepSize, targetTokenIndex, ffnOutput, vocabularyEmbeddings, learningRate, selectedElement]);
 
   // Apply dropout to embeddings (only during training) with a unique ID
   // Include trainingCycle in dependencies to ensure recalculation when timer ticks
@@ -366,25 +458,6 @@ function App() {
 
   // No need for dimension adjustment functions anymore
 
-  // State to hold the attention output context vectors
-  const [attentionContext, setAttentionContext] = useState<number[][]>([]);
-
-  // State to hold the feed-forward network output (final layer prediction)
-  const [ffnOutput, setFfnOutput] = useState<number[][]>([]);
-
-  type ElementObject = {
-    matrixType:
-      | 'embeddings'
-      | 'weightQ'
-      | 'weightK'
-      | 'weightV'
-      | 'weightW1'
-      | 'weightW2'
-      | 'none';
-    row: number;
-    col: number;
-  };
-
   const initialElement: ElementObject | null = useMemo(() => {
     // Initialize selectedElement to the second-to-last token's 4th embedding
     if (selectedTokenIndices.length > 0 && embeddingDim > 0) {
@@ -399,11 +472,6 @@ function App() {
     }
     return null;
   }, [selectedTokenIndices, embeddingDim]);
-
-  // Only have one selectedElement for the entire application to prevent multiple sliders
-  const [selectedElement, setSelectedElement] = useState<ElementObject | null>(
-    null
-  );
 
   // State for the current value of the selected element
   const [selectedValue, setSelectedValue] = useState<number | null>(null);
@@ -597,7 +665,7 @@ function App() {
             </div>
 
             {/* Top control - training mode toggle */}
-            <div className="p-2 flex justify-center items-center">
+            <div className="p-2 flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <span className="text-xs sm:text-sm font-medium text-gray-700">
                   Training:
@@ -625,6 +693,31 @@ function App() {
                   </button>
                 </div>
               </div>
+              {/* Training status display */}
+              {trainingMode && (
+                <div className="flex items-center gap-4 text-xs sm:text-sm">
+                  {targetTokenIndex !== null ? (
+                    <>
+                      <span className="text-gray-600">Target:</span>
+                      <span className="font-mono font-bold text-green-600">
+                        {vocabularyWords[targetTokenIndex]}
+                      </span>
+                      {trainingLoss !== null && (
+                        <>
+                          <span className="text-gray-600">Loss:</span>
+                          <span className="font-mono font-bold text-blue-600">
+                            {trainingLoss.toFixed(4)}
+                          </span>
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-gray-500 italic">
+                      Right-click a token to set target
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -635,7 +728,7 @@ function App() {
             </h3>
             <div className="p-1 sm:p-2">
               <p className="text-[10px] sm:text-xs text-gray-600 mb-1 sm:mb-2">
-                Click tokens to add to input sequence below (hover to see
+                Click tokens to add to input sequence{trainingMode ? ' or right-click to set as target output' : ''} (hover to see
                 embeddings)
               </p>
               <div className="flex flex-wrap gap-1 sm:gap-2">
@@ -643,11 +736,21 @@ function App() {
                   <div
                     key={idx}
                     onClick={() => handleTokenizerClick(idx)}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      if (trainingMode) {
+                        setTargetTokenIndex(idx);
+                      }
+                    }}
                     className={`px-2 sm:px-3 py-1 sm:py-1.5 border ${
                       idx === recentlyAddedIndex
                         ? 'border-blue-500'
+                        : idx === targetTokenIndex
+                        ? 'border-green-400'
                         : 'border-gray-300'
-                    } rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] text-center shadow-sm bg-gray-100 hover:bg-gray-200 cursor-pointer font-mono transition-colors group relative`}
+                    } rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] text-center shadow-sm ${
+                      idx === targetTokenIndex ? 'bg-green-50' : 'bg-gray-100'
+                    } hover:bg-gray-200 cursor-pointer font-mono transition-colors group relative`}
                   >
                     {word}
                     {/* Show embedding as matrix on hover */}
@@ -676,9 +779,29 @@ function App() {
 
           {/* Input Sequence section */}
           <div className="mb-0.5 bg-white rounded p-0.5">
-            <h3 className="text-xs sm:text-sm font-semibold mb-0.5 border-b pb-0.5">
-              Input Sequence
-            </h3>
+            <div className="flex justify-between items-center border-b pb-0.5">
+              <h3 className="text-xs sm:text-sm font-semibold">
+                Input Sequence
+              </h3>
+              {/* Output token display */}
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] sm:text-xs text-gray-600">
+                  Target Output:
+                </span>
+                {targetTokenIndex !== null ? (
+                  <div
+                    onClick={() => setTargetTokenIndex(null)}
+                    className="px-2 sm:px-3 py-1 sm:py-1.5 border border-green-400 rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] text-center shadow-sm bg-green-50 font-mono cursor-pointer hover:bg-red-50 hover:border-red-300 transition-colors"
+                  >
+                    {vocabularyWords[targetTokenIndex]}
+                  </div>
+                ) : (
+                  <div className="px-2 sm:px-3 py-1 sm:py-1.5 border border-dashed border-gray-300 rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] text-center text-gray-400 italic">
+                    none
+                  </div>
+                )}
+              </div>
+            </div>
             <div className="p-1 sm:p-2">
               <p className="text-[10px] sm:text-xs text-gray-600 mb-1 sm:mb-2">
                 Click a token to remove it (hover to see embeddings)
@@ -1087,7 +1210,14 @@ function App() {
               Blue: positive, Red: negative. Click a value to edit (magenta
               border).
               {trainingMode &&
-                ' Training mode enabled: weights evolve and dropout is applied.'}
+                (targetTokenIndex !== null 
+                  ? ` Training mode: learning to predict "${vocabularyWords[targetTokenIndex]}".`
+                  : ' Training mode enabled: select a target token (right-click in tokenizer).')}
+              {trainingMode && targetTokenIndex !== null && trainingLoss !== null && (
+                <span className="ml-2 text-blue-600">
+                  Loss: {trainingLoss.toFixed(4)}
+                </span>
+              )}
             </p>
 
             <div className="flex flex-wrap gap-2 sm:gap-4">
