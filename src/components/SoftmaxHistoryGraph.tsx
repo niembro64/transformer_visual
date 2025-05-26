@@ -18,9 +18,9 @@ const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
   }, [history, maxPoints]);
 
   // SVG dimensions
-  const width = 800;
+  const width = 680;
   const height = 200;
-  const padding = { top: 20, right: 120, bottom: 30, left: 60 };
+  const padding = { top: 20, right: 20, bottom: 30, left: 60 };
   const graphWidth = width - padding.left - padding.right;
   const graphHeight = height - padding.top - padding.bottom;
 
@@ -45,12 +45,37 @@ const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
     }, {} as Record<string, string>);
   }, [vocabularyWords]);
 
+  // Calculate min and max probabilities for auto-scaling
+  const { minProb, maxProb } = useMemo(() => {
+    if (displayHistory.length === 0) return { minProb: 0, maxProb: 1 };
+    
+    let min = 1;
+    let max = 0;
+    
+    displayHistory.forEach(entry => {
+      entry.softmaxValues.forEach(sv => {
+        if (sv.probability < min) min = sv.probability;
+        if (sv.probability > max) max = sv.probability;
+      });
+    });
+    
+    // Add some padding to make the graph more readable
+    const range = max - min || 0.1;
+    return {
+      minProb: Math.max(0, min - range * 0.1),
+      maxProb: Math.min(1, max + range * 0.1)
+    };
+  }, [displayHistory]);
+
   // Create path data for each token's probability line
   const pathsData = useMemo(() => {
     if (displayHistory.length === 0) return {};
     
     const xScale = (i: number) => (i / Math.max(1, displayHistory.length - 1)) * graphWidth;
-    const yScale = (prob: number) => graphHeight - prob * graphHeight;
+    const yScale = (prob: number) => {
+      const normalized = (prob - minProb) / (maxProb - minProb || 1);
+      return graphHeight - normalized * graphHeight;
+    };
 
     const paths: Record<string, string> = {};
     
@@ -69,25 +94,25 @@ const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
     });
     
     return paths;
-  }, [displayHistory, vocabularyWords, graphWidth, graphHeight]);
+  }, [displayHistory, vocabularyWords, graphWidth, graphHeight, minProb, maxProb]);
 
-  // Create Y-axis labels
+  // Create Y-axis labels based on actual data range
   const yAxisLabels = useMemo(() => {
     const labels = [];
     const steps = 5;
     for (let i = 0; i <= steps; i++) {
-      const value = i / steps;
+      const value = minProb + (maxProb - minProb) * (i / steps);
       const y = graphHeight - (i / steps) * graphHeight;
       labels.push({ value, y });
     }
     return labels;
-  }, [graphHeight]);
+  }, [graphHeight, minProb, maxProb]);
 
   if (history.length === 0) {
     return (
       <div className="mb-0.5 bg-white rounded p-0.5">
         <h3 className="text-xs sm:text-sm font-semibold mb-0.5 border-b pb-0.5">
-          Token Probability History
+          Next Token Prediction Probabilities Over Time
         </h3>
         <div className="p-2 text-center text-gray-500 text-xs italic">
           Start training to see probability history
@@ -99,15 +124,16 @@ const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
   return (
     <div className="mb-0.5 bg-white rounded p-0.5">
       <h3 className="text-xs sm:text-sm font-semibold mb-0.5 border-b pb-0.5">
-        Token Probability History
+        Next Token Prediction Probabilities Over Time
       </h3>
-      <div className="p-1 sm:p-2 overflow-x-auto">
-        <svg 
-          viewBox={`0 0 ${width} ${height}`} 
-          className="w-full max-w-full h-auto"
-          style={{ minWidth: '400px' }}
-        >
-          <g transform={`translate(${padding.left}, ${padding.top})`}>
+      <div className="p-1 sm:p-2 flex gap-2">
+        <div className="flex-[3] min-w-0">
+          <svg 
+            viewBox={`0 0 ${width - 120} ${height}`} 
+            className="w-full h-auto"
+            preserveAspectRatio="xMidYMid meet"
+          >
+            <g transform={`translate(${padding.left}, ${padding.top})`}>
             {/* Grid lines */}
             {yAxisLabels.map((label, i) => (
               <g key={i}>
@@ -169,7 +195,7 @@ const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
               textAnchor="middle"
               className="text-[11px] fill-gray-700 font-medium"
             >
-              Training Steps (Last {displayHistory.length})
+              Time Steps (Last {displayHistory.length})
             </text>
             <text
               x={-graphHeight / 2}
@@ -178,43 +204,26 @@ const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
               transform={`rotate(-90, ${-graphHeight / 2}, ${-45})`}
               className="text-[11px] fill-gray-700 font-medium"
             >
-              Probability
+              Softmax Probability
             </text>
-          </g>
-
-          {/* Legend */}
-          <g transform={`translate(${width - 110}, 10)`}>
-            <rect 
-              x="0" 
-              y="0" 
-              width="100" 
-              height={Math.min(vocabularyWords.length * 15 + 10, 170)} 
-              fill="white" 
-              stroke="#e5e7eb" 
-              rx="4" 
-            />
-            {vocabularyWords.slice(0, 10).map((token, idx) => (
-              <g key={token} transform={`translate(5, ${idx * 15 + 10})`}>
-                <line
-                  x1={0}
-                  y1={0}
-                  x2={15}
-                  y2={0}
-                  stroke={tokenColors[token]}
-                  strokeWidth="2"
-                />
-                <text x={20} y={3} className="text-[10px] fill-gray-700">
-                  {token}
-                </text>
-              </g>
+            </g>
+          </svg>
+        </div>
+        
+        {/* Legend */}
+        <div className="flex-1 flex items-start">
+          <div className="bg-white border border-gray-200 rounded p-2 text-[10px] space-y-1">
+            {vocabularyWords.map((token, idx) => (
+              <div key={token} className="flex items-center gap-1">
+                <div 
+                  className="w-3 h-0.5" 
+                  style={{ backgroundColor: tokenColors[token] }}
+                ></div>
+                <span className="text-gray-700">{token}</span>
+              </div>
             ))}
-            {vocabularyWords.length > 10 && (
-              <text x={5} y={165} className="text-[10px] fill-gray-600">
-                ...{vocabularyWords.length - 10} more
-              </text>
-            )}
-          </g>
-        </svg>
+          </div>
+        </div>
       </div>
     </div>
   );

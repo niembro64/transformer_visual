@@ -29,10 +29,9 @@ export type HistorySoftMaxEntry = {
 };
 
 // Training configuration constants
-const LEARNING_RATE = 0.01; // Reduced from 0.1 for more stable training
 const TRAINING_INTERVAL_MS = 0.01; // Update every 200ms (5 times per second) instead of 1000ms
 const EXPONENTIAL_DECIMALS = 4; // Number of decimal places for exponential values
-const HISTORY_DISPLAY_STEPS = 500; // Number of training steps to show in history graph
+const HISTORY_DISPLAY_STEPS = 200; // Number of training steps to show in history graph
 const DIM_EMBEDDING = isPortraitOrientation() ? 8 : 8; // Dimension of embeddings (d_model)
 const DIM_ATTENTION_HEAD = isPortraitOrientation() ? 4 : 4; // Dimension of attention heads (d_k = d_v = d_model / num_heads)
 const DIM_MLP_HIDDEN = 6; // Dimension of MLP hidden layer (d_ff = 8, typically 4x d_model)
@@ -41,9 +40,11 @@ function App() {
   // Fixed dimension values
 
   // Training mode - determines if dropout is applied and weights are updated
-  const [trainingMode, setTrainingMode] = useState(false);
+  const [trainingMode, setTrainingMode] = useState(true);
   // Target output token for training (what we're trying to predict)
   const [targetTokenIndex, setTargetTokenIndex] = useState<number | null>(null);
+  // Learning rate for gradient descent
+  const [learningRate, setLearningRate] = useState(0.001);
 
   const [historyTraining, setHistoryTraining] = useState<
     HistoryTrainingEntry[]
@@ -269,7 +270,7 @@ function App() {
                   if (i !== row || j !== col) {
                     // Simplified gradient - in reality would use hidden layer activations
                     const gradient = outputGradient[i] * 1.0; // Increased from 0.1
-                    newWeights.W2[i][j] -= LEARNING_RATE * gradient;
+                    newWeights.W2[i][j] -= learningRate * gradient;
                   }
                 }
               }
@@ -279,14 +280,14 @@ function App() {
                 for (let j = 0; j < newWeights.W2[i].length; j++) {
                   // Simplified gradient - in reality would use hidden layer activations
                   const gradient = outputGradient[i] * 1.0; // Increased from 0.1
-                  newWeights.W2[i][j] -= LEARNING_RATE * gradient;
+                  newWeights.W2[i][j] -= learningRate * gradient;
                 }
               }
             }
 
             // Apply gradient updates to biases
             for (let i = 0; i < newWeights.b2.length; i++) {
-              newWeights.b2[i] -= LEARNING_RATE * outputGradient[i] * 1.0; // Increased from 0.1
+              newWeights.b2[i] -= learningRate * outputGradient[i] * 1.0; // Increased from 0.1
             }
 
             // For W1 and b1, we'd need to backpropagate through activation function
@@ -300,7 +301,7 @@ function App() {
                     const avgError =
                       outputGradient.reduce((a, b) => a + b, 0) /
                       outputGradient.length;
-                    newWeights.W1[i][j] -= LEARNING_RATE * avgError * 0.5; // Increased from 0.01
+                    newWeights.W1[i][j] -= learningRate * avgError * 0.5; // Increased from 0.01
                   }
                 }
               }
@@ -311,7 +312,7 @@ function App() {
                   const avgError =
                     outputGradient.reduce((a, b) => a + b, 0) /
                     outputGradient.length;
-                  newWeights.W1[i][j] -= LEARNING_RATE * avgError * 0.5; // Increased from 0.01
+                  newWeights.W1[i][j] -= learningRate * avgError * 0.5; // Increased from 0.01
                 }
               }
             }
@@ -320,7 +321,7 @@ function App() {
             const avgError =
               outputGradient.reduce((a, b) => a + b, 0) / outputGradient.length;
             for (let i = 0; i < newWeights.b1.length; i++) {
-              newWeights.b1[i] -= LEARNING_RATE * avgError * 0.5; // Increased from 0.01
+              newWeights.b1[i] -= learningRate * avgError * 0.5; // Increased from 0.01
             }
 
             return newWeights;
@@ -345,14 +346,14 @@ function App() {
               for (let i = 0; i < newWeights.weightQ.length; i++) {
                 for (let j = 0; j < newWeights.weightQ[i].length; j++) {
                   if (i !== row || j !== col) {
-                    newWeights.weightQ[i][j] -= LEARNING_RATE * avgError * 0.1; // Increased from 0.001
+                    newWeights.weightQ[i][j] -= learningRate * avgError * 0.1; // Increased from 0.001
                   }
                 }
               }
             } else {
               for (let i = 0; i < newWeights.weightQ.length; i++) {
                 for (let j = 0; j < newWeights.weightQ[i].length; j++) {
-                  newWeights.weightQ[i][j] -= LEARNING_RATE * avgError * 0.1; // Increased from 0.001
+                  newWeights.weightQ[i][j] -= learningRate * avgError * 0.1; // Increased from 0.001
                 }
               }
             }
@@ -363,14 +364,14 @@ function App() {
               for (let i = 0; i < newWeights.weightK.length; i++) {
                 for (let j = 0; j < newWeights.weightK[i].length; j++) {
                   if (i !== row || j !== col) {
-                    newWeights.weightK[i][j] -= LEARNING_RATE * avgError * 0.1; // Increased from 0.001
+                    newWeights.weightK[i][j] -= learningRate * avgError * 0.1; // Increased from 0.001
                   }
                 }
               }
             } else {
               for (let i = 0; i < newWeights.weightK.length; i++) {
                 for (let j = 0; j < newWeights.weightK[i].length; j++) {
-                  newWeights.weightK[i][j] -= LEARNING_RATE * avgError * 0.1; // Increased from 0.001
+                  newWeights.weightK[i][j] -= learningRate * avgError * 0.1; // Increased from 0.001
                 }
               }
             }
@@ -381,14 +382,14 @@ function App() {
               for (let i = 0; i < newWeights.weightV.length; i++) {
                 for (let j = 0; j < newWeights.weightV[i].length; j++) {
                   if (i !== row || j !== col) {
-                    newWeights.weightV[i][j] -= LEARNING_RATE * avgError * 0.5; // Increased from 0.01
+                    newWeights.weightV[i][j] -= learningRate * avgError * 0.5; // Increased from 0.01
                   }
                 }
               }
             } else {
               for (let i = 0; i < newWeights.weightV.length; i++) {
                 for (let j = 0; j < newWeights.weightV[i].length; j++) {
-                  newWeights.weightV[i][j] -= LEARNING_RATE * avgError * 0.5; // Increased from 0.01
+                  newWeights.weightV[i][j] -= learningRate * avgError * 0.5; // Increased from 0.01
                 }
               }
             }
@@ -413,6 +414,7 @@ function App() {
     targetTokenIndex,
     ffnOutput,
     selectedElement,
+    learningRate,
   ]);
 
   // Use embeddings directly (no dropout)
@@ -717,13 +719,25 @@ function App() {
                   </span>
                 </button>
               </div>
-              {/* Training status display */}
+              {/* Training controls */}
               {trainingMode && (
-                <div className="flex items-center gap-4 text-xs sm:text-sm">
-                  {targetTokenIndex !== null ? (
-                    <></>
-                  ) : (
-                    <span className="text-gray-500 italic">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs sm:text-sm font-medium text-gray-700">
+                      Learning Rate:
+                    </label>
+                    <input
+                      type="number"
+                      value={learningRate}
+                      onChange={(e) => setLearningRate(parseFloat(e.target.value) || 0)}
+                      step="0.001"
+                      min="0"
+                      max="1"
+                      className="w-20 sm:w-24 px-2 py-1 text-xs sm:text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    />
+                  </div>
+                  {targetTokenIndex === null && (
+                    <span className="text-xs sm:text-sm text-gray-500 italic">
                       Click a token to set target
                     </span>
                   )}
@@ -886,7 +900,7 @@ function App() {
 
                       return (
                         <div className="flex items-center gap-2">
-                          <div className="px-2 sm:px-3 py-1 sm:py-1.5 border border-blue-400 rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] text-center shadow-sm bg-blue-50 font-mono group relative cursor-pointer">
+                          <div className="px-2 sm:px-3 py-1 sm:py-1.5 border-2 border-blue-500 rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] text-center shadow-sm bg-blue-100 font-mono group relative cursor-pointer text-blue-900 font-semibold">
                             {vocabularyWords[predictedTokenIndex]}
                             {/* Show embedding as matrix on hover */}
                             <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 p-2 bg-white border border-gray-200 text-gray-700 text-[10px] rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
@@ -932,7 +946,7 @@ function App() {
                     <div className="min-h-[40px] sm:min-h-[50px] border-2 border-dashed rounded-lg p-1 sm:p-2 transition-colors border-gray-300 bg-gray-50">
                       {targetTokenIndex !== null ? (
                         <div className="flex items-center gap-2">
-                          <div className="px-2 sm:px-3 py-1 sm:py-1.5 border border-green-400 rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] text-center shadow-sm bg-green-50 font-mono group relative cursor-pointer">
+                          <div className="px-2 sm:px-3 py-1 sm:py-1.5 border-2 border-green-500 rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] text-center shadow-sm bg-green-100 font-mono group relative cursor-pointer text-green-900 font-semibold">
                             {vocabularyWords[targetTokenIndex]}
                             {/* Show embedding as matrix on hover */}
                             <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 p-2 bg-white border border-gray-200 text-gray-700 text-[10px] rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
