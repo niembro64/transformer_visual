@@ -166,6 +166,48 @@ const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
               strokeWidth="2"
             />
 
+            {/* X-axis labels */}
+            {displayHistory.length > 1 && (() => {
+              const maxLabels = 5;
+              const step = Math.max(1, Math.floor(displayHistory.length / maxLabels));
+              const labels = [];
+              
+              for (let i = 0; i < displayHistory.length; i += step) {
+                const x = (i / Math.max(1, displayHistory.length - 1)) * graphWidth;
+                const stepNumber = history.length - displayHistory.length + i + 1;
+                labels.push(
+                  <text
+                    key={i}
+                    x={x}
+                    y={graphHeight + 15}
+                    textAnchor="middle"
+                    className="text-[9px] fill-gray-600"
+                  >
+                    {stepNumber}
+                  </text>
+                );
+              }
+              
+              // Always show the last step
+              if (displayHistory.length > 1) {
+                const lastX = graphWidth;
+                const lastStepNumber = history.length;
+                labels.push(
+                  <text
+                    key="last"
+                    x={lastX}
+                    y={graphHeight + 15}
+                    textAnchor="middle"
+                    className="text-[9px] fill-gray-600"
+                  >
+                    {lastStepNumber}
+                  </text>
+                );
+              }
+              
+              return labels;
+            })()}
+
             {/* Y-axis */}
             <line
               x1={0}
@@ -212,11 +254,11 @@ const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
         
         {/* Legend */}
         <div className="flex-1 flex items-start">
-          <div className="bg-white border border-gray-200 rounded p-2 text-[10px] space-y-1">
+          <div className="bg-white border border-gray-200 rounded p-1 sm:p-2 text-[8px] sm:text-[10px] space-y-0.5 sm:space-y-1">
             {vocabularyWords.map((token, idx) => (
-              <div key={token} className="flex items-center gap-1">
+              <div key={token} className="flex items-center gap-0.5 sm:gap-1">
                 <div 
-                  className="w-3 h-0.5" 
+                  className="w-2 h-0.5 sm:w-3 sm:h-0.5" 
                   style={{ backgroundColor: tokenColors[token] }}
                 ></div>
                 <span className="text-gray-700">{token}</span>

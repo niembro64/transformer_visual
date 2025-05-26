@@ -415,6 +415,8 @@ function App() {
     ffnOutput,
     selectedElement,
     learningRate,
+    vocabularyEmbeddings,
+    vocabularyWords,
   ]);
 
   // Use embeddings directly (no dropout)
@@ -701,7 +703,7 @@ function App() {
             </div>
 
             {/* Top control - mode toggle */}
-            <div className="p-2 flex justify-between items-center">
+            <div className="p-2 flex gap-2 justify-between items-center">
               <div className="flex items-center gap-2">
                 <span className="text-xs sm:text-sm font-medium text-gray-700">
                   Mode:
@@ -723,13 +725,18 @@ function App() {
               {trainingMode && (
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
-                    <label className="text-xs sm:text-sm font-medium text-gray-700">
+                    <label
+                      htmlFor="learningRate"
+                      className="text-xs sm:text-sm font-medium text-gray-700"
+                    >
                       Learning Rate:
                     </label>
                     <input
                       type="number"
                       value={learningRate}
-                      onChange={(e) => setLearningRate(parseFloat(e.target.value) || 0)}
+                      onChange={(e) =>
+                        setLearningRate(parseFloat(e.target.value) || 0)
+                      }
                       step="0.001"
                       min="0"
                       max="1"
@@ -779,15 +786,19 @@ function App() {
                   <div
                     key={idx}
                     onClick={() => handleTokenizerClick(idx)}
-                    className={`px-2 sm:px-3 py-1 sm:py-1.5 border ${
-                      idx === recentlyAddedIndex
-                        ? 'border-blue-500'
-                        : idx === targetTokenIndex
-                        ? 'border-green-400'
-                        : 'border-gray-300'
+                    className={`px-2 sm:px-3 py-1 sm:py-1.5 ${
+                      trainingMode && idx === targetTokenIndex
+                        ? 'border-2 border-green-500'
+                        : `border ${
+                            idx === recentlyAddedIndex
+                              ? 'border-blue-500'
+                              : 'border-gray-300'
+                          }`
                     } rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] text-center shadow-sm ${
-                      idx === targetTokenIndex ? 'bg-green-50' : 'bg-gray-100'
-                    } hover:bg-gray-200 cursor-pointer font-mono transition-colors group relative`}
+                      trainingMode && idx === targetTokenIndex
+                        ? 'bg-green-100 text-green-900 font-semibold hover:bg-green-200'
+                        : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                    } cursor-pointer font-mono transition-colors group relative`}
                   >
                     {word}
                     {/* Show embedding as matrix on hover */}
@@ -836,7 +847,11 @@ function App() {
                         key={seqIdx}
                         data-token-index={seqIdx}
                         onClick={() => handleSequenceTokenClick(seqIdx)}
-                        className="px-2 sm:px-3 py-1 sm:py-1.5 border border-gray-400 rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] h-7 sm:h-9 text-center shadow-sm bg-white font-mono cursor-pointer transition-all hover:bg-red-50 hover:border-red-300 group relative"
+                        className={`px-2 sm:px-3 py-1 sm:py-1.5 ${
+                          trainingMode && tokenIdx === targetTokenIndex
+                            ? 'border-2 border-green-500 bg-green-100 text-green-900 font-semibold hover:bg-green-200'
+                            : 'border border-purple-400 bg-purple-100 text-purple-900 hover:bg-purple-200'
+                        } rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] h-7 sm:h-9 text-center shadow-sm font-mono cursor-pointer transition-all group relative`}
                       >
                         {vocabularyWords[tokenIdx]}
                         {/* Show embedding as matrix on hover */}
@@ -1288,7 +1303,7 @@ function App() {
                         <div className="w-full flex flex-col items-center">
                           <div className="flex justify-center">
                             {/* Token styled like tokenizer tokens */}
-                            <div className="px-2 sm:px-3 py-1 sm:py-1.5 border border-gray-300 rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] text-center shadow-sm bg-gray-100 font-mono cursor-pointer group relative hover:bg-gray-200 transition-colors">
+                            <div className="px-2 sm:px-3 py-1 sm:py-1.5 border-2 border-blue-500 rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] text-center shadow-sm bg-blue-100 font-mono cursor-pointer group relative text-blue-900 font-semibold">
                               {topPredictedToken}
                               {/* Show embedding as matrix on hover */}
                               <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 p-2 bg-white border border-gray-200 text-gray-700 text-[10px] rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">

@@ -57,9 +57,10 @@ const Layer: React.FC<LayerProps> = ({ layer }) => {
             ref={(el) => setTokenRef(el, idx)}
           >
             <Token
-              token={token}
+              text={token.text}
               isSelected={selectedToken === token.id}
-              onClick={id => setSelectedToken(id === selectedToken ? null : id)}
+              onClick={() => setSelectedToken(token.id === selectedToken ? null : token.id)}
+              tokenType="token_input"
             />
           </div>
         ))}

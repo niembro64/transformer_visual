@@ -133,6 +133,48 @@ const HistoryGraph: React.FC<HistoryGraphProps> = ({
               strokeWidth="2"
             />
 
+            {/* X-axis labels */}
+            {displayHistory.length > 1 && (() => {
+              const maxLabels = 5;
+              const step = Math.max(1, Math.floor(displayHistory.length / maxLabels));
+              const labels = [];
+              
+              for (let i = 0; i < displayHistory.length; i += step) {
+                const x = (i / Math.max(1, displayHistory.length - 1)) * graphWidth;
+                const stepNumber = history.length - displayHistory.length + i + 1;
+                labels.push(
+                  <text
+                    key={i}
+                    x={x}
+                    y={graphHeight + 15}
+                    textAnchor="middle"
+                    className="text-[9px] fill-gray-600"
+                  >
+                    {stepNumber}
+                  </text>
+                );
+              }
+              
+              // Always show the last step
+              if (displayHistory.length > 1) {
+                const lastX = graphWidth;
+                const lastStepNumber = history.length;
+                labels.push(
+                  <text
+                    key="last"
+                    x={lastX}
+                    y={graphHeight + 15}
+                    textAnchor="middle"
+                    className="text-[9px] fill-gray-600"
+                  >
+                    {lastStepNumber}
+                  </text>
+                );
+              }
+              
+              return labels;
+            })()}
+
             {/* Y-axis */}
             <line
               x1={0}
@@ -233,13 +275,13 @@ const HistoryGraph: React.FC<HistoryGraphProps> = ({
         
         {/* Legend */}
         <div className="flex-1 flex items-start">
-          <div className="bg-white border border-gray-200 rounded p-2 text-[10px] space-y-1">
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-green-500"></div>
+          <div className="bg-white border border-gray-200 rounded p-1 sm:p-2 text-[8px] sm:text-[10px] space-y-0.5 sm:space-y-1">
+            <div className="flex items-center gap-0.5 sm:gap-1">
+              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-green-500"></div>
               <span className="text-gray-700">Correct Token</span>
             </div>
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-red-500"></div>
+            <div className="flex items-center gap-0.5 sm:gap-1">
+              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-red-500"></div>
               <span className="text-gray-700">Wrong Token</span>
             </div>
           </div>
