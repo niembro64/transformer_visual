@@ -20,6 +20,10 @@ import {
   updateVectorWeights,
 } from './utils/matrixOperations';
 
+// Training configuration constants
+const LEARNING_RATE = 0.01; // Reduced from 0.1 for more stable training
+const TRAINING_INTERVAL_MS = 100; // Update every 200ms (5 times per second) instead of 1000ms
+
 function App() {
   // Fixed dimension values
   const embeddingDim = isPortraitOrientation() ? 4 : 8; // Dimension of embeddings (d_model)
@@ -34,16 +38,16 @@ function App() {
   // Vocabulary of 25 common words
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const vocabularyWords: string[] = [
-    'lorem',
-    'ipsum',
-    'dolor',
+    'et',
+    'lore',
+    'ut',
+    'ipsu',
+    'dolo',
     'sit',
     'amet',
     'elit',
     'sed',
     'do',
-    'ut',
-    'et',
   ];
 
   // Generate vocabulary embeddings - mutable state
@@ -124,9 +128,6 @@ function App() {
 
   // Used for random walk step size - smaller values for more subtle updates
   const weightUpdateStepSize = 0; // Set to 0 to disable random walk, use pure gradient descent
-
-  // Learning rate for gradient descent training
-  const learningRate = 0.1; // Moderate learning rate for cross-entropy loss
 
   // Track training loss
   const [trainingLoss, setTrainingLoss] = useState<number | null>(null);
@@ -211,7 +212,7 @@ function App() {
             targetToken: vocabularyWords[targetTokenIndex],
             predictedToken: vocabularyWords[predictedTokenIndex],
             targetProb: targetProb.toFixed(4),
-            learningRate,
+            LEARNING_RATE,
           });
 
           // Apply gradient-based updates to all layers
@@ -236,7 +237,7 @@ function App() {
                   if (i !== row || j !== col) {
                     // Simplified gradient - in reality would use hidden layer activations
                     const gradient = outputGradient[i] * 1.0; // Increased from 0.1
-                    newWeights.W2[i][j] -= learningRate * gradient;
+                    newWeights.W2[i][j] -= LEARNING_RATE * gradient;
                   }
                 }
               }
@@ -246,14 +247,14 @@ function App() {
                 for (let j = 0; j < newWeights.W2[i].length; j++) {
                   // Simplified gradient - in reality would use hidden layer activations
                   const gradient = outputGradient[i] * 1.0; // Increased from 0.1
-                  newWeights.W2[i][j] -= learningRate * gradient;
+                  newWeights.W2[i][j] -= LEARNING_RATE * gradient;
                 }
               }
             }
 
             // Apply gradient updates to biases
             for (let i = 0; i < newWeights.b2.length; i++) {
-              newWeights.b2[i] -= learningRate * outputGradient[i] * 1.0; // Increased from 0.1
+              newWeights.b2[i] -= LEARNING_RATE * outputGradient[i] * 1.0; // Increased from 0.1
             }
 
             // For W1 and b1, we'd need to backpropagate through activation function
@@ -267,7 +268,7 @@ function App() {
                     const avgError =
                       outputGradient.reduce((a, b) => a + b, 0) /
                       outputGradient.length;
-                    newWeights.W1[i][j] -= learningRate * avgError * 0.5; // Increased from 0.01
+                    newWeights.W1[i][j] -= LEARNING_RATE * avgError * 0.5; // Increased from 0.01
                   }
                 }
               }
@@ -278,7 +279,7 @@ function App() {
                   const avgError =
                     outputGradient.reduce((a, b) => a + b, 0) /
                     outputGradient.length;
-                  newWeights.W1[i][j] -= learningRate * avgError * 0.5; // Increased from 0.01
+                  newWeights.W1[i][j] -= LEARNING_RATE * avgError * 0.5; // Increased from 0.01
                 }
               }
             }
@@ -287,7 +288,7 @@ function App() {
             const avgError =
               outputGradient.reduce((a, b) => a + b, 0) / outputGradient.length;
             for (let i = 0; i < newWeights.b1.length; i++) {
-              newWeights.b1[i] -= learningRate * avgError * 0.5; // Increased from 0.01
+              newWeights.b1[i] -= LEARNING_RATE * avgError * 0.5; // Increased from 0.01
             }
 
             return newWeights;
@@ -312,14 +313,14 @@ function App() {
               for (let i = 0; i < newWeights.weightQ.length; i++) {
                 for (let j = 0; j < newWeights.weightQ[i].length; j++) {
                   if (i !== row || j !== col) {
-                    newWeights.weightQ[i][j] -= learningRate * avgError * 0.1; // Increased from 0.001
+                    newWeights.weightQ[i][j] -= LEARNING_RATE * avgError * 0.1; // Increased from 0.001
                   }
                 }
               }
             } else {
               for (let i = 0; i < newWeights.weightQ.length; i++) {
                 for (let j = 0; j < newWeights.weightQ[i].length; j++) {
-                  newWeights.weightQ[i][j] -= learningRate * avgError * 0.1; // Increased from 0.001
+                  newWeights.weightQ[i][j] -= LEARNING_RATE * avgError * 0.1; // Increased from 0.001
                 }
               }
             }
@@ -330,14 +331,14 @@ function App() {
               for (let i = 0; i < newWeights.weightK.length; i++) {
                 for (let j = 0; j < newWeights.weightK[i].length; j++) {
                   if (i !== row || j !== col) {
-                    newWeights.weightK[i][j] -= learningRate * avgError * 0.1; // Increased from 0.001
+                    newWeights.weightK[i][j] -= LEARNING_RATE * avgError * 0.1; // Increased from 0.001
                   }
                 }
               }
             } else {
               for (let i = 0; i < newWeights.weightK.length; i++) {
                 for (let j = 0; j < newWeights.weightK[i].length; j++) {
-                  newWeights.weightK[i][j] -= learningRate * avgError * 0.1; // Increased from 0.001
+                  newWeights.weightK[i][j] -= LEARNING_RATE * avgError * 0.1; // Increased from 0.001
                 }
               }
             }
@@ -348,14 +349,14 @@ function App() {
               for (let i = 0; i < newWeights.weightV.length; i++) {
                 for (let j = 0; j < newWeights.weightV[i].length; j++) {
                   if (i !== row || j !== col) {
-                    newWeights.weightV[i][j] -= learningRate * avgError * 0.5; // Increased from 0.01
+                    newWeights.weightV[i][j] -= LEARNING_RATE * avgError * 0.5; // Increased from 0.01
                   }
                 }
               }
             } else {
               for (let i = 0; i < newWeights.weightV.length; i++) {
                 for (let j = 0; j < newWeights.weightV[i].length; j++) {
-                  newWeights.weightV[i][j] -= learningRate * avgError * 0.5; // Increased from 0.01
+                  newWeights.weightV[i][j] -= LEARNING_RATE * avgError * 0.5; // Increased from 0.01
                 }
               }
             }
@@ -370,7 +371,7 @@ function App() {
                 // Move target embedding to reduce loss
                 // The gradient for target embedding is negative of output gradient
                 return emb.map(
-                  (val, i) => val - learningRate * outputGradient[i] * 1.0 // Increased from 0.1
+                  (val, i) => val - LEARNING_RATE * outputGradient[i] * 1.0 // Increased from 0.1
                 );
               }
               // Other embeddings don't get updated in this simplified version
@@ -380,7 +381,7 @@ function App() {
             return newEmbeddings;
           });
         }
-      }, 1000);
+      }, TRAINING_INTERVAL_MS);
     }
 
     return () => {
@@ -394,7 +395,6 @@ function App() {
     targetTokenIndex,
     ffnOutput,
     vocabularyEmbeddings,
-    learningRate,
     selectedElement,
   ]);
 
@@ -432,16 +432,25 @@ function App() {
     null
   );
 
-  // Handler to add a token from tokenizer to input sequence
-  const handleTokenizerClick = useCallback((index: number) => {
-    setSelectedTokenIndices((prev) => [...prev, index]);
-    setRecentlyAddedIndex(index);
+  // Handler for tokenizer click - adds to sequence or sets target based on training mode
+  const handleTokenizerClick = useCallback(
+    (index: number) => {
+      if (trainingMode) {
+        // In training mode, set as target output
+        setTargetTokenIndex(index);
+      } else {
+        // In inference mode, add to input sequence
+        setSelectedTokenIndices((prev) => [...prev, index]);
+        setRecentlyAddedIndex(index);
 
-    // Clear the highlight after a brief delay
-    setTimeout(() => {
-      setRecentlyAddedIndex(null);
-    }, 500);
-  }, []);
+        // Clear the highlight after a brief delay
+        setTimeout(() => {
+          setRecentlyAddedIndex(null);
+        }, 500);
+      }
+    },
+    [trainingMode]
+  );
 
   // Handler to remove a token from the input sequence
   const handleSequenceTokenClick = useCallback((index: number) => {
@@ -648,67 +657,183 @@ function App() {
       <main className="w-full p-0.5 md:p-2">
         <div className="bg-white rounded p-0.5 mb-0.5">
           {/* Main control panel */}
-          <div className="mb-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-sm overflow-hidden">
+          <div
+            className={`mb-4 ${
+              trainingMode
+                ? 'bg-gradient-to-r from-green-50 to-emerald-50'
+                : 'bg-gradient-to-r from-blue-50 to-indigo-50'
+            } rounded-lg shadow-sm overflow-hidden`}
+          >
             {/* Header bar */}
-            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-2 sm:px-4 py-2 flex justify-between items-center">
+            <div
+              className={`${
+                trainingMode
+                  ? 'bg-gradient-to-r from-green-500 to-emerald-600'
+                  : 'bg-gradient-to-r from-blue-500 to-indigo-600'
+              } text-white px-2 sm:px-4 py-2 flex justify-between items-center`}
+            >
               <h2 className="text-base sm:text-lg font-bold">
                 Transformer Visualization
               </h2>
             </div>
 
-            {/* Top control - training mode toggle */}
+            {/* Top control - mode toggle */}
             <div className="p-2 flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <span className="text-xs sm:text-sm font-medium text-gray-700">
-                  Training:
+                  Mode:
                 </span>
-                <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden shadow-sm w-28 sm:w-32">
-                  <button
-                    onClick={() => setTrainingMode(false)}
-                    className={`flex-1 h-8 flex items-center justify-center text-xs sm:text-sm font-medium transition-colors border-r border-gray-300 ${
-                      !trainingMode
-                        ? 'bg-gray-200 text-gray-800 font-semibold'
-                        : 'bg-white text-gray-500 hover:bg-gray-50'
-                    }`}
-                  >
-                    <span className="block">Off</span>
-                  </button>
-                  <button
-                    onClick={() => setTrainingMode(true)}
-                    className={`flex-1 h-8 flex items-center justify-center text-xs sm:text-sm font-medium transition-colors ${
-                      trainingMode
-                        ? 'bg-blue-500 text-white font-semibold'
-                        : 'bg-white text-gray-500 hover:bg-gray-50'
-                    }`}
-                  >
-                    <span className="block">On</span>
-                  </button>
-                </div>
+                <button
+                  onClick={() => setTrainingMode(!trainingMode)}
+                  className={`px-4 sm:px-6 h-8 flex items-center justify-center text-xs sm:text-sm font-medium transition-all duration-200 rounded-lg shadow-sm border ${
+                    trainingMode
+                      ? 'bg-green-500 hover:bg-green-600 text-white border-green-600'
+                      : 'bg-blue-500 hover:bg-blue-600 text-white border-blue-600'
+                  }`}
+                >
+                  <span className="block">
+                    {trainingMode ? 'Training' : 'Inferencing'}
+                  </span>
+                </button>
               </div>
               {/* Training status display */}
               {trainingMode && (
                 <div className="flex items-center gap-4 text-xs sm:text-sm">
                   {targetTokenIndex !== null ? (
-                    <>
-                      <span className="text-gray-600">Target:</span>
-                      <span className="font-mono font-bold text-green-600">
-                        {vocabularyWords[targetTokenIndex]}
-                      </span>
-                      {trainingLoss !== null && (
-                        <>
-                          <span className="text-gray-600">Loss:</span>
-                          <span className="font-mono font-bold text-blue-600">
-                            {trainingLoss.toFixed(4)}
-                          </span>
-                        </>
-                      )}
-                    </>
+                    <></>
                   ) : (
                     <span className="text-gray-500 italic">
-                      Right-click a token to set target
+                      Click a token to set target
                     </span>
                   )}
                 </div>
+              )}
+            </div>
+          </div>
+
+          {/* Output Token section */}
+          <div className="mb-0.5 bg-white rounded p-0.5">
+            <h3 className="text-xs sm:text-sm font-semibold mb-0.5 border-b pb-0.5">
+              Output Token
+            </h3>
+            <div className="p-1 sm:p-2">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+                {/* Next Token Prediction */}
+                <div className="flex-1">
+                  <p className="text-[10px] sm:text-xs text-gray-600 mb-1">
+                    Next Token:
+                  </p>
+                  {ffnOutput.length > 0 ? (
+                    (() => {
+                      const nextTokenPrediction =
+                        ffnOutput[ffnOutput.length - 1];
+                      const dotProducts = vocabularyEmbeddings.map(
+                        (vocabEmbedding) =>
+                          vectorDotProduct(nextTokenPrediction, vocabEmbedding)
+                      );
+                      const predictedTokenIndex = dotProducts.indexOf(
+                        Math.max(...dotProducts)
+                      );
+                      const maxDotProduct = Math.max(...dotProducts);
+                      const expValues = dotProducts.map((dp) =>
+                        Math.exp(dp - maxDotProduct)
+                      );
+                      const sumExp = expValues.reduce((a, b) => a + b, 0);
+                      const probabilities = expValues.map(
+                        (exp) => exp / sumExp
+                      );
+                      const predictedProb = probabilities[predictedTokenIndex];
+
+                      return (
+                        <div className="flex items-center gap-2">
+                          <div className="px-2 sm:px-3 py-1 sm:py-1.5 border border-blue-400 rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] text-center shadow-sm bg-blue-50 font-mono group relative cursor-pointer">
+                            {vocabularyWords[predictedTokenIndex]}
+                            {/* Show embedding as matrix on hover */}
+                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 p-2 bg-white border border-gray-200 text-gray-700 text-[10px] rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                              <div className="mb-1 text-gray-600 text-center font-medium">
+                                {vocabularyWords[predictedTokenIndex]} embedding
+                              </div>
+                              <MatrixDisplay
+                                data={[
+                                  vocabularyEmbeddings[predictedTokenIndex],
+                                ]}
+                                rowLabels={['']}
+                                columnLabels={Array.from(
+                                  { length: embeddingDim },
+                                  (_, i) => `d${i + 1}`
+                                )}
+                                maxAbsValue={0.2}
+                                cellSize="xs"
+                                selectable={false}
+                                matrixType="none"
+                              />
+                            </div>
+                          </div>
+                          <span className="text-[10px] sm:text-xs text-blue-600 font-mono">
+                            p={predictedProb.toFixed(4)}
+                          </span>
+                        </div>
+                      );
+                    })()
+                  ) : (
+                    <div className="px-2 sm:px-3 py-1 sm:py-1.5 border border-dashed border-gray-300 rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] text-center text-gray-400 italic">
+                      computing...
+                    </div>
+                  )}
+                </div>
+
+                {/* Target Output (Training Mode Only) */}
+                {trainingMode && (
+                  <div className="flex-1">
+                    <p className="text-[10px] sm:text-xs text-gray-600 mb-1">
+                      Target Token:
+                    </p>
+                    {targetTokenIndex !== null ? (
+                      <div className="flex items-center gap-2">
+                        <div className="px-2 sm:px-3 py-1 sm:py-1.5 border border-green-400 rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] text-center shadow-sm bg-green-50 font-mono group relative cursor-pointer">
+                          {vocabularyWords[targetTokenIndex]}
+                          {/* Show embedding as matrix on hover */}
+                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 p-2 bg-white border border-gray-200 text-gray-700 text-[10px] rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                            <div className="mb-1 text-gray-600 text-center font-medium">
+                              {vocabularyWords[targetTokenIndex]} embedding
+                            </div>
+                            <MatrixDisplay
+                              data={[vocabularyEmbeddings[targetTokenIndex]]}
+                              rowLabels={['']}
+                              columnLabels={Array.from(
+                                { length: embeddingDim },
+                                (_, i) => `d${i + 1}`
+                              )}
+                              maxAbsValue={0.2}
+                              cellSize="xs"
+                              selectable={false}
+                              matrixType="none"
+                            />
+                          </div>
+                        </div>
+                        {trainingLoss !== null && (
+                          <span className="text-[10px] sm:text-xs text-gray-600 font-mono">
+                            Loss:{' '}
+                            <span className="text-red-600 font-bold">
+                              {trainingLoss.toFixed(4)}
+                            </span>
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="px-2 sm:px-3 py-1 sm:py-1.5 border border-dashed border-gray-300 rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] text-center text-gray-400 italic">
+                        none
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Training Status Message */}
+              {trainingMode && targetTokenIndex === null && (
+                <p className="text-[10px] sm:text-xs text-gray-500 italic mt-2">
+                  Click a token in the tokenizer to set as target output
+                </p>
               )}
             </div>
           </div>
@@ -720,10 +845,10 @@ function App() {
             </h3>
             <div className="p-1 sm:p-2">
               <p className="text-[10px] sm:text-xs text-gray-600 mb-1 sm:mb-2">
-                Click tokens to add to input sequence
+                Click tokens to{' '}
                 {trainingMode
-                  ? ' or right-click to set as target output'
-                  : ''}{' '}
+                  ? 'set as target output'
+                  : 'add to input sequence'}{' '}
                 (hover to see embeddings)
               </p>
               <div className="flex flex-wrap gap-1 sm:gap-2">
@@ -731,12 +856,6 @@ function App() {
                   <div
                     key={idx}
                     onClick={() => handleTokenizerClick(idx)}
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      if (trainingMode) {
-                        setTargetTokenIndex(idx);
-                      }
-                    }}
                     className={`px-2 sm:px-3 py-1 sm:py-1.5 border ${
                       idx === recentlyAddedIndex
                         ? 'border-blue-500'
@@ -774,29 +893,9 @@ function App() {
 
           {/* Input Sequence section */}
           <div className="mb-0.5 bg-white rounded p-0.5">
-            <div className="flex justify-between items-center border-b pb-0.5">
-              <h3 className="text-xs sm:text-sm font-semibold">
-                Input Sequence
-              </h3>
-              {/* Output token display */}
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] sm:text-xs text-gray-600">
-                  Target Output:
-                </span>
-                {targetTokenIndex !== null ? (
-                  <div
-                    onClick={() => setTargetTokenIndex(null)}
-                    className="px-2 sm:px-3 py-1 sm:py-1.5 border border-green-400 rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] text-center shadow-sm bg-green-50 font-mono cursor-pointer hover:bg-red-50 hover:border-red-300 transition-colors"
-                  >
-                    {vocabularyWords[targetTokenIndex]}
-                  </div>
-                ) : (
-                  <div className="px-2 sm:px-3 py-1 sm:py-1.5 border border-dashed border-gray-300 rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] text-center text-gray-400 italic">
-                    none
-                  </div>
-                )}
-              </div>
-            </div>
+            <h3 className="text-xs sm:text-sm font-semibold mb-0.5 border-b pb-0.5">
+              Input Sequence
+            </h3>
             <div className="p-1 sm:p-2">
               <p className="text-[10px] sm:text-xs text-gray-600 mb-1 sm:mb-2">
                 Click a token to remove it (hover to see embeddings)
@@ -1197,17 +1296,6 @@ function App() {
             <p className="text-gray-700">
               Blue: positive, Red: negative. Click a value to edit (magenta
               border).
-              {trainingMode &&
-                (targetTokenIndex !== null
-                  ? ` Training mode: learning to predict "${vocabularyWords[targetTokenIndex]}".`
-                  : ' Training mode enabled: select a target token (right-click in tokenizer).')}
-              {trainingMode &&
-                targetTokenIndex !== null &&
-                trainingLoss !== null && (
-                  <span className="ml-2 text-blue-600">
-                    Loss: {trainingLoss.toFixed(4)}
-                  </span>
-                )}
             </p>
 
             <div className="flex flex-wrap gap-2 sm:gap-4">
