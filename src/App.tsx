@@ -1161,23 +1161,6 @@ function App() {
                   const sumExp = expValues.reduce((a, b) => a + b, 0);
                   // Normalize to get softmax values
                   const softmaxValues = expValues.map((exp) => exp / sumExp);
-                  
-                  // Save softmax to history when in training mode and we have ffnOutput
-                  if (trainingMode && ffnOutput.length > 0) {
-                    const softmaxEntry: HistorySoftMaxEntry = {
-                      softmaxValues: vocabularyWords.map((word, idx) => ({
-                        token: word,
-                        probability: softmaxValues[idx]
-                      })),
-                      timestamp: Date.now()
-                    };
-                    
-                    setHistorySoftMax((prev: HistorySoftMaxEntry[]) => {
-                      const newHistory = [...prev, softmaxEntry];
-                      // Limit history to last 1000 entries
-                      return newHistory.slice(-1000);
-                    });
-                  }
 
                   // Create pairs of [index, softmax value] so we can sort them while keeping the original indices
                   const indexedSoftmax = softmaxValues.map((value, index) => ({
