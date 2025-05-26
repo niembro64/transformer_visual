@@ -20,13 +20,11 @@ import {
   updateVectorWeights,
 } from './utils/matrixOperations';
 
-
 function App() {
   // Fixed dimension values
   const embeddingDim = isPortraitOrientation() ? 4 : 8; // Dimension of embeddings (d_model)
   const attentionHeadDim = isPortraitOrientation() ? 2 : 4; // Dimension of attention heads (d_k = d_v = d_model / num_heads)
   const mlpHiddenDim = 4; // Dimension of MLP hidden layer (d_ff = 8, typically 4x d_model)
-
 
   // Training mode - determines if dropout is applied and weights are updated
   const [trainingMode, setTrainingMode] = useState(false);
@@ -36,16 +34,16 @@ function App() {
   // Vocabulary of 25 common words
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const vocabularyWords: string[] = [
-    'the', // 0
-    'a', // 1
-    'and', // 2
-    'to', // 3
-    'is', // 4
-    'in', // 5
-    'it', // 6
-    'of', // 7
-    'that', // 8
-    'boy', // 9
+    'lorem',
+    'ipsum',
+    'dolor',
+    'sit',
+    'amet',
+    'elit',
+    'sed',
+    'do',
+    'ut',
+    'et',
   ];
 
   // Generate vocabulary embeddings - mutable state
@@ -55,9 +53,7 @@ function App() {
 
   // Track selected tokens (indices into vocabulary)
   const [selectedTokenIndices, setSelectedTokenIndices] = useState<number[]>([
-    1, // a
-    9, // boy
-    5, // with
+    1, 2, 3, 4,
   ]);
 
   // Get token labels from selected indices
@@ -128,19 +124,19 @@ function App() {
 
   // Used for random walk step size - smaller values for more subtle updates
   const weightUpdateStepSize = 0; // Set to 0 to disable random walk, use pure gradient descent
-  
+
   // Learning rate for gradient descent training
   const learningRate = 0.1; // Moderate learning rate for cross-entropy loss
-  
+
   // Track training loss
   const [trainingLoss, setTrainingLoss] = useState<number | null>(null);
-  
+
   // State to hold the attention output context vectors
   const [attentionContext, setAttentionContext] = useState<number[][]>([]);
 
   // State to hold the feed-forward network output (final layer prediction)
   const [ffnOutput, setFfnOutput] = useState<number[][]>([]);
-  
+
   // Type for selected element
   type ElementObject = {
     matrixType:
@@ -154,7 +150,7 @@ function App() {
     row: number;
     col: number;
   };
-  
+
   // Only have one selectedElement for the entire application to prevent multiple sliders
   const [selectedElement, setSelectedElement] = useState<ElementObject | null>(
     null
@@ -173,50 +169,54 @@ function App() {
         if (trainingMode && targetTokenIndex !== null && ffnOutput.length > 0) {
           // Get the predicted embedding (last token's output)
           const predictedEmbedding = ffnOutput[ffnOutput.length - 1];
-          
+
           // Calculate which token is predicted by finding closest vocabulary embedding
           const dotProducts = vocabularyEmbeddings.map((vocabEmbedding) =>
             vectorDotProduct(predictedEmbedding, vocabEmbedding)
           );
-          
+
           // Apply softmax to get probabilities
           const maxDotProduct = Math.max(...dotProducts);
-          const expValues = dotProducts.map((dp) => Math.exp(dp - maxDotProduct));
+          const expValues = dotProducts.map((dp) =>
+            Math.exp(dp - maxDotProduct)
+          );
           const sumExp = expValues.reduce((a, b) => a + b, 0);
           const probabilities = expValues.map((exp) => exp / sumExp);
-          
+
           // Cross-entropy loss: -log(probability of correct token)
           const targetProb = probabilities[targetTokenIndex];
           const loss = -Math.log(Math.max(targetProb, 1e-7)); // Avoid log(0)
           setTrainingLoss(loss);
-          
+
           // Gradient for cross-entropy with softmax
           // For the correct class: gradient = predicted_prob - 1
           // For other classes: gradient = predicted_prob
-          const gradients = probabilities.map((prob, idx) => 
+          const gradients = probabilities.map((prob, idx) =>
             idx === targetTokenIndex ? prob - 1 : prob
           );
-          
+
           // Convert gradient to embedding space
           // We need to push the output embedding towards the target embedding
           const targetEmbedding = vocabularyEmbeddings[targetTokenIndex];
-          const outputGradient = predictedEmbedding.map((val, i) => 
-            val - targetEmbedding[i]
+          const outputGradient = predictedEmbedding.map(
+            (val, i) => val - targetEmbedding[i]
           );
-          
+
           // Debug logging
-          const predictedTokenIndex = dotProducts.indexOf(Math.max(...dotProducts));
+          const predictedTokenIndex = dotProducts.indexOf(
+            Math.max(...dotProducts)
+          );
           console.log('Training update:', {
             loss: loss.toFixed(4),
             targetToken: vocabularyWords[targetTokenIndex],
             predictedToken: vocabularyWords[predictedTokenIndex],
             targetProb: targetProb.toFixed(4),
-            learningRate
+            learningRate,
           });
-          
+
           // Apply gradient-based updates to all layers
           // Simplified backpropagation - in a real implementation we'd compute proper gradients
-          
+
           // Update MLP weights with gradient descent
           setMlpWeights((prev) => {
             const newWeights = {
@@ -225,7 +225,7 @@ function App() {
               W2: [...prev.W2.map((r) => [...r])],
               b2: [...prev.b2],
             };
-            
+
             // Apply gradient updates to W2 (output layer)
             // The gradient for W2 is approximately: gradient = output_gradient * hidden_activation^T
             // Skip selected element if it's in W2
@@ -250,12 +250,12 @@ function App() {
                 }
               }
             }
-            
+
             // Apply gradient updates to biases
             for (let i = 0; i < newWeights.b2.length; i++) {
               newWeights.b2[i] -= learningRate * outputGradient[i] * 1.0; // Increased from 0.1
             }
-            
+
             // For W1 and b1, we'd need to backpropagate through activation function
             // For now, apply small gradient updates proportional to output error
             if (selectedElement?.matrixType === 'weightW1') {
@@ -264,7 +264,9 @@ function App() {
                 for (let j = 0; j < newWeights.W1[i].length; j++) {
                   if (i !== row || j !== col) {
                     // Simplified gradient
-                    const avgError = outputGradient.reduce((a, b) => a + b, 0) / outputGradient.length;
+                    const avgError =
+                      outputGradient.reduce((a, b) => a + b, 0) /
+                      outputGradient.length;
                     newWeights.W1[i][j] -= learningRate * avgError * 0.5; // Increased from 0.01
                   }
                 }
@@ -273,21 +275,24 @@ function App() {
               for (let i = 0; i < newWeights.W1.length; i++) {
                 for (let j = 0; j < newWeights.W1[i].length; j++) {
                   // Simplified gradient
-                  const avgError = outputGradient.reduce((a, b) => a + b, 0) / outputGradient.length;
+                  const avgError =
+                    outputGradient.reduce((a, b) => a + b, 0) /
+                    outputGradient.length;
                   newWeights.W1[i][j] -= learningRate * avgError * 0.5; // Increased from 0.01
                 }
               }
             }
-            
+
             // Update b1 biases
-            const avgError = outputGradient.reduce((a, b) => a + b, 0) / outputGradient.length;
+            const avgError =
+              outputGradient.reduce((a, b) => a + b, 0) / outputGradient.length;
             for (let i = 0; i < newWeights.b1.length; i++) {
               newWeights.b1[i] -= learningRate * avgError * 0.5; // Increased from 0.01
             }
-            
+
             return newWeights;
           });
-          
+
           // Update attention weights with gradient descent
           setAttentionWeights((prev) => {
             const newWeights = {
@@ -295,11 +300,12 @@ function App() {
               weightK: [...prev.weightK.map((r) => [...r])],
               weightV: [...prev.weightV.map((r) => [...r])],
             };
-            
+
             // For attention weights, the gradient flows back from the output through the attention mechanism
             // This is a simplified version - proper gradients would require full backpropagation
-            const avgError = outputGradient.reduce((a, b) => a + b, 0) / outputGradient.length;
-            
+            const avgError =
+              outputGradient.reduce((a, b) => a + b, 0) / outputGradient.length;
+
             // Update Q matrix with gradient descent (skip selected element)
             if (selectedElement?.matrixType === 'weightQ') {
               const { row, col } = selectedElement;
@@ -317,7 +323,7 @@ function App() {
                 }
               }
             }
-            
+
             // Update K matrix with gradient descent (skip selected element)
             if (selectedElement?.matrixType === 'weightK') {
               const { row, col } = selectedElement;
@@ -335,7 +341,7 @@ function App() {
                 }
               }
             }
-            
+
             // Update V matrix with gradient descent - larger updates as it affects output directly
             if (selectedElement?.matrixType === 'weightV') {
               const { row, col } = selectedElement;
@@ -353,18 +359,18 @@ function App() {
                 }
               }
             }
-            
+
             return newWeights;
           });
-          
+
           // Update vocabulary embeddings with gradient descent
           setVocabularyEmbeddings((prev) => {
             const newEmbeddings = prev.map((emb, idx) => {
               if (idx === targetTokenIndex) {
                 // Move target embedding to reduce loss
                 // The gradient for target embedding is negative of output gradient
-                return emb.map((val, i) => 
-                  val - learningRate * outputGradient[i] * 1.0 // Increased from 0.1
+                return emb.map(
+                  (val, i) => val - learningRate * outputGradient[i] * 1.0 // Increased from 0.1
                 );
               }
               // Other embeddings don't get updated in this simplified version
@@ -382,7 +388,15 @@ function App() {
         window.clearInterval(timerId);
       }
     };
-  }, [trainingMode, weightUpdateStepSize, targetTokenIndex, ffnOutput, vocabularyEmbeddings, learningRate, selectedElement]);
+  }, [
+    trainingMode,
+    weightUpdateStepSize,
+    targetTokenIndex,
+    ffnOutput,
+    vocabularyEmbeddings,
+    learningRate,
+    selectedElement,
+  ]);
 
   // Use embeddings directly (no dropout)
   const embeddingsWithDropout = embeddings;
@@ -706,8 +720,11 @@ function App() {
             </h3>
             <div className="p-1 sm:p-2">
               <p className="text-[10px] sm:text-xs text-gray-600 mb-1 sm:mb-2">
-                Click tokens to add to input sequence{trainingMode ? ' or right-click to set as target output' : ''} (hover to see
-                embeddings)
+                Click tokens to add to input sequence
+                {trainingMode
+                  ? ' or right-click to set as target output'
+                  : ''}{' '}
+                (hover to see embeddings)
               </p>
               <div className="flex flex-wrap gap-1 sm:gap-2">
                 {vocabularyWords.map((word, idx) => (
@@ -1181,14 +1198,16 @@ function App() {
               Blue: positive, Red: negative. Click a value to edit (magenta
               border).
               {trainingMode &&
-                (targetTokenIndex !== null 
+                (targetTokenIndex !== null
                   ? ` Training mode: learning to predict "${vocabularyWords[targetTokenIndex]}".`
                   : ' Training mode enabled: select a target token (right-click in tokenizer).')}
-              {trainingMode && targetTokenIndex !== null && trainingLoss !== null && (
-                <span className="ml-2 text-blue-600">
-                  Loss: {trainingLoss.toFixed(4)}
-                </span>
-              )}
+              {trainingMode &&
+                targetTokenIndex !== null &&
+                trainingLoss !== null && (
+                  <span className="ml-2 text-blue-600">
+                    Loss: {trainingLoss.toFixed(4)}
+                  </span>
+                )}
             </p>
 
             <div className="flex flex-wrap gap-2 sm:gap-4">
@@ -1211,7 +1230,6 @@ function App() {
                 <span className="font-semibold mr-1">FFN Hidden Dim:</span>
                 <span>{mlpHiddenDim}</span>
               </div>
-
             </div>
           </div>
         </div>
