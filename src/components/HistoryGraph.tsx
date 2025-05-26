@@ -34,7 +34,7 @@ const HistoryGraph: React.FC<HistoryGraphProps> = ({
   // SVG dimensions
   const width = 800;
   const height = 150;
-  const padding = { top: 20, right: 60, bottom: 30, left: 60 };
+  const padding = { top: 20, right: 120, bottom: 30, left: 60 };
   const graphWidth = width - padding.left - padding.right;
   const graphHeight = height - padding.top - padding.bottom;
 
@@ -224,7 +224,7 @@ const HistoryGraph: React.FC<HistoryGraphProps> = ({
               textAnchor="middle"
               className="text-[11px] fill-gray-700 font-medium"
             >
-              Training Steps
+              Training Steps (Last {displayHistory.length})
             </text>
             <text
               x={-graphHeight / 2}
@@ -238,26 +238,23 @@ const HistoryGraph: React.FC<HistoryGraphProps> = ({
           </g>
 
           {/* Legend */}
-          <g transform={`translate(${width - 120}, 10)`}>
+          <g transform={`translate(${width - 110}, 10)`}>
             <rect
               x="0"
               y="0"
-              width="110"
-              height="50"
+              width="100"
+              height="35"
               fill="white"
               stroke="#e5e7eb"
               rx="4"
             />
             <circle cx="10" cy="15" r="3" fill="#22c55e" />
             <text x="20" y="18" className="text-[10px] fill-gray-700">
-              Correct prediction
+              Correct
             </text>
             <circle cx="10" cy="30" r="3" fill="#ef4444" />
             <text x="20" y="33" className="text-[10px] fill-gray-700">
-              Wrong prediction
-            </text>
-            <text x="10" y="45" className="text-[10px] fill-gray-600">
-              Last {displayHistory.length} steps
+              Wrong
             </text>
           </g>
         </svg>

@@ -29,10 +29,10 @@ export type HistorySoftMaxEntry = {
 };
 
 // Training configuration constants
-const LEARNING_RATE = 0.001; // Reduced from 0.1 for more stable training
-const TRAINING_INTERVAL_MS = 1; // Update every 200ms (5 times per second) instead of 1000ms
+const LEARNING_RATE = 0.01; // Reduced from 0.1 for more stable training
+const TRAINING_INTERVAL_MS = 0.01; // Update every 200ms (5 times per second) instead of 1000ms
 const EXPONENTIAL_DECIMALS = 4; // Number of decimal places for exponential values
-const HISTORY_DISPLAY_STEPS = 1000; // Number of training steps to show in history graph
+const HISTORY_DISPLAY_STEPS = 500; // Number of training steps to show in history graph
 const DIM_EMBEDDING = isPortraitOrientation() ? 8 : 8; // Dimension of embeddings (d_model)
 const DIM_ATTENTION_HEAD = isPortraitOrientation() ? 4 : 4; // Dimension of attention heads (d_k = d_v = d_model / num_heads)
 const DIM_MLP_HIDDEN = 6; // Dimension of MLP hidden layer (d_ff = 8, typically 4x d_model)
@@ -236,11 +236,11 @@ function App() {
           const softmaxEntry: HistorySoftMaxEntry = {
             softmaxValues: vocabularyWords.map((word, idx) => ({
               token: word,
-              probability: probabilities[idx]
+              probability: probabilities[idx],
             })),
-            timestamp: Date.now()
+            timestamp: Date.now(),
           };
-          
+
           setHistorySoftMax((prev: HistorySoftMaxEntry[]) => {
             const newHistory = [...prev, softmaxEntry];
             // Limit history to last 1000 entries

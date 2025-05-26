@@ -169,7 +169,7 @@ const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
               textAnchor="middle"
               className="text-[11px] fill-gray-700 font-medium"
             >
-              Training Steps
+              Training Steps (Last {displayHistory.length})
             </text>
             <text
               x={-graphHeight / 2}
