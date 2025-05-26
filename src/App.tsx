@@ -22,7 +22,7 @@ import {
 
 // Training configuration constants
 const LEARNING_RATE = 0.01; // Reduced from 0.1 for more stable training
-const TRAINING_INTERVAL_MS = 100; // Update every 200ms (5 times per second) instead of 1000ms
+const TRAINING_INTERVAL_MS = 1; // Update every 200ms (5 times per second) instead of 1000ms
 
 function App() {
   // Fixed dimension values
@@ -364,22 +364,8 @@ function App() {
             return newWeights;
           });
 
-          // Update vocabulary embeddings with gradient descent
-          setVocabularyEmbeddings((prev) => {
-            const newEmbeddings = prev.map((emb, idx) => {
-              if (idx === targetTokenIndex) {
-                // Move target embedding to reduce loss
-                // The gradient for target embedding is negative of output gradient
-                return emb.map(
-                  (val, i) => val - LEARNING_RATE * outputGradient[i] * 1.0 // Increased from 0.1
-                );
-              }
-              // Other embeddings don't get updated in this simplified version
-              // In a real implementation, all embeddings that contributed to the output would be updated
-              return [...emb];
-            });
-            return newEmbeddings;
-          });
+          // Note: In a real transformer, token embeddings would typically remain fixed
+          // during training, with only the model weights being updated
         }
       }, TRAINING_INTERVAL_MS);
     }
@@ -394,7 +380,6 @@ function App() {
     weightUpdateStepSize,
     targetTokenIndex,
     ffnOutput,
-    vocabularyEmbeddings,
     selectedElement,
   ]);
 
@@ -873,8 +858,8 @@ function App() {
                               />
                             </div>
                           </div>
-                          <span className="text-[10px] sm:text-xs text-blue-600 font-mono">
-                            p={predictedProb.toFixed(4)}
+                          <span className="text-[10px] sm:text-xs text-gray-600 font-mono">
+                            p: {predictedProb.toFixed(4)}
                           </span>
                         </div>
                       );
@@ -892,43 +877,42 @@ function App() {
                     <p className="text-[10px] sm:text-xs text-gray-600 mb-1">
                       Target Token:
                     </p>
-                    {targetTokenIndex !== null ? (
-                      <div className="flex items-center gap-2">
-                        <div className="px-2 sm:px-3 py-1 sm:py-1.5 border border-green-400 rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] text-center shadow-sm bg-green-50 font-mono group relative cursor-pointer">
-                          {vocabularyWords[targetTokenIndex]}
-                          {/* Show embedding as matrix on hover */}
-                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 p-2 bg-white border border-gray-200 text-gray-700 text-[10px] rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                            <div className="mb-1 text-gray-600 text-center font-medium">
-                              {vocabularyWords[targetTokenIndex]} embedding
+                    <div className="min-h-[40px] sm:min-h-[50px] border-2 border-dashed rounded-lg p-1 sm:p-2 transition-colors border-gray-300 bg-gray-50">
+                      {targetTokenIndex !== null ? (
+                        <div className="flex items-center gap-2">
+                          <div className="px-2 sm:px-3 py-1 sm:py-1.5 border border-green-400 rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] text-center shadow-sm bg-green-50 font-mono group relative cursor-pointer">
+                            {vocabularyWords[targetTokenIndex]}
+                            {/* Show embedding as matrix on hover */}
+                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 p-2 bg-white border border-gray-200 text-gray-700 text-[10px] rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                              <div className="mb-1 text-gray-600 text-center font-medium">
+                                {vocabularyWords[targetTokenIndex]} embedding
+                              </div>
+                              <MatrixDisplay
+                                data={[vocabularyEmbeddings[targetTokenIndex]]}
+                                rowLabels={['']}
+                                columnLabels={Array.from(
+                                  { length: embeddingDim },
+                                  (_, i) => `d${i + 1}`
+                                )}
+                                maxAbsValue={0.2}
+                                cellSize="xs"
+                                selectable={false}
+                                matrixType="none"
+                              />
                             </div>
-                            <MatrixDisplay
-                              data={[vocabularyEmbeddings[targetTokenIndex]]}
-                              rowLabels={['']}
-                              columnLabels={Array.from(
-                                { length: embeddingDim },
-                                (_, i) => `d${i + 1}`
-                              )}
-                              maxAbsValue={0.2}
-                              cellSize="xs"
-                              selectable={false}
-                              matrixType="none"
-                            />
                           </div>
-                        </div>
-                        {trainingLoss !== null && (
-                          <span className="text-[10px] sm:text-xs text-gray-600 font-mono">
-                            Loss:{' '}
-                            <span className="text-red-600 font-bold">
-                              {trainingLoss.toFixed(4)}
+                          {trainingLoss !== null && (
+                            <span className="text-[10px] sm:text-xs text-gray-600 font-mono">
+                              Loss: {trainingLoss.toFixed(4)}
                             </span>
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="px-2 sm:px-3 py-1 sm:py-1.5 border border-dashed border-gray-300 rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] text-center text-gray-400 italic">
-                        none
-                      </div>
-                    )}
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-gray-400 text-center text-xs sm:text-sm italic">
+                          Click a token in tokenizer to set target
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -1259,8 +1243,8 @@ function App() {
                               </div>
                             </div>
                           </div>
-                          <div className="text-[0.6rem] sm:text-[0.65rem] font-mono text-blue-600 bg-blue-50 px-2 sm:px-3 py-0.5 rounded-md border border-blue-100 min-w-[55px] sm:min-w-[60px] text-center">
-                            p={sortedSoftmax[0].value.toFixed(4)}
+                          <div className="text-[0.6rem] sm:text-[0.65rem] font-mono text-gray-600 px-2 sm:px-3 py-0.5 min-w-[55px] sm:min-w-[60px] text-center">
+                            p: {sortedSoftmax[0].value.toFixed(4)}
                           </div>
 
                           {/* Raw embedding for the predicted token */}
