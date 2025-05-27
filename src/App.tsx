@@ -785,7 +785,7 @@ function App() {
           {/* Tokenizer section */}
           <div className="mb-0.5 bg-white rounded p-0.5">
             <h3 className="text-xs sm:text-sm font-semibold mb-0.5 border-b pb-0.5">
-              Tokenizer
+              Token Dictionary
             </h3>
             <div className="p-1 sm:p-2">
               <p className="text-[10px] sm:text-xs text-gray-600 mb-1 sm:mb-2">
@@ -891,7 +891,9 @@ function App() {
                             text={vocabularyWords[predictedTokenIndex]}
                             tokenType="output_prediction"
                             showEmbedding={true}
-                            embedding={vocabularyEmbeddings[predictedTokenIndex]}
+                            embedding={
+                              vocabularyEmbeddings[predictedTokenIndex]
+                            }
                             embeddingDimension={DIM_EMBEDDING}
                           />
                           <span className="text-[10px] sm:text-xs text-gray-600 font-mono">
@@ -902,10 +904,7 @@ function App() {
                       );
                     })()
                   ) : (
-                    <Token
-                      text="computing..."
-                      tokenType="placeholder"
-                    />
+                    <Token text="computing..." tokenType="placeholder" />
                   )}
                 </div>
 
@@ -1004,19 +1003,23 @@ function App() {
 
           {/* History Graphs */}
           {trainingMode && (
-            <>
-              <SoftmaxHistoryGraph
-                history={historySoftMax}
-                maxPoints={HISTORY_DISPLAY_STEPS}
-                vocabularyWords={vocabularyWords}
-                totalSteps={totalTrainingSteps}
-              />
-              <HistoryGraph
-                history={historyTraining}
-                maxPoints={HISTORY_DISPLAY_STEPS}
-                totalSteps={totalTrainingSteps}
-              />
-            </>
+            <div className="flex flex-col lg:flex-row lg:gap-4">
+              <div className="lg:flex-1">
+                <SoftmaxHistoryGraph
+                  history={historySoftMax}
+                  maxPoints={HISTORY_DISPLAY_STEPS}
+                  vocabularyWords={vocabularyWords}
+                  totalSteps={totalTrainingSteps}
+                />
+              </div>
+              <div className="lg:flex-1">
+                <HistoryGraph
+                  history={historyTraining}
+                  maxPoints={HISTORY_DISPLAY_STEPS}
+                  totalSteps={totalTrainingSteps}
+                />
+              </div>
+            </div>
           )}
 
           <div className="mb-0.5">

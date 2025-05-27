@@ -56,7 +56,7 @@ const Token: React.FC<TokenProps> = ({
         } else if (isRecentlyAdded) {
           return `${baseStyles} ${heightStyles} border border-blue-500 bg-gray-100 text-gray-800 hover:bg-gray-200`;
         } else {
-          return `${baseStyles} ${heightStyles} border border-gray-300 bg-gray-100 text-gray-800 hover:bg-gray-200`;
+          return `${baseStyles} ${heightStyles} border border-gray-300 bg-gray-100 text-gray-500 hover:bg-gray-200`;
         }
 
       case 'input':

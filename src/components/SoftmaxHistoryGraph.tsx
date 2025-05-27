@@ -21,7 +21,7 @@ const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
 
   // SVG dimensions
   const width = 800;
-  const height = 200;
+  const height = window.innerWidth >= 1024 ? 300 : 200;
   const padding = { top: 20, right: 20, bottom: 30, left: 45 };
   const graphWidth = width - padding.left - padding.right;
   const graphHeight = height - padding.top - padding.bottom;
@@ -165,7 +165,7 @@ const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
                     x={-10}
                     y={label.y + 4}
                     textAnchor="end"
-                    className="text-[10px] fill-gray-600"
+                    className="text-sm sm:text-base fill-gray-600"
                   >
                     {(label.value * 100).toFixed(0)}%
                   </text>
@@ -188,7 +188,7 @@ const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
                   x={graphWidth}
                   y={graphHeight + 15}
                   textAnchor="end"
-                  className="text-[9px] fill-gray-600"
+                  className="text-sm sm:text-base fill-gray-600"
                 >
                   {totalSteps}
                 </text>
@@ -221,7 +221,7 @@ const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
                 x={graphWidth / 2}
                 y={graphHeight + 25}
                 textAnchor="middle"
-                className="text-[11px] fill-gray-700 font-medium font-mono"
+                className="text-base sm:text-lg fill-gray-700 font-medium font-mono"
               >
                 {'Time Steps'}
               </text>
@@ -230,7 +230,7 @@ const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
                 y={-45}
                 textAnchor="middle"
                 transform={`rotate(-90, ${-graphHeight / 2}, ${-45})`}
-                className="text-[11px] fill-gray-700 font-medium"
+                className="text-base sm:text-lg fill-gray-700 font-medium"
               >
                 Softmax Probability
               </text>

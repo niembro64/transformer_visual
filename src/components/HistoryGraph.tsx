@@ -35,7 +35,7 @@ const HistoryGraph: React.FC<HistoryGraphProps> = ({
 
   // SVG dimensions
   const width = 800;
-  const height = 150;
+  const height = window.innerWidth >= 1024 ? 250 : 150;
   const padding = { top: 20, right: 20, bottom: 30, left: 45 };
   const graphWidth = width - padding.left - padding.right;
   const graphHeight = height - padding.top - padding.bottom;
@@ -118,7 +118,7 @@ const HistoryGraph: React.FC<HistoryGraphProps> = ({
                     x={-10}
                     y={label.y + 4}
                     textAnchor="end"
-                    className="text-[10px] fill-gray-600"
+                    className="text-sm sm:text-base fill-gray-600"
                   >
                     {label.value.toFixed(2)}
                   </text>
@@ -141,7 +141,7 @@ const HistoryGraph: React.FC<HistoryGraphProps> = ({
                   x={graphWidth}
                   y={graphHeight + 15}
                   textAnchor="end"
-                  className="text-[9px] fill-gray-600"
+                  className="text-sm sm:text-base fill-gray-600"
                 >
                   {totalSteps}
                 </text>
@@ -199,7 +199,7 @@ const HistoryGraph: React.FC<HistoryGraphProps> = ({
                         x={x}
                         y={y - 20}
                         textAnchor="middle"
-                        className="text-[10px] fill-white"
+                        className="text-sm fill-white"
                       >
                         {entry.predictedToken} → {entry.targetToken}
                       </text>
@@ -207,7 +207,7 @@ const HistoryGraph: React.FC<HistoryGraphProps> = ({
                         x={x}
                         y={y - 8}
                         textAnchor="middle"
-                        className="text-[10px] fill-white"
+                        className="text-sm fill-white"
                       >
                         Loss: {entry.loss.toFixed(3)}
                       </text>
@@ -237,7 +237,7 @@ const HistoryGraph: React.FC<HistoryGraphProps> = ({
                 x={graphWidth / 2}
                 y={graphHeight + 25}
                 textAnchor="middle"
-                className="text-[11px] fill-gray-700 font-medium font-mono"
+                className="text-base sm:text-lg fill-gray-700 font-medium font-mono"
               >
                 {'Time Steps'}
               </text>
