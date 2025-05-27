@@ -119,6 +119,16 @@ export function relu(x: number): number {
 }
 
 /**
+ * Leaky ReLU activation function
+ * @param x - Input value
+ * @param alpha - Slope for negative values (default: 0.01)
+ * @returns x when positive, alpha*x when negative
+ */
+export function leakyRelu(x: number, alpha: number = 0.01): number {
+  return x > 0 ? x : alpha * x;
+}
+
+/**
  * Apply softmax to each row of a matrix
  * @param matrix - Input matrix
  * @returns Matrix with softmax applied to each row

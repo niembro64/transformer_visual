@@ -37,7 +37,7 @@ const DIM_MLP_HIDDEN = 6; // Dimension of MLP hidden layer (d_ff = 8, typically 
 
 function App() {
   // Fixed dimension values
-  const HISTORY_DISPLAY_STEPS = isPortraitOrientation() ? 200 : 500; // Number of training steps to show in history graph
+  const HISTORY_DISPLAY_STEPS = isPortraitOrientation() ? 50 : 100; // Number of training steps to show in history graph
 
   // Training mode - determines if dropout is applied and weights are updated
   const [trainingMode, setTrainingMode] = useState(true);
@@ -45,7 +45,7 @@ function App() {
   const [targetTokenIndex, setTargetTokenIndex] = useState<number | null>(null);
   // Learning rate for gradient descent
   const [learningRate, setLearningRate] = useState(
-    isPortraitOrientation() ? 0.001 : 0.01
+    isPortraitOrientation() ? 0.001 : 0.001
   );
 
   const [historyTraining, setHistoryTraining] = useState<
@@ -977,6 +977,46 @@ function App() {
                     </div>
                   )}
                 </div>
+
+                {/* Sorted Softmax Token Similarities */}
+                {ffnOutput.length > 0 && (
+                  <div className="mt-3 mb-3">
+                    <p className="text-[10px] sm:text-xs text-gray-600 mb-1">
+                      Token Probabilities (sorted):
+                    </p>
+                    {(() => {
+                      const nextTokenPrediction = ffnOutput[ffnOutput.length - 1];
+                      const dotProducts = vocabularyEmbeddings.map((vocabEmbedding) =>
+                        vectorDotProduct(nextTokenPrediction, vocabEmbedding)
+                      );
+                      const maxDotProduct = Math.max(...dotProducts);
+                      const expValues = dotProducts.map((dp) =>
+                        Math.exp(dp - maxDotProduct)
+                      );
+                      const sumExp = expValues.reduce((a, b) => a + b, 0);
+                      const probabilities = expValues.map((exp) => exp / sumExp);
+                      
+                      // Create indexed pairs and sort by value
+                      const indexed = probabilities.map((value, index) => ({ index, value }));
+                      const sortedSoftmax = indexed.sort((a, b) => b.value - a.value);
+                      const sortedTokenLabels = sortedSoftmax.map(item => vocabularyWords[item.index]);
+                      
+                      return (
+                        <div className="overflow-x-auto">
+                          <MatrixDisplay
+                            data={[sortedSoftmax.map((item) => item.value)]}
+                            rowLabels={['']}
+                            columnLabels={sortedTokenLabels}
+                            maxAbsValue={1.0}
+                            cellSize="xs"
+                            selectable={false}
+                            matrixType="none"
+                          />
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
 
                 {/* Target Output (Training Mode Only) */}
                 {trainingMode && (

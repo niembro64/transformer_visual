@@ -4,7 +4,7 @@ import {
   matrixMultiply, 
   addBias, 
   applyFn, 
-  relu, 
+  leakyRelu, 
   isPortraitOrientation 
 } from '../utils/matrixOperations';
 
@@ -58,8 +58,8 @@ const FeedForward: React.FC<FeedForwardProps> = ({
   selectedElement = null,
   onElementClick,
   onValueChange,
-  activationFn = relu,
-  activationFnName = 'ReLU',
+  activationFn = leakyRelu,
+  activationFnName = 'Leaky ReLU',
   valueLabel,
   onOutputComputed
 }) => {
