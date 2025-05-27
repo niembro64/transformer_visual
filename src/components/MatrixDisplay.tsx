@@ -61,6 +61,10 @@ interface MatrixDisplayProps {
    * Whether we are in training mode (disables wiggle when true)
    */
   isTrainingMode?: boolean;
+  /**
+   * Optional array of column indices to highlight with green background
+   */
+  highlightColumns?: number[];
 }
 
 /**
@@ -83,6 +87,7 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
   valueLabel,
   autoOscillate = false,
   isTrainingMode = false,
+  highlightColumns = [],
 }) => {
   if (!data || data.length === 0) {
     return <div>No data to display</div>;
@@ -159,18 +164,23 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
         
         {/* Column labels row */}
         {showColumnLabels && 
-          columnLabels!.map((label, j) => (
-            <div
-              key={`col-${j}`}
-              className={`text-center ${isMobile ? 'text-[0.55rem]' : 'text-[0.5rem]'} text-gray-600 flex items-center justify-center font-medium`}
-              style={{
-                gridColumn: showRowLabels ? j + 2 : j + 1,
-                gridRow: 1
-              }}
-            >
-              {label}
-            </div>
-          ))
+          columnLabels!.map((label, j) => {
+            const isHighlighted = highlightColumns.includes(j);
+            return (
+              <div
+                key={`col-${j}`}
+                className={`text-center ${isMobile ? 'text-[0.55rem]' : 'text-[0.5rem]'} ${
+                  isHighlighted ? 'bg-green-700 text-white font-bold rounded px-1' : 'text-gray-600'
+                } flex items-center justify-center font-medium`}
+                style={{
+                  gridColumn: showRowLabels ? j + 2 : j + 1,
+                  gridRow: 1
+                }}
+              >
+                {label}
+              </div>
+            );
+          })
         }
         
         {/* Row labels and matrix cells */}

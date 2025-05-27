@@ -33,7 +33,8 @@ export type HistorySoftMaxEntry = {
 };
 
 // Training configuration constants
-const TRAINING_INTERVAL_MS = 0.01;
+const TRAINING_INTERVAL_MS = 1;
+// const TRAINING_INTERVAL_MS = 0.01;
 const EXPONENTIAL_DECIMALS = 4; // Number of decimal places for exponential values
 const DIM_EMBEDDING = isPortraitOrientation() ? 6 : 10; // Dimension of embeddings (d_model)
 const DIM_ATTENTION_HEAD = isPortraitOrientation() ? 2 : 4; // Dimension of attention heads (d_k = d_v = d_model / num_heads)
@@ -1002,6 +1003,17 @@ function App() {
                         (item) => vocabularyWords[item.index]
                       );
 
+                      // Find which columns match the target token (if in training mode)
+                      const highlightColumns: number[] = [];
+                      if (trainingMode && targetTokenIndex !== null) {
+                        const targetTokenName = vocabularyWords[targetTokenIndex];
+                        sortedTokenLabels.forEach((label, idx) => {
+                          if (label === targetTokenName) {
+                            highlightColumns.push(idx);
+                          }
+                        });
+                      }
+
                       return (
                         <div className="overflow-x-auto">
                           <MatrixDisplay
@@ -1012,6 +1024,7 @@ function App() {
                             cellSize="xs"
                             selectable={false}
                             matrixType="none"
+                            highlightColumns={highlightColumns}
                           />
                         </div>
                       );
