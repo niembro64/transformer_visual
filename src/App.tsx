@@ -31,9 +31,9 @@ export type HistorySoftMaxEntry = {
 // Training configuration constants
 const TRAINING_INTERVAL_MS = 0.01;
 const EXPONENTIAL_DECIMALS = 4; // Number of decimal places for exponential values
-const DIM_EMBEDDING = isPortraitOrientation() ? 6 : 8; // Dimension of embeddings (d_model)
+const DIM_EMBEDDING = isPortraitOrientation() ? 6 : 10; // Dimension of embeddings (d_model)
 const DIM_ATTENTION_HEAD = isPortraitOrientation() ? 2 : 4; // Dimension of attention heads (d_k = d_v = d_model / num_heads)
-const DIM_MLP_HIDDEN = 6; // Dimension of MLP hidden layer (d_ff = 8, typically 4x d_model)
+const DIM_MLP_HIDDEN = isPortraitOrientation() ? 6 : 8; // Dimension of MLP hidden layer (d_ff = 8, typically 4x d_model)
 
 function App() {
   // Fixed dimension values
@@ -95,7 +95,7 @@ function App() {
 
   const initInputSequence: number[] = isPortraitOrientation()
     ? [2, 3, 1]
-    : [3, 4, 2, 1, 0];
+    : [3, 4, 2, 1, 0, 6, 7];
 
   // Track selected tokens (indices into vocabulary)
   const [selectedTokenIndices, setSelectedTokenIndices] =
@@ -781,23 +781,6 @@ function App() {
             </div>
           </div>
 
-          {/* History Graphs */}
-          {trainingMode && (
-            <>
-              <HistoryGraph
-                history={historyTraining}
-                maxPoints={HISTORY_DISPLAY_STEPS}
-                totalSteps={totalTrainingSteps}
-              />
-              <SoftmaxHistoryGraph
-                history={historySoftMax}
-                maxPoints={HISTORY_DISPLAY_STEPS}
-                vocabularyWords={vocabularyWords}
-                totalSteps={totalTrainingSteps}
-              />
-            </>
-          )}
-
           {/* Tokenizer section */}
           <div className="mb-0.5 bg-white rounded p-0.5">
             <h3 className="text-xs sm:text-sm font-semibold mb-0.5 border-b pb-0.5">
@@ -865,7 +848,7 @@ function App() {
                 Click a token to remove it (hover to see embeddings)
               </p>
               {/* Input sequence area */}
-              <div className="min-h-[40px] sm:min-h-[50px] border border-dashed rounded-lg p-1 sm:p-2 transition-colors border-gray-300 bg-gray-50">
+              <div className="min-h-[40px] sm:min-h-[50px] border-2 border-dashed rounded-lg p-1 sm:p-2 transition-colors border-gray-300 bg-gray-50">
                 {selectedTokenIndices.length === 0 ? (
                   <p className="text-gray-400 text-center text-xs sm:text-sm italic">
                     Drag tokens here...
@@ -985,22 +968,33 @@ function App() {
                       Token Probabilities (sorted):
                     </p>
                     {(() => {
-                      const nextTokenPrediction = ffnOutput[ffnOutput.length - 1];
-                      const dotProducts = vocabularyEmbeddings.map((vocabEmbedding) =>
-                        vectorDotProduct(nextTokenPrediction, vocabEmbedding)
+                      const nextTokenPrediction =
+                        ffnOutput[ffnOutput.length - 1];
+                      const dotProducts = vocabularyEmbeddings.map(
+                        (vocabEmbedding) =>
+                          vectorDotProduct(nextTokenPrediction, vocabEmbedding)
                       );
                       const maxDotProduct = Math.max(...dotProducts);
                       const expValues = dotProducts.map((dp) =>
                         Math.exp(dp - maxDotProduct)
                       );
                       const sumExp = expValues.reduce((a, b) => a + b, 0);
-                      const probabilities = expValues.map((exp) => exp / sumExp);
-                      
+                      const probabilities = expValues.map(
+                        (exp) => exp / sumExp
+                      );
+
                       // Create indexed pairs and sort by value
-                      const indexed = probabilities.map((value, index) => ({ index, value }));
-                      const sortedSoftmax = indexed.sort((a, b) => b.value - a.value);
-                      const sortedTokenLabels = sortedSoftmax.map(item => vocabularyWords[item.index]);
-                      
+                      const indexed = probabilities.map((value, index) => ({
+                        index,
+                        value,
+                      }));
+                      const sortedSoftmax = indexed.sort(
+                        (a, b) => b.value - a.value
+                      );
+                      const sortedTokenLabels = sortedSoftmax.map(
+                        (item) => vocabularyWords[item.index]
+                      );
+
                       return (
                         <div className="overflow-x-auto">
                           <MatrixDisplay
@@ -1074,6 +1068,23 @@ function App() {
             </div>
           </div>
 
+          {/* History Graphs */}
+          {trainingMode && (
+            <>
+              <SoftmaxHistoryGraph
+                history={historySoftMax}
+                maxPoints={HISTORY_DISPLAY_STEPS}
+                vocabularyWords={vocabularyWords}
+                totalSteps={totalTrainingSteps}
+              />
+              <HistoryGraph
+                history={historyTraining}
+                maxPoints={HISTORY_DISPLAY_STEPS}
+                totalSteps={totalTrainingSteps}
+              />
+            </>
+          )}
+
           <div className="mb-0.5">
             <h3 className="text-xs sm:text-sm font-semibold mb-0.5 border-b pb-0.5">
               Embeddings with Positional Encoding
@@ -1113,6 +1124,7 @@ function App() {
                     onValueChange={handleValueChange}
                     valueLabel={valueLabel}
                     autoOscillate={false}
+                    isTrainingMode={trainingMode}
                   />
                 </div>
               </div>
@@ -1137,7 +1149,7 @@ function App() {
                       { length: DIM_EMBEDDING },
                       (_, i) => `d_${i + 1}`
                     )}
-                    maxAbsValue={0.2}
+                    maxAbsValue={1}
                     cellSize="xs"
                     selectable={false}
                     matrixType="none"

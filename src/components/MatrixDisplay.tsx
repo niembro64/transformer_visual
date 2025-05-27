@@ -57,6 +57,10 @@ interface MatrixDisplayProps {
    * Whether to auto-oscillate the selected value
    */
   autoOscillate?: boolean;
+  /**
+   * Whether we are in training mode (disables wiggle when true)
+   */
+  isTrainingMode?: boolean;
 }
 
 /**
@@ -78,6 +82,7 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
   onValueChange,
   valueLabel,
   autoOscillate = false,
+  isTrainingMode = false,
 }) => {
   if (!data || data.length === 0) {
     return <div>No data to display</div>;
@@ -214,6 +219,7 @@ const MatrixDisplay: React.FC<MatrixDisplayProps> = ({
                     onValueChange={cellValueChangeHandler}
                     valueLabel={isSelected ? valueLabel : undefined}
                     autoOscillate={isSelected && autoOscillate}
+                    isTrainingMode={isTrainingMode}
                   />
                 </div>
               );
