@@ -31,13 +31,13 @@ export type HistorySoftMaxEntry = {
 // Training configuration constants
 const TRAINING_INTERVAL_MS = 0.01; // Update every 200ms (5 times per second) instead of 1000ms
 const EXPONENTIAL_DECIMALS = 4; // Number of decimal places for exponential values
-const HISTORY_DISPLAY_STEPS = 200; // Number of training steps to show in history graph
-const DIM_EMBEDDING = isPortraitOrientation() ? 8 : 8; // Dimension of embeddings (d_model)
+const DIM_EMBEDDING = isPortraitOrientation() ? 6 : 8; // Dimension of embeddings (d_model)
 const DIM_ATTENTION_HEAD = isPortraitOrientation() ? 2 : 4; // Dimension of attention heads (d_k = d_v = d_model / num_heads)
 const DIM_MLP_HIDDEN = 6; // Dimension of MLP hidden layer (d_ff = 8, typically 4x d_model)
 
 function App() {
   // Fixed dimension values
+  const HISTORY_DISPLAY_STEPS = isPortraitOrientation() ? 200 : 500; // Number of training steps to show in history graph
 
   // Training mode - determines if dropout is applied and weights are updated
   const [trainingMode, setTrainingMode] = useState(true);
@@ -54,30 +54,50 @@ function App() {
     []
   ); // History of softmax probabilities
 
+  // Total number of training steps (not limited by history display)
+  const [totalTrainingSteps, setTotalTrainingSteps] = useState(0);
+
+  // Track if device is in mobile mode (height > width)
+  const [isMobile, setIsMobile] = useState(isPortraitOrientation);
+
   // Vocabulary of 25 common words
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const vocabularyWords: string[] = [
-    'et',
-    'lore',
-    'ut',
-    'ipsu',
-    'dolo',
-    'sit',
-    'amet',
-    'elit',
-    'sed',
-    'do',
-  ];
+
+  let vocabularyWords: string[] = [];
+  if (isPortraitOrientation()) {
+    vocabularyWords = ['lore', 'ipsu', 'dolo', 'sit', 'amet', 'cons'];
+  } else {
+    vocabularyWords = [
+      'lore',
+      'ipsu',
+      'dolo',
+      'sit',
+      'amet',
+      'cons',
+      'adip',
+      'elit',
+      'sed',
+      'do',
+      'eius',
+      'temp',
+      'inci',
+      'ut',
+      'labo',
+    ];
+  }
 
   // Generate vocabulary embeddings - mutable state
   const [vocabularyEmbeddings, setVocabularyEmbeddings] = useState(() =>
     generateSampleEmbeddings(vocabularyWords.length, DIM_EMBEDDING)
   );
 
+  const initInputSequence: number[] = isPortraitOrientation()
+    ? [2, 3, 1]
+    : [3, 4, 2, 1, 0];
+
   // Track selected tokens (indices into vocabulary)
-  const [selectedTokenIndices, setSelectedTokenIndices] = useState<number[]>([
-    1, 2, 3, 4, 5, 6,
-  ]);
+  const [selectedTokenIndices, setSelectedTokenIndices] =
+    useState<number[]>(initInputSequence);
 
   // Get token labels from selected indices
   const tokenLabels = useMemo(
@@ -120,9 +140,6 @@ function App() {
     () => addPositionalEncodings(rawEmbeddings, positionalEncodings),
     [rawEmbeddings, positionalEncodings]
   );
-
-  // Track if device is in mobile mode (height > width)
-  const [isMobile, setIsMobile] = useState(isPortraitOrientation);
 
   // Listen for orientation/size changes
   useEffect(() => {
@@ -221,11 +238,14 @@ function App() {
             targetProb: targetProb.toFixed(EXPONENTIAL_DECIMALS),
           };
 
-          // Add to training history
+          // Increment total training steps
+          setTotalTrainingSteps((prev) => prev + 1);
+
+          // Add to training history (limited to HISTORY_DISPLAY_STEPS)
           setHistoryTraining((prev: HistoryTrainingEntry[]) => {
             const newHistory = [...prev, historyItem];
-            // Limit history to last 1000 entries
-            return newHistory.slice(-1000);
+            // Keep only the last HISTORY_DISPLAY_STEPS entries
+            return newHistory.slice(-HISTORY_DISPLAY_STEPS);
           });
 
           // Save softmax probabilities to history
@@ -239,8 +259,8 @@ function App() {
 
           setHistorySoftMax((prev: HistorySoftMaxEntry[]) => {
             const newHistory = [...prev, softmaxEntry];
-            // Limit history to last 1000 entries
-            return newHistory.slice(-1000);
+            // Keep only the last HISTORY_DISPLAY_STEPS entries
+            return newHistory.slice(-HISTORY_DISPLAY_STEPS);
           });
 
           // Apply gradient-based updates to all layers
@@ -754,11 +774,13 @@ function App() {
               <HistoryGraph
                 history={historyTraining}
                 maxPoints={HISTORY_DISPLAY_STEPS}
+                totalSteps={totalTrainingSteps}
               />
               <SoftmaxHistoryGraph
                 history={historySoftMax}
                 maxPoints={HISTORY_DISPLAY_STEPS}
                 vocabularyWords={vocabularyWords}
+                totalSteps={totalTrainingSteps}
               />
             </>
           )}
@@ -830,7 +852,7 @@ function App() {
                 Click a token to remove it (hover to see embeddings)
               </p>
               {/* Input sequence area */}
-              <div className="min-h-[40px] sm:min-h-[50px] border-2 border-dashed rounded-lg p-1 sm:p-2 transition-colors border-gray-300 bg-gray-50">
+              <div className="min-h-[40px] sm:min-h-[50px] border border-dashed rounded-lg p-1 sm:p-2 transition-colors border-gray-300 bg-gray-50">
                 {selectedTokenIndices.length === 0 ? (
                   <p className="text-gray-400 text-center text-xs sm:text-sm italic">
                     Drag tokens here...
@@ -947,7 +969,7 @@ function App() {
                 {trainingMode && (
                   <div className="flex-1">
                     <p className="text-[10px] sm:text-xs text-gray-600 mb-1">
-                      Desired Predicted Next Token:
+                      Desired Next Token:
                     </p>
                     <div className="min-h-[40px] sm:min-h-[50px] border-2 border-dashed rounded-lg p-1 sm:p-2 transition-colors border-gray-300 bg-gray-50">
                       {targetTokenIndex !== null ? (

@@ -5,12 +5,14 @@ interface SoftmaxHistoryGraphProps {
   history: HistorySoftMaxEntry[];
   maxPoints?: number;
   vocabularyWords: string[];
+  totalSteps: number;
 }
 
 const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
   history,
   maxPoints = 100,
-  vocabularyWords
+  vocabularyWords,
+  totalSteps,
 }) => {
   // Get the last N points to display
   const displayHistory = useMemo(() => {
@@ -18,9 +20,9 @@ const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
   }, [history, maxPoints]);
 
   // SVG dimensions
-  const width = 680;
+  const width = 800;
   const height = 200;
-  const padding = { top: 20, right: 20, bottom: 30, left: 60 };
+  const padding = { top: 20, right: 20, bottom: 30, left: 45 };
   const graphWidth = width - padding.left - padding.right;
   const graphHeight = height - padding.top - padding.bottom;
 
@@ -37,8 +39,14 @@ const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
       '#ec4899', // pink
       '#f97316', // orange
       '#10b981', // emerald
+      '#6366f1', // indigo
+      '#d946ef', // purple
+      '#f43f5e', // rose
+      '#eab308', // yellow
+      '#f97316', // orange
+      '#0ea5e9', // sky
     ];
-    
+
     return vocabularyWords.reduce((acc, word, idx) => {
       acc[word] = colors[idx % colors.length];
       return acc;
@@ -48,53 +56,61 @@ const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
   // Calculate min and max probabilities for auto-scaling
   const { minProb, maxProb } = useMemo(() => {
     if (displayHistory.length === 0) return { minProb: 0, maxProb: 1 };
-    
+
     let min = 1;
     let max = 0;
-    
-    displayHistory.forEach(entry => {
-      entry.softmaxValues.forEach(sv => {
+
+    displayHistory.forEach((entry) => {
+      entry.softmaxValues.forEach((sv) => {
         if (sv.probability < min) min = sv.probability;
         if (sv.probability > max) max = sv.probability;
       });
     });
-    
+
     // Add some padding to make the graph more readable
     const range = max - min || 0.1;
     return {
       minProb: Math.max(0, min - range * 0.1),
-      maxProb: Math.min(1, max + range * 0.1)
+      maxProb: Math.min(1, max + range * 0.1),
     };
   }, [displayHistory]);
 
   // Create path data for each token's probability line
   const pathsData = useMemo(() => {
     if (displayHistory.length === 0) return {};
-    
-    const xScale = (i: number) => (i / Math.max(1, displayHistory.length - 1)) * graphWidth;
+
+    const xScale = (i: number) =>
+      (i / Math.max(1, displayHistory.length - 1)) * graphWidth;
     const yScale = (prob: number) => {
       const normalized = (prob - minProb) / (maxProb - minProb || 1);
       return graphHeight - normalized * graphHeight;
     };
 
     const paths: Record<string, string> = {};
-    
-    vocabularyWords.forEach(token => {
+
+    vocabularyWords.forEach((token) => {
       const points = displayHistory.map((entry, i) => {
-        const tokenData = entry.softmaxValues.find(sv => sv.token === token);
+        const tokenData = entry.softmaxValues.find((sv) => sv.token === token);
         const prob = tokenData?.probability ?? 0;
         const x = xScale(i);
         const y = yScale(prob);
         return { x, y };
       });
-      
+
       paths[token] = points
         .map((point, i) => `${i === 0 ? 'M' : 'L'} ${point.x} ${point.y}`)
         .join(' ');
     });
-    
+
     return paths;
-  }, [displayHistory, vocabularyWords, graphWidth, graphHeight, minProb, maxProb]);
+  }, [
+    displayHistory,
+    vocabularyWords,
+    graphWidth,
+    graphHeight,
+    minProb,
+    maxProb,
+  ]);
 
   // Create Y-axis labels based on actual data range
   const yAxisLabels = useMemo(() => {
@@ -127,138 +143,144 @@ const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
         Next Token Prediction Probabilities Over Time
       </h3>
       <div className="p-1 sm:p-2 flex gap-2">
-        <div className="flex-[3] min-w-0">
-          <svg 
-            viewBox={`0 0 ${width - 120} ${height}`} 
+        <div className="flex-auto min-w-0">
+          <svg
+            viewBox={`0 0 ${width} ${height}`}
             className="w-full h-auto"
             preserveAspectRatio="xMidYMid meet"
           >
             <g transform={`translate(${padding.left}, ${padding.top})`}>
-            {/* Grid lines */}
-            {yAxisLabels.map((label, i) => (
-              <g key={i}>
-                <line
-                  x1={0}
-                  y1={label.y}
-                  x2={graphWidth}
-                  y2={label.y}
-                  stroke="#e5e7eb"
-                  strokeWidth="1"
-                />
-                <text
-                  x={-10}
-                  y={label.y + 4}
-                  textAnchor="end"
-                  className="text-[10px] fill-gray-600"
-                >
-                  {(label.value * 100).toFixed(0)}%
-                </text>
-              </g>
-            ))}
-
-            {/* X-axis */}
-            <line
-              x1={0}
-              y1={graphHeight}
-              x2={graphWidth}
-              y2={graphHeight}
-              stroke="#9ca3af"
-              strokeWidth="2"
-            />
-
-            {/* X-axis labels */}
-            {displayHistory.length > 1 && (() => {
-              const maxLabels = 5;
-              const step = Math.max(1, Math.floor(displayHistory.length / maxLabels));
-              const labels = [];
-              
-              for (let i = 0; i < displayHistory.length; i += step) {
-                const x = (i / Math.max(1, displayHistory.length - 1)) * graphWidth;
-                const stepNumber = history.length - displayHistory.length + i + 1;
-                labels.push(
+              {/* Grid lines */}
+              {yAxisLabels.map((label, i) => (
+                <g key={i}>
+                  <line
+                    x1={0}
+                    y1={label.y}
+                    x2={graphWidth}
+                    y2={label.y}
+                    stroke="#e5e7eb"
+                    strokeWidth="1"
+                  />
                   <text
-                    key={i}
-                    x={x}
-                    y={graphHeight + 15}
-                    textAnchor="middle"
-                    className="text-[9px] fill-gray-600"
+                    x={-10}
+                    y={label.y + 4}
+                    textAnchor="end"
+                    className="text-[10px] fill-gray-600"
                   >
-                    {stepNumber}
+                    {(label.value * 100).toFixed(0)}%
                   </text>
-                );
-              }
-              
-              // Always show the last step
-              if (displayHistory.length > 1) {
-                const lastX = graphWidth;
-                const lastStepNumber = history.length;
-                labels.push(
-                  <text
-                    key="last"
-                    x={lastX}
-                    y={graphHeight + 15}
-                    textAnchor="middle"
-                    className="text-[9px] fill-gray-600"
-                  >
-                    {lastStepNumber}
-                  </text>
-                );
-              }
-              
-              return labels;
-            })()}
+                </g>
+              ))}
 
-            {/* Y-axis */}
-            <line
-              x1={0}
-              y1={0}
-              x2={0}
-              y2={graphHeight}
-              stroke="#9ca3af"
-              strokeWidth="2"
-            />
-
-            {/* Probability lines for each token */}
-            {Object.entries(pathsData).map(([token, pathData]) => (
-              <path
-                key={token}
-                d={pathData}
-                fill="none"
-                stroke={tokenColors[token]}
+              {/* X-axis */}
+              <line
+                x1={0}
+                y1={graphHeight}
+                x2={graphWidth}
+                y2={graphHeight}
+                stroke="#9ca3af"
                 strokeWidth="2"
-                opacity="0.8"
               />
-            ))}
 
-            {/* Axis labels */}
-            <text
-              x={graphWidth / 2}
-              y={graphHeight + 25}
-              textAnchor="middle"
-              className="text-[11px] fill-gray-700 font-medium font-mono"
-            >
-              {history.length > 0 ? `${history.length} of Last ${Math.min(maxPoints, history.length)} Time Steps` : 'Time Steps'}
-            </text>
-            <text
-              x={-graphHeight / 2}
-              y={-45}
-              textAnchor="middle"
-              transform={`rotate(-90, ${-graphHeight / 2}, ${-45})`}
-              className="text-[11px] fill-gray-700 font-medium"
-            >
-              Softmax Probability
-            </text>
+              {/* X-axis labels */}
+              {displayHistory.length > 1 &&
+                (() => {
+                  const maxLabels = 5;
+                  const step = Math.max(
+                    1,
+                    Math.floor(displayHistory.length / maxLabels)
+                  );
+                  const labels = [];
+
+                  for (let i = 0; i < displayHistory.length; i += step) {
+                    const x =
+                      (i / Math.max(1, displayHistory.length - 1)) * graphWidth;
+                    const stepNumber =
+                      totalSteps - displayHistory.length + i + 1;
+                    labels.push(
+                      <text
+                        key={i}
+                        x={x}
+                        y={graphHeight + 15}
+                        textAnchor="middle"
+                        className="text-[9px] fill-gray-600"
+                      >
+                        {stepNumber}
+                      </text>
+                    );
+                  }
+
+                  // Always show the last step
+                  if (displayHistory.length > 1) {
+                    const lastX = graphWidth;
+                    const lastStepNumber = totalSteps;
+                    labels.push(
+                      <text
+                        key="last"
+                        x={lastX}
+                        y={graphHeight + 15}
+                        textAnchor="middle"
+                        className="text-[9px] fill-gray-600"
+                      >
+                        {lastStepNumber}
+                      </text>
+                    );
+                  }
+
+                  return labels;
+                })()}
+
+              {/* Y-axis */}
+              <line
+                x1={0}
+                y1={0}
+                x2={0}
+                y2={graphHeight}
+                stroke="#9ca3af"
+                strokeWidth="2"
+              />
+
+              {/* Probability lines for each token */}
+              {Object.entries(pathsData).map(([token, pathData]) => (
+                <path
+                  key={token}
+                  d={pathData}
+                  fill="none"
+                  stroke={tokenColors[token]}
+                  strokeWidth="2"
+                  opacity="0.8"
+                />
+              ))}
+
+              {/* Axis labels */}
+              <text
+                x={graphWidth / 2}
+                y={graphHeight + 25}
+                textAnchor="middle"
+                className="text-[11px] fill-gray-700 font-medium font-mono"
+              >
+                {'Time Steps'}
+              </text>
+              <text
+                x={-graphHeight / 2}
+                y={-45}
+                textAnchor="middle"
+                transform={`rotate(-90, ${-graphHeight / 2}, ${-45})`}
+                className="text-[11px] fill-gray-700 font-medium"
+              >
+                Softmax Probability
+              </text>
             </g>
           </svg>
         </div>
-        
+
         {/* Legend */}
-        <div className="flex-1 flex items-start">
+        <div className="flex-shrink-0">
           <div className="bg-white border border-gray-200 rounded p-1 sm:p-2 text-[8px] sm:text-[10px] space-y-0.5 sm:space-y-1">
             {vocabularyWords.map((token, idx) => (
               <div key={token} className="flex items-center gap-0.5 sm:gap-1">
-                <div 
-                  className="w-2 h-0.5 sm:w-3 sm:h-0.5" 
+                <div
+                  className="w-2 h-0.5 sm:w-3 sm:h-0.5"
                   style={{ backgroundColor: tokenColors[token] }}
                 ></div>
                 <span className="text-gray-700">{token}</span>
