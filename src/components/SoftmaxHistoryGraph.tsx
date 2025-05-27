@@ -235,9 +235,9 @@ const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
               x={graphWidth / 2}
               y={graphHeight + 25}
               textAnchor="middle"
-              className="text-[11px] fill-gray-700 font-medium"
+              className="text-[11px] fill-gray-700 font-medium font-mono"
             >
-              Time Steps (Last {displayHistory.length})
+              {history.length > 0 ? `${history.length} of Last ${Math.min(maxPoints, history.length)} Time Steps` : 'Time Steps'}
             </text>
             <text
               x={-graphHeight / 2}

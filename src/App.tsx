@@ -33,7 +33,7 @@ const TRAINING_INTERVAL_MS = 0.01; // Update every 200ms (5 times per second) in
 const EXPONENTIAL_DECIMALS = 4; // Number of decimal places for exponential values
 const HISTORY_DISPLAY_STEPS = 200; // Number of training steps to show in history graph
 const DIM_EMBEDDING = isPortraitOrientation() ? 8 : 8; // Dimension of embeddings (d_model)
-const DIM_ATTENTION_HEAD = isPortraitOrientation() ? 4 : 4; // Dimension of attention heads (d_k = d_v = d_model / num_heads)
+const DIM_ATTENTION_HEAD = isPortraitOrientation() ? 2 : 4; // Dimension of attention heads (d_k = d_v = d_model / num_heads)
 const DIM_MLP_HIDDEN = 6; // Dimension of MLP hidden layer (d_ff = 8, typically 4x d_model)
 
 function App() {
@@ -76,7 +76,7 @@ function App() {
 
   // Track selected tokens (indices into vocabulary)
   const [selectedTokenIndices, setSelectedTokenIndices] = useState<number[]>([
-    1, 2, 3, 4,
+    1, 2, 3, 4, 5, 6,
   ]);
 
   // Get token labels from selected indices
@@ -113,16 +113,13 @@ function App() {
     setVocabularyEmbeddings(
       generateSampleEmbeddings(vocabularyWords.length, DIM_EMBEDDING)
     );
-  }, [DIM_EMBEDDING]);
+  }, [vocabularyWords.length]);
 
   // Apply positional encodings to embeddings
   const embeddings = useMemo(
     () => addPositionalEncodings(rawEmbeddings, positionalEncodings),
     [rawEmbeddings, positionalEncodings]
   );
-
-  // For forcing re-renders on dropout timer cycles and weight updates
-  const [trainingCycle, setTrainingCycle] = useState(0);
 
   // Track if device is in mobile mode (height > width)
   const [isMobile, setIsMobile] = useState(isPortraitOrientation);
@@ -183,8 +180,6 @@ function App() {
     if (trainingMode && targetTokenIndex !== null && ffnOutput.length > 0) {
       // Start a timer that updates every second
       timerId = window.setInterval(() => {
-        setTrainingCycle((prev) => prev + 1); // Increment counter to trigger re-renders
-
         // Perform gradient-based weight updates when we have a target
         if (trainingMode && targetTokenIndex !== null && ffnOutput.length > 0) {
           // Get the predicted embedding (last token's output)
@@ -847,11 +842,7 @@ function App() {
                         key={seqIdx}
                         data-token-index={seqIdx}
                         onClick={() => handleSequenceTokenClick(seqIdx)}
-                        className={`px-2 sm:px-3 py-1 sm:py-1.5 ${
-                          trainingMode && tokenIdx === targetTokenIndex
-                            ? 'border-2 border-green-500 bg-green-100 text-green-900 font-semibold hover:bg-green-200'
-                            : 'border border-purple-400 bg-purple-100 text-purple-900 hover:bg-purple-200'
-                        } rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] h-7 sm:h-9 text-center shadow-sm font-mono cursor-pointer transition-all group relative`}
+                        className="px-2 sm:px-3 py-1 sm:py-1.5 border border-purple-400 bg-purple-100 text-purple-900 hover:bg-purple-200 rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] h-7 sm:h-9 text-center shadow-sm font-mono cursor-pointer transition-all group relative"
                       >
                         {vocabularyWords[tokenIdx]}
                         {/* Show embedding as matrix on hover */}
@@ -890,7 +881,7 @@ function App() {
                 {/* Next Token Prediction */}
                 <div className="flex-1">
                   <p className="text-[10px] sm:text-xs text-gray-600 mb-1">
-                    Next Token:
+                    Currently Predicted Next Token:
                   </p>
                   {ffnOutput.length > 0 ? (
                     (() => {
@@ -956,7 +947,7 @@ function App() {
                 {trainingMode && (
                   <div className="flex-1">
                     <p className="text-[10px] sm:text-xs text-gray-600 mb-1">
-                      Target Token:
+                      Desired Predicted Next Token:
                     </p>
                     <div className="min-h-[40px] sm:min-h-[50px] border-2 border-dashed rounded-lg p-1 sm:p-2 transition-colors border-gray-300 bg-gray-50">
                       {targetTokenIndex !== null ? (
