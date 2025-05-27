@@ -5,7 +5,9 @@ import {
   transpose,
   softmax,
   scaleMatrix,
-  isPortraitOrientation
+  isPortraitOrientation,
+  hasInvalidValues,
+  getMatrixErrorDetails
 } from '../utils/matrixOperations';
 
 interface AttentionHeadProps {
@@ -33,6 +35,8 @@ interface AttentionHeadProps {
   onValueChange?: (newValue: number) => void;
   // Label for value editing
   valueLabel?: string;
+  // Callback when calculation error occurs
+  onCalculationError?: (error: string | null) => void;
 }
 
 /**
@@ -53,7 +57,8 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
   selectedElement = null,
   onElementClick,
   onValueChange,
-  valueLabel
+  valueLabel,
+  onCalculationError
 }) => {
   // Number of tokens and dimensionality
   const numTokens = embeddings.length;
@@ -61,26 +66,113 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
   const headDim = weightQ[0].length;
 
   // Project input embeddings to Query, Key, and Value matrices - memoized with proper dependencies
-  const Q = useMemo(() => matrixMultiply(embeddings, weightQ), [embeddings, weightQ]);
-  const K = useMemo(() => matrixMultiply(embeddings, weightK), [embeddings, weightK]);
-  const V = useMemo(() => matrixMultiply(embeddings, weightV), [embeddings, weightV]);
+  const Q = useMemo(() => {
+    try {
+      const result = matrixMultiply(embeddings, weightQ);
+      if (hasInvalidValues(result)) {
+        const error = getMatrixErrorDetails(result, 'Query matrix (Q)');
+        onCalculationError?.(error || 'Invalid values in Query matrix');
+        return embeddings; // Fallback
+      }
+      return result;
+    } catch (error) {
+      onCalculationError?.(`Error computing Q: ${error}`);
+      return embeddings;
+    }
+  }, [embeddings, weightQ, onCalculationError]);
+
+  const K = useMemo(() => {
+    try {
+      const result = matrixMultiply(embeddings, weightK);
+      if (hasInvalidValues(result)) {
+        const error = getMatrixErrorDetails(result, 'Key matrix (K)');
+        onCalculationError?.(error || 'Invalid values in Key matrix');
+        return embeddings; // Fallback
+      }
+      return result;
+    } catch (error) {
+      onCalculationError?.(`Error computing K: ${error}`);
+      return embeddings;
+    }
+  }, [embeddings, weightK, onCalculationError]);
+
+  const V = useMemo(() => {
+    try {
+      const result = matrixMultiply(embeddings, weightV);
+      if (hasInvalidValues(result)) {
+        const error = getMatrixErrorDetails(result, 'Value matrix (V)');
+        onCalculationError?.(error || 'Invalid values in Value matrix');
+        return embeddings; // Fallback
+      }
+      return result;
+    } catch (error) {
+      onCalculationError?.(`Error computing V: ${error}`);
+      return embeddings;
+    }
+  }, [embeddings, weightV, onCalculationError]);
 
   // Compute scaled dot-product attention
   const Kt = useMemo(() => transpose(K), [K]);
+  
   const attentionScores = useMemo(() => {
-    const scores = matrixMultiply(Q, Kt);
-    // Scale by square root of the attention dimension (d_k)
-    return scaleMatrix(scores, 1 / Math.sqrt(headDim));
-  }, [Q, Kt, headDim]);
+    try {
+      const scores = matrixMultiply(Q, Kt);
+      const scaledScores = scaleMatrix(scores, 1 / Math.sqrt(headDim));
+      
+      if (hasInvalidValues(scaledScores)) {
+        const error = getMatrixErrorDetails(scaledScores, 'Attention scores');
+        onCalculationError?.(error || 'Invalid values in attention scores');
+        // Return identity-like matrix as fallback
+        return Q.map((_, i) => Q.map((_, j) => i === j ? 1 : 0));
+      }
+      
+      return scaledScores;
+    } catch (error) {
+      onCalculationError?.(`Error computing attention scores: ${error}`);
+      return Q.map((_, i) => Q.map((_, j) => i === j ? 1 : 0));
+    }
+  }, [Q, Kt, headDim, onCalculationError]);
 
   // Apply softmax to get attention weights
-  const attentionWeights = useMemo(() => softmax(attentionScores), [attentionScores]);
+  const attentionWeights = useMemo(() => {
+    try {
+      const result = softmax(attentionScores);
+      
+      if (hasInvalidValues(result)) {
+        const error = getMatrixErrorDetails(result, 'Attention weights (after softmax)');
+        onCalculationError?.(error || 'Invalid values in attention weights');
+        // Return uniform attention as fallback
+        const numTokens = attentionScores.length;
+        return attentionScores.map(() => Array(numTokens).fill(1 / numTokens));
+      }
+      
+      // Clear any previous errors if calculation succeeded
+      onCalculationError?.(null);
+      return result;
+    } catch (error) {
+      onCalculationError?.(`Error computing softmax: ${error}`);
+      const numTokens = attentionScores.length;
+      return attentionScores.map(() => Array(numTokens).fill(1 / numTokens));
+    }
+  }, [attentionScores, onCalculationError]);
 
   // Compute output as attention-weighted sum of values
-  const rawAttentionOutput = useMemo(() => 
-    matrixMultiply(attentionWeights, V), 
-    [attentionWeights, V]
-  );
+  const rawAttentionOutput = useMemo(() => {
+    try {
+      const result = matrixMultiply(attentionWeights, V);
+      
+      if (hasInvalidValues(result)) {
+        const error = getMatrixErrorDetails(result, 'Attention output');
+        onCalculationError?.(error || 'Invalid values in attention output');
+        return V; // Use V as fallback
+      }
+      
+      return result;
+    } catch (error) {
+      onCalculationError?.(`Error computing attention output: ${error}`);
+      return V;
+    }
+  }, [attentionWeights, V, onCalculationError]);
   
   // Use raw attention output directly (no dropout)
   const attentionOutput = rawAttentionOutput;

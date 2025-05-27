@@ -5,7 +5,9 @@ import {
   addBias, 
   applyFn, 
   leakyRelu, 
-  isPortraitOrientation 
+  isPortraitOrientation,
+  hasInvalidValues,
+  getMatrixErrorDetails
 } from '../utils/matrixOperations';
 
 interface FeedForwardProps {
@@ -39,6 +41,8 @@ interface FeedForwardProps {
   valueLabel?: string;
   // Optional callback when output is computed
   onOutputComputed?: (output: number[][]) => void;
+  // Callback when calculation error occurs
+  onCalculationError?: (error: string | null) => void;
 }
 
 /**
@@ -61,7 +65,8 @@ const FeedForward: React.FC<FeedForwardProps> = ({
   activationFn = leakyRelu,
   activationFnName = 'Leaky ReLU',
   valueLabel,
-  onOutputComputed
+  onOutputComputed,
+  onCalculationError
 }) => {
   // Number of tokens and dimensionality
   const numTokens = inputs.length;
@@ -90,24 +95,74 @@ const FeedForward: React.FC<FeedForwardProps> = ({
 
   // First layer computation: inputs × W1 + b1
   const firstLayerOutput = useMemo(() => {
-    const product = matrixMultiply(inputs, W1);
-    return addBias(product, b1);
-  }, [inputs, W1, b1]);
+    try {
+      const product = matrixMultiply(inputs, W1);
+      if (hasInvalidValues(product)) {
+        const error = getMatrixErrorDetails(product, 'FFN first layer (after W1)');
+        onCalculationError?.(error || 'Invalid values in FFN first layer');
+        return inputs; // Fallback
+      }
+      
+      const withBias = addBias(product, b1);
+      if (hasInvalidValues(withBias)) {
+        const error = getMatrixErrorDetails(withBias, 'FFN first layer (after bias)');
+        onCalculationError?.(error || 'Invalid values after adding bias in FFN');
+        return product; // Fallback without bias
+      }
+      
+      return withBias;
+    } catch (error) {
+      onCalculationError?.(`Error in FFN first layer: ${error}`);
+      return inputs;
+    }
+  }, [inputs, W1, b1, onCalculationError]);
 
   // Apply activation function (defaults to ReLU)
-  const activations = useMemo(() => 
-    applyFn(firstLayerOutput, activationFn),
-    [firstLayerOutput, activationFn]
-  );
+  const activations = useMemo(() => {
+    try {
+      const result = applyFn(firstLayerOutput, activationFn);
+      
+      if (hasInvalidValues(result)) {
+        const error = getMatrixErrorDetails(result, `FFN activations (after ${activationFnName})`);
+        onCalculationError?.(error || 'Invalid values after activation function');
+        return firstLayerOutput; // Return pre-activation as fallback
+      }
+      
+      return result;
+    } catch (error) {
+      onCalculationError?.(`Error applying activation function: ${error}`);
+      return firstLayerOutput;
+    }
+  }, [firstLayerOutput, activationFn, activationFnName, onCalculationError]);
   
   // Use activations directly (no dropout)
   const activationsWithDropout = activations;
 
   // Second layer computation: activations × W2 + b2
   const output = useMemo(() => {
-    const product = matrixMultiply(activationsWithDropout, W2);
-    return addBias(product, b2);
-  }, [activationsWithDropout, W2, b2]);
+    try {
+      const product = matrixMultiply(activationsWithDropout, W2);
+      if (hasInvalidValues(product)) {
+        const error = getMatrixErrorDetails(product, 'FFN output (after W2)');
+        onCalculationError?.(error || 'Invalid values in FFN output layer');
+        return activationsWithDropout; // Fallback
+      }
+      
+      const withBias = addBias(product, b2);
+      if (hasInvalidValues(withBias)) {
+        const error = getMatrixErrorDetails(withBias, 'FFN output (after bias)');
+        onCalculationError?.(error || 'Invalid values in final FFN output');
+        return product; // Fallback without bias
+      }
+      
+      // Clear any previous errors if calculation succeeded
+      onCalculationError?.(null);
+      return withBias;
+    } catch (error) {
+      onCalculationError?.(`Error in FFN output layer: ${error}`);
+      return activationsWithDropout;
+    }
+  }, [activationsWithDropout, W2, b2, onCalculationError]);
   
   // Call the output computed callback when the output changes
   React.useEffect(() => {

@@ -534,3 +534,55 @@ export function updateVectorWeights(
   }
   return weights.map((w, i) => w - learningRate * gradients[i]);
 }
+
+/**
+ * Check if a value is valid (not NaN, not Infinity)
+ * @param value - Value to check
+ * @returns true if value is valid, false otherwise
+ */
+export function isValidNumber(value: number): boolean {
+  return !isNaN(value) && isFinite(value);
+}
+
+/**
+ * Check if a matrix contains any invalid values (NaN or Infinity)
+ * @param matrix - Matrix to check
+ * @returns true if matrix contains invalid values, false otherwise
+ */
+export function hasInvalidValues(matrix: number[][]): boolean {
+  for (let i = 0; i < matrix.length; i++) {
+    for (let j = 0; j < matrix[i].length; j++) {
+      if (!isValidNumber(matrix[i][j])) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * Check if a vector contains any invalid values (NaN or Infinity)
+ * @param vector - Vector to check
+ * @returns true if vector contains invalid values, false otherwise
+ */
+export function hasInvalidValuesVector(vector: number[]): boolean {
+  return vector.some(val => !isValidNumber(val));
+}
+
+/**
+ * Get error details for a matrix with invalid values
+ * @param matrix - Matrix to check
+ * @param matrixName - Name of the matrix for error reporting
+ * @returns Error details or null if no errors
+ */
+export function getMatrixErrorDetails(matrix: number[][], matrixName: string): string | null {
+  for (let i = 0; i < matrix.length; i++) {
+    for (let j = 0; j < matrix[i].length; j++) {
+      if (!isValidNumber(matrix[i][j])) {
+        const errorType = isNaN(matrix[i][j]) ? 'NaN' : 'Infinity';
+        return `${errorType} detected in ${matrixName} at position [${i},${j}]`;
+      }
+    }
+  }
+  return null;
+}

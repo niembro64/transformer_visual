@@ -15,6 +15,9 @@ import {
   isPortraitOrientation,
   relu,
   vectorDotProduct,
+  hasInvalidValues,
+  hasInvalidValuesVector,
+  getMatrixErrorDetails,
 } from './utils/matrixOperations';
 
 export type HistoryTrainingEntry = {
@@ -39,6 +42,9 @@ const DIM_MLP_HIDDEN = isPortraitOrientation() ? 6 : 8; // Dimension of MLP hidd
 function App() {
   // Fixed dimension values
   const HISTORY_DISPLAY_STEPS = isPortraitOrientation() ? 300 : 300; // Number of training steps to show in history graph
+
+  // Error state to track calculation errors
+  const [calculationError, setCalculationError] = useState<string | null>(null);
 
   // Training mode - determines if dropout is applied and weights are updated
   const [trainingMode, setTrainingMode] = useState(true);
@@ -139,10 +145,23 @@ function App() {
   }, [vocabularyWords.length]);
 
   // Apply positional encodings to embeddings
-  const embeddings = useMemo(
-    () => addPositionalEncodings(rawEmbeddings, positionalEncodings),
-    [rawEmbeddings, positionalEncodings]
-  );
+  const embeddings = useMemo(() => {
+    try {
+      const result = addPositionalEncodings(rawEmbeddings, positionalEncodings);
+      
+      // Check for invalid values
+      if (hasInvalidValues(result)) {
+        const error = getMatrixErrorDetails(result, 'embeddings');
+        setCalculationError(error || 'Invalid values detected in embeddings');
+        return rawEmbeddings; // Return raw embeddings as fallback
+      }
+      
+      return result;
+    } catch (error) {
+      setCalculationError(`Error in positional encoding: ${error}`);
+      return rawEmbeddings;
+    }
+  }, [rawEmbeddings, positionalEncodings]);
 
   // Listen for orientation/size changes
   useEffect(() => {
@@ -204,6 +223,12 @@ function App() {
         if (trainingMode && targetTokenIndex !== null && ffnOutput.length > 0) {
           // Get the predicted embedding (last token's output)
           const predictedEmbedding = ffnOutput[ffnOutput.length - 1];
+
+          // Check for invalid values in the prediction
+          if (hasInvalidValuesVector(predictedEmbedding)) {
+            setCalculationError('Invalid values detected in predicted embedding');
+            return;
+          }
 
           // Calculate which token is predicted by finding closest vocabulary embedding
           const dotProducts = vocabularyEmbeddings.map((vocabEmbedding) =>
@@ -605,6 +630,12 @@ function App() {
       if (selectedElement) {
         const { matrixType, row, col } = selectedElement;
 
+        // First check if the new value is valid
+        if (!isFinite(newValue) || isNaN(newValue)) {
+          setCalculationError(`Invalid value entered: ${newValue}`);
+          return;
+        }
+
         if (matrixType === 'embeddings') {
           // Update the vocabulary embedding for the specific token
           if (row < selectedTokenIndices.length && col < DIM_EMBEDDING) {
@@ -615,7 +646,16 @@ function App() {
                 ? r.map((v, j) => (j === col ? newValue : v))
                 : [...r]
             );
+            
+            // Check if the updated embeddings have any invalid values
+            if (hasInvalidValues(newVocabEmbeddings)) {
+              setCalculationError('Invalid values detected after embedding update');
+              return;
+            }
+            
             setVocabularyEmbeddings(newVocabEmbeddings);
+            // Clear any existing errors since the update was successful
+            setCalculationError(null);
           }
         } else if (
           matrixType === 'weightQ' ||
@@ -710,13 +750,33 @@ function App() {
     <div className="min-h-screen bg-gray-50">
       <main className="w-full p-0.5 md:p-2">
         <div className="bg-white rounded p-0.5 mb-0.5">
+          {/* Error banner */}
+          {calculationError && (
+            <div className="bg-red-600 text-white px-4 py-2 rounded-t-lg flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span className="font-medium">Calculation Error: {calculationError}</span>
+              </div>
+              <button
+                onClick={() => setCalculationError(null)}
+                className="text-white hover:text-gray-200 focus:outline-none"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          )}
+          
           {/* Main control panel */}
           <div
             className={`mb-4 ${
               trainingMode
                 ? 'bg-gradient-to-r from-green-50 to-emerald-50'
                 : 'bg-gradient-to-r from-blue-50 to-indigo-50'
-            } rounded-lg shadow-sm overflow-hidden`}
+            } ${calculationError ? 'rounded-b-lg' : 'rounded-lg'} shadow-sm overflow-hidden`}
           >
             {/* Header bar */}
             <div
@@ -1137,6 +1197,7 @@ function App() {
               selectedElement={selectedElement}
               onElementClick={handleElementClick}
               onValueChange={handleValueChange}
+              onCalculationError={setCalculationError}
             />
           </div>
 
@@ -1160,6 +1221,7 @@ function App() {
                 activationFn={relu} // ReLU activation as default
                 activationFnName="ReLU"
                 onOutputComputed={handleFfnOutputComputed}
+                onCalculationError={setCalculationError}
               />
             ) : (
               <div className="p-0.5 bg-gray-100 rounded">
