@@ -5,6 +5,7 @@ import FeedForward from './components/FeedForward';
 import HistoryGraph from './components/HistoryGraph';
 import MatrixDisplay from './components/MatrixDisplay';
 import SoftmaxHistoryGraph from './components/SoftmaxHistoryGraph';
+import Token from './components/Token';
 import {
   addPositionalEncodings,
   generatePositionalEncodings,
@@ -796,43 +797,19 @@ function App() {
               </p>
               <div className="flex flex-wrap gap-1 sm:gap-2">
                 {vocabularyWords.map((word, idx) => (
-                  <div
+                  <Token
                     key={idx}
+                    text={word}
                     onClick={() => handleTokenizerClick(idx)}
-                    className={`px-2 sm:px-3 py-1 sm:py-1.5 ${
-                      trainingMode && idx === targetTokenIndex
-                        ? 'border-2 border-green-500'
-                        : `border ${
-                            idx === recentlyAddedIndex
-                              ? 'border-blue-500'
-                              : 'border-gray-300'
-                          }`
-                    } rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] text-center shadow-sm ${
-                      trainingMode && idx === targetTokenIndex
-                        ? 'bg-green-100 text-green-900 font-semibold hover:bg-green-200'
-                        : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                    } cursor-pointer font-mono transition-colors group relative`}
-                  >
-                    {word}
-                    {/* Show embedding as matrix on hover */}
-                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 p-2 bg-white border border-gray-200 text-gray-700 text-[10px] rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                      <div className="mb-1 text-gray-600 text-center font-medium">
-                        {word} embedding
-                      </div>
-                      <MatrixDisplay
-                        data={[vocabularyEmbeddings[idx]]}
-                        rowLabels={['']}
-                        columnLabels={Array.from(
-                          { length: DIM_EMBEDDING },
-                          (_, i) => `d${i + 1}`
-                        )}
-                        maxAbsValue={0.2}
-                        cellSize="xs"
-                        selectable={false}
-                        matrixType="none"
-                      />
-                    </div>
-                  </div>
+                    tokenType="tokenizer"
+                    isTargetToken={idx === targetTokenIndex}
+                    isPredictedToken={false}
+                    isRecentlyAdded={idx === recentlyAddedIndex}
+                    isTrainingMode={trainingMode}
+                    showEmbedding={true}
+                    embedding={vocabularyEmbeddings[idx]}
+                    embeddingDimension={DIM_EMBEDDING}
+                  />
                 ))}
               </div>
             </div>
@@ -856,32 +833,18 @@ function App() {
                 ) : (
                   <div className="flex flex-wrap gap-1 sm:gap-2 relative">
                     {selectedTokenIndices.map((tokenIdx, seqIdx) => (
-                      <div
+                      <Token
                         key={seqIdx}
-                        data-token-index={seqIdx}
+                        text={vocabularyWords[tokenIdx]}
                         onClick={() => handleSequenceTokenClick(seqIdx)}
-                        className="px-2 sm:px-3 py-1 sm:py-1.5 border border-purple-400 bg-purple-100 text-purple-900 hover:bg-purple-200 rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] h-7 sm:h-9 text-center shadow-sm font-mono cursor-pointer transition-all group relative"
-                      >
-                        {vocabularyWords[tokenIdx]}
-                        {/* Show embedding as matrix on hover */}
-                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 p-2 bg-white border border-gray-200 text-gray-700 text-[10px] rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                          <div className="mb-1 text-gray-600 text-center font-medium">
-                            {vocabularyWords[tokenIdx]} embedding
-                          </div>
-                          <MatrixDisplay
-                            data={[vocabularyEmbeddings[tokenIdx]]}
-                            rowLabels={['']}
-                            columnLabels={Array.from(
-                              { length: DIM_EMBEDDING },
-                              (_, i) => `d${i + 1}`
-                            )}
-                            maxAbsValue={0.2}
-                            cellSize="xs"
-                            selectable={false}
-                            matrixType="none"
-                          />
-                        </div>
-                      </div>
+                        tokenType="input"
+                        isTargetToken={tokenIdx === targetTokenIndex}
+                        isTrainingMode={trainingMode}
+                        showEmbedding={true}
+                        embedding={vocabularyEmbeddings[tokenIdx]}
+                        embeddingDimension={DIM_EMBEDDING}
+                        includeHeight={true}
+                      />
                     ))}
                   </div>
                 )}
@@ -924,29 +887,13 @@ function App() {
 
                       return (
                         <div className="flex items-center gap-2">
-                          <div className="px-2 sm:px-3 py-1 sm:py-1.5 border-2 border-blue-500 rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] text-center shadow-sm bg-blue-100 font-mono group relative cursor-pointer text-blue-900 font-semibold">
-                            {vocabularyWords[predictedTokenIndex]}
-                            {/* Show embedding as matrix on hover */}
-                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 p-2 bg-white border border-gray-200 text-gray-700 text-[10px] rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                              <div className="mb-1 text-gray-600 text-center font-medium">
-                                {vocabularyWords[predictedTokenIndex]} embedding
-                              </div>
-                              <MatrixDisplay
-                                data={[
-                                  vocabularyEmbeddings[predictedTokenIndex],
-                                ]}
-                                rowLabels={['']}
-                                columnLabels={Array.from(
-                                  { length: DIM_EMBEDDING },
-                                  (_, i) => `d${i + 1}`
-                                )}
-                                maxAbsValue={0.2}
-                                cellSize="xs"
-                                selectable={false}
-                                matrixType="none"
-                              />
-                            </div>
-                          </div>
+                          <Token
+                            text={vocabularyWords[predictedTokenIndex]}
+                            tokenType="output_prediction"
+                            showEmbedding={true}
+                            embedding={vocabularyEmbeddings[predictedTokenIndex]}
+                            embeddingDimension={DIM_EMBEDDING}
+                          />
                           <span className="text-[10px] sm:text-xs text-gray-600 font-mono">
                             p: {predictedProb >= 0 ? '+' : ''}
                             {predictedProb.toExponential(EXPONENTIAL_DECIMALS)}
@@ -955,9 +902,10 @@ function App() {
                       );
                     })()
                   ) : (
-                    <div className="px-2 sm:px-3 py-1 sm:py-1.5 border border-dashed border-gray-300 rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] text-center text-gray-400 italic">
-                      computing...
-                    </div>
+                    <Token
+                      text="computing..."
+                      tokenType="placeholder"
+                    />
                   )}
                 </div>
 
@@ -1021,27 +969,13 @@ function App() {
                     <div className="min-h-[40px] sm:min-h-[50px] border-2 border-dashed rounded-lg p-1 sm:p-2 transition-colors border-gray-300 bg-gray-50">
                       {targetTokenIndex !== null ? (
                         <div className="flex items-center gap-2">
-                          <div className="px-2 sm:px-3 py-1 sm:py-1.5 border-2 border-green-500 rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] text-center shadow-sm bg-green-100 font-mono group relative cursor-pointer text-green-900 font-semibold">
-                            {vocabularyWords[targetTokenIndex]}
-                            {/* Show embedding as matrix on hover */}
-                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 p-2 bg-white border border-gray-200 text-gray-700 text-[10px] rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                              <div className="mb-1 text-gray-600 text-center font-medium">
-                                {vocabularyWords[targetTokenIndex]} embedding
-                              </div>
-                              <MatrixDisplay
-                                data={[vocabularyEmbeddings[targetTokenIndex]]}
-                                rowLabels={['']}
-                                columnLabels={Array.from(
-                                  { length: DIM_EMBEDDING },
-                                  (_, i) => `d${i + 1}`
-                                )}
-                                maxAbsValue={0.2}
-                                cellSize="xs"
-                                selectable={false}
-                                matrixType="none"
-                              />
-                            </div>
-                          </div>
+                          <Token
+                            text={vocabularyWords[targetTokenIndex]}
+                            tokenType="output_target"
+                            showEmbedding={true}
+                            embedding={vocabularyEmbeddings[targetTokenIndex]}
+                            embeddingDimension={DIM_EMBEDDING}
+                          />
                           {trainingLoss !== null && (
                             <span className="text-[10px] sm:text-xs text-gray-600 font-mono">
                               Loss: {trainingLoss >= 0 ? '+' : ''}
@@ -1380,28 +1314,13 @@ function App() {
                         </h4>
                         <div className="w-full flex flex-col items-center">
                           <div className="flex justify-center">
-                            {/* Token styled like tokenizer tokens */}
-                            <div className="px-2 sm:px-3 py-1 sm:py-1.5 border-2 border-blue-500 rounded text-xs sm:text-sm min-w-[2.5rem] sm:min-w-[3.5rem] text-center shadow-sm bg-blue-100 font-mono cursor-pointer group relative text-blue-900 font-semibold">
-                              {topPredictedToken}
-                              {/* Show embedding as matrix on hover */}
-                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 p-2 bg-white border border-gray-200 text-gray-700 text-[10px] rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                                <div className="mb-1 text-gray-600 text-center font-medium">
-                                  {topPredictedToken} embedding
-                                </div>
-                                <MatrixDisplay
-                                  data={[topPredictedTokenEmbedding]}
-                                  rowLabels={['']}
-                                  columnLabels={Array.from(
-                                    { length: DIM_EMBEDDING },
-                                    (_, i) => `d${i + 1}`
-                                  )}
-                                  maxAbsValue={0.2}
-                                  cellSize="xs"
-                                  selectable={false}
-                                  matrixType="none"
-                                />
-                              </div>
-                            </div>
+                            <Token
+                              text={topPredictedToken}
+                              tokenType="output_prediction"
+                              showEmbedding={true}
+                              embedding={topPredictedTokenEmbedding}
+                              embeddingDimension={DIM_EMBEDDING}
+                            />
                           </div>
                           <div className="text-[0.6rem] sm:text-[0.65rem] font-mono text-gray-600 px-2 sm:px-3 py-0.5 min-w-[55px] sm:min-w-[60px] text-center">
                             p:{' '}
