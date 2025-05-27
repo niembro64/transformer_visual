@@ -34,11 +34,16 @@ export type HistorySoftMaxEntry = {
 
 // Training configuration constants
 const TRAINING_INTERVAL_MS = 1;
-// const TRAINING_INTERVAL_MS = 0.01;
+// const TRAINING_INTERVAL_MS = 0.5;
 const EXPONENTIAL_DECIMALS = 4; // Number of decimal places for exponential values
 const DIM_EMBEDDING = isPortraitOrientation() ? 6 : 10; // Dimension of embeddings (d_model)
 const DIM_ATTENTION_HEAD = isPortraitOrientation() ? 2 : 4; // Dimension of attention heads (d_k = d_v = d_model / num_heads)
-const DIM_MLP_HIDDEN = isPortraitOrientation() ? 6 : 8; // Dimension of MLP hidden layer (d_ff = 8, typically 4x d_model)
+const DIM_MLP_HIDDEN = isPortraitOrientation() ? 6 : 10; // Dimension of MLP hidden layer (d_ff = 8, typically 4x d_model)
+
+// Learning rate multiplier for attention weights (to make them learn faster relative to FFN)
+// Since FFN weights were learning too fast and attention weights too slow, this multiplier
+// helps balance the learning speeds. Attention weights will use: base_lr * ATTENTION_LR_MULTIPLIER
+const ATTENTION_LR_MULTIPLIER = 2.0; // Increase this to make attention learn faster, decrease to make it slower
 
 function App() {
   // Fixed dimension values
@@ -383,6 +388,9 @@ function App() {
             // This is a simplified version - proper gradients would require full backpropagation
             const avgError =
               outputGradient.reduce((a, b) => a + b, 0) / outputGradient.length;
+            
+            // Use the multiplied learning rate for attention weights
+            const attentionLearningRate = learningRate * ATTENTION_LR_MULTIPLIER;
 
             // Update Q matrix with gradient descent (skip selected element)
             if (selectedElement?.matrixType === 'weightQ') {
@@ -390,14 +398,14 @@ function App() {
               for (let i = 0; i < newWeights.weightQ.length; i++) {
                 for (let j = 0; j < newWeights.weightQ[i].length; j++) {
                   if (i !== row || j !== col) {
-                    newWeights.weightQ[i][j] -= learningRate * avgError * 0.1; // Increased from 0.001
+                    newWeights.weightQ[i][j] -= attentionLearningRate * avgError * 0.1; // Increased from 0.001
                   }
                 }
               }
             } else {
               for (let i = 0; i < newWeights.weightQ.length; i++) {
                 for (let j = 0; j < newWeights.weightQ[i].length; j++) {
-                  newWeights.weightQ[i][j] -= learningRate * avgError * 0.1; // Increased from 0.001
+                  newWeights.weightQ[i][j] -= attentionLearningRate * avgError * 0.1; // Increased from 0.001
                 }
               }
             }
@@ -408,14 +416,14 @@ function App() {
               for (let i = 0; i < newWeights.weightK.length; i++) {
                 for (let j = 0; j < newWeights.weightK[i].length; j++) {
                   if (i !== row || j !== col) {
-                    newWeights.weightK[i][j] -= learningRate * avgError * 0.1; // Increased from 0.001
+                    newWeights.weightK[i][j] -= attentionLearningRate * avgError * 0.1; // Increased from 0.001
                   }
                 }
               }
             } else {
               for (let i = 0; i < newWeights.weightK.length; i++) {
                 for (let j = 0; j < newWeights.weightK[i].length; j++) {
-                  newWeights.weightK[i][j] -= learningRate * avgError * 0.1; // Increased from 0.001
+                  newWeights.weightK[i][j] -= attentionLearningRate * avgError * 0.1; // Increased from 0.001
                 }
               }
             }
@@ -426,14 +434,14 @@ function App() {
               for (let i = 0; i < newWeights.weightV.length; i++) {
                 for (let j = 0; j < newWeights.weightV[i].length; j++) {
                   if (i !== row || j !== col) {
-                    newWeights.weightV[i][j] -= learningRate * avgError * 0.5; // Increased from 0.01
+                    newWeights.weightV[i][j] -= attentionLearningRate * avgError * 0.5; // Increased from 0.01
                   }
                 }
               }
             } else {
               for (let i = 0; i < newWeights.weightV.length; i++) {
                 for (let j = 0; j < newWeights.weightV[i].length; j++) {
-                  newWeights.weightV[i][j] -= learningRate * avgError * 0.5; // Increased from 0.01
+                  newWeights.weightV[i][j] -= attentionLearningRate * avgError * 0.5; // Increased from 0.01
                 }
               }
             }
