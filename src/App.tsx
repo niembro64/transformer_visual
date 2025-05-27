@@ -38,7 +38,7 @@ const DIM_MLP_HIDDEN = isPortraitOrientation() ? 6 : 8; // Dimension of MLP hidd
 
 function App() {
   // Fixed dimension values
-  const HISTORY_DISPLAY_STEPS = isPortraitOrientation() ? 300 : 1000; // Number of training steps to show in history graph
+  const HISTORY_DISPLAY_STEPS = isPortraitOrientation() ? 300 : 300; // Number of training steps to show in history graph
 
   // Training mode - determines if dropout is applied and weights are updated
   const [trainingMode, setTrainingMode] = useState(true);
