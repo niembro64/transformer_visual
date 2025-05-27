@@ -22,7 +22,7 @@ const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
   // SVG dimensions
   const width = 800;
   const height = window.innerWidth >= 1024 ? 300 : 200;
-  const padding = { top: 20, right: 20, bottom: 30, left: 45 };
+  const padding = { top: 20, right: 100, bottom: 30, left: 45 }; // More right padding for labels
   const graphWidth = width - padding.left - padding.right;
   const graphHeight = height - padding.top - padding.bottom;
 
@@ -75,9 +75,9 @@ const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
     };
   }, [displayHistory]);
 
-  // Create path data for each token's probability line
-  const pathsData = useMemo(() => {
-    if (displayHistory.length === 0) return {};
+  // Create path data for each token's probability line and track end positions
+  const { pathsData, endPositions } = useMemo(() => {
+    if (displayHistory.length === 0) return { pathsData: {}, endPositions: {} };
 
     const xScale = (i: number) =>
       (i / Math.max(1, displayHistory.length - 1)) * graphWidth;
@@ -87,6 +87,7 @@ const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
     };
 
     const paths: Record<string, string> = {};
+    const ends: Record<string, { x: number; y: number; prob: number }> = {};
 
     vocabularyWords.forEach((token) => {
       const points = displayHistory.map((entry, i) => {
@@ -94,15 +95,21 @@ const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
         const prob = tokenData?.probability ?? 0;
         const x = xScale(i);
         const y = yScale(prob);
-        return { x, y };
+        return { x, y, prob };
       });
 
       paths[token] = points
         .map((point, i) => `${i === 0 ? 'M' : 'L'} ${point.x} ${point.y}`)
         .join(' ');
+      
+      // Store the last point for label positioning
+      if (points.length > 0) {
+        const lastPoint = points[points.length - 1];
+        ends[token] = lastPoint;
+      }
     });
 
-    return paths;
+    return { pathsData: paths, endPositions: ends };
   }, [
     displayHistory,
     vocabularyWords,
@@ -128,7 +135,7 @@ const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
     return (
       <div className="mb-0.5 bg-white rounded p-0.5">
         <h3 className="text-xs sm:text-sm font-semibold mb-0.5 border-b pb-0.5">
-          Next Token Prediction Probabilities Over Time
+          Next Token Prediction Probabilities
         </h3>
         <div className="p-2 text-center text-gray-500 text-xs italic">
           Start training to see probability history
@@ -140,10 +147,10 @@ const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
   return (
     <div className="mb-0.5 bg-white rounded p-0.5">
       <h3 className="text-xs sm:text-sm font-semibold mb-0.5 border-b pb-0.5">
-        Next Token Prediction Probabilities Over Time
+        Next Token Prediction Probabilities
       </h3>
-      <div className="p-1 sm:p-2 flex gap-2">
-        <div className="flex-auto min-w-0">
+      <div className="p-1 sm:p-2">
+        <div className="w-full">
           <svg
             viewBox={`0 0 ${width} ${height}`}
             className="w-full h-auto"
@@ -216,6 +223,61 @@ const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
                 />
               ))}
 
+              {/* Floating labels at the end of each line */}
+              {Object.entries(endPositions)
+                .sort((a, b) => a[1].y - b[1].y) // Sort by y position to avoid overlaps
+                .map(([token, position], idx, arr) => {
+                  // Calculate adjusted y position to avoid overlaps
+                  let adjustedY = position.y;
+                  const minSpacing = 18;
+                  
+                  // Check previous labels for overlap
+                  for (let i = 0; i < idx; i++) {
+                    const prevY = arr[i][1].y;
+                    if (Math.abs(adjustedY - prevY) < minSpacing) {
+                      adjustedY = prevY + minSpacing;
+                    }
+                  }
+                  
+                  // Keep label within bounds
+                  adjustedY = Math.max(10, Math.min(graphHeight - 10, adjustedY));
+                  
+                  return (
+                    <g key={`label-${token}`}>
+                      {/* Line connecting label to data point */}
+                      {adjustedY !== position.y && (
+                        <line
+                          x1={position.x}
+                          y1={position.y}
+                          x2={position.x + 5}
+                          y2={adjustedY}
+                          stroke={tokenColors[token]}
+                          strokeWidth="1"
+                          opacity="0.3"
+                        />
+                      )}
+                      {/* Background rect for better readability */}
+                      <rect
+                        x={position.x + 5}
+                        y={adjustedY - 8}
+                        width={token.length * 7 + 4}
+                        height={16}
+                        fill="white"
+                        opacity="0.9"
+                        rx="2"
+                      />
+                      <text
+                        x={position.x + 7}
+                        y={adjustedY + 3}
+                        className="text-xs font-medium"
+                        fill={tokenColors[token]}
+                      >
+                        {token}
+                      </text>
+                    </g>
+                  );
+                })}
+
               {/* Axis labels */}
               <text
                 x={graphWidth / 2}
@@ -236,21 +298,6 @@ const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
               </text>
             </g>
           </svg>
-        </div>
-
-        {/* Legend */}
-        <div className="flex-shrink-0">
-          <div className="bg-white border border-gray-200 rounded p-1 sm:p-2 text-[8px] sm:text-[10px] space-y-0.5 sm:space-y-1">
-            {vocabularyWords.map((token, idx) => (
-              <div key={token} className="flex items-center gap-0.5 sm:gap-1">
-                <div
-                  className="w-2 h-0.5 sm:w-3 sm:h-0.5"
-                  style={{ backgroundColor: tokenColors[token] }}
-                ></div>
-                <span className="text-gray-700">{token}</span>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </div>

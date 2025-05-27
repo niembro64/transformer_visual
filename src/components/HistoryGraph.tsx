@@ -81,7 +81,7 @@ const HistoryGraph: React.FC<HistoryGraphProps> = ({
     return (
       <div className="mb-0.5 bg-white rounded p-0.5">
         <h3 className="text-xs sm:text-sm font-semibold mb-0.5 border-b pb-0.5">
-          Loss Over Time
+          Loss
         </h3>
         <div className="p-2 text-center text-gray-500 text-xs italic">
           Start training to see loss history
@@ -93,7 +93,7 @@ const HistoryGraph: React.FC<HistoryGraphProps> = ({
   return (
     <div className="mb-0.5 bg-white rounded p-0.5">
       <h3 className="text-xs sm:text-sm font-semibold mb-0.5 border-b pb-0.5">
-        Loss Over Time
+        Loss
       </h3>
       <div className="p-1 sm:p-2 flex gap-2">
         <div className="flex-auto min-w-0">
