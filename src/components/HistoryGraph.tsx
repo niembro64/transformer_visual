@@ -135,53 +135,17 @@ const HistoryGraph: React.FC<HistoryGraphProps> = ({
                 strokeWidth="2"
               />
 
-              {/* X-axis labels */}
-              {displayHistory.length > 1 &&
-                (() => {
-                  const maxLabels = 5;
-                  const step = Math.max(
-                    1,
-                    Math.floor(displayHistory.length / maxLabels)
-                  );
-                  const labels = [];
-
-                  for (let i = 0; i < displayHistory.length; i += step) {
-                    const x =
-                      (i / Math.max(1, displayHistory.length - 1)) * graphWidth;
-                    const stepNumber =
-                      totalSteps - displayHistory.length + i + 1;
-                    labels.push(
-                      <text
-                        key={i}
-                        x={x}
-                        y={graphHeight + 15}
-                        textAnchor="middle"
-                        className="text-[9px] fill-gray-600"
-                      >
-                        {stepNumber}
-                      </text>
-                    );
-                  }
-
-                  // Always show the last step
-                  if (displayHistory.length > 1) {
-                    const lastX = graphWidth;
-                    const lastStepNumber = totalSteps;
-                    labels.push(
-                      <text
-                        key="last"
-                        x={lastX}
-                        y={graphHeight + 15}
-                        textAnchor="middle"
-                        className="text-[9px] fill-gray-600"
-                      >
-                        {lastStepNumber}
-                      </text>
-                    );
-                  }
-
-                  return labels;
-                })()}
+              {/* X-axis labels - only show the last step */}
+              {displayHistory.length > 0 && (
+                <text
+                  x={graphWidth}
+                  y={graphHeight + 15}
+                  textAnchor="end"
+                  className="text-[9px] fill-gray-600"
+                >
+                  {totalSteps}
+                </text>
+              )}
 
               {/* Y-axis */}
               <line

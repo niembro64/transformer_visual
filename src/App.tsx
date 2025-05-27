@@ -29,7 +29,7 @@ export type HistorySoftMaxEntry = {
 };
 
 // Training configuration constants
-const TRAINING_INTERVAL_MS = 0.01; // Update every 200ms (5 times per second) instead of 1000ms
+const TRAINING_INTERVAL_MS = 0.01;
 const EXPONENTIAL_DECIMALS = 4; // Number of decimal places for exponential values
 const DIM_EMBEDDING = isPortraitOrientation() ? 6 : 8; // Dimension of embeddings (d_model)
 const DIM_ATTENTION_HEAD = isPortraitOrientation() ? 2 : 4; // Dimension of attention heads (d_k = d_v = d_model / num_heads)
@@ -44,7 +44,9 @@ function App() {
   // Target output token for training (what we're trying to predict)
   const [targetTokenIndex, setTargetTokenIndex] = useState<number | null>(null);
   // Learning rate for gradient descent
-  const [learningRate, setLearningRate] = useState(0.001);
+  const [learningRate, setLearningRate] = useState(
+    isPortraitOrientation() ? 0.001 : 0.01
+  );
 
   const [historyTraining, setHistoryTraining] = useState<
     HistoryTrainingEntry[]
@@ -679,7 +681,18 @@ function App() {
         setSelectedValue(newValue);
       }
     },
-    [selectedElement, rawEmbeddings, attentionWeights, mlpWeights]
+    [
+      selectedElement,
+      selectedTokenIndices,
+      vocabularyEmbeddings,
+      attentionWeights.weightQ,
+      attentionWeights.weightK,
+      attentionWeights.weightV,
+      mlpWeights.W1,
+      mlpWeights.b1,
+      mlpWeights.W2,
+      mlpWeights.b2,
+    ]
   );
 
   // Handler for receiving the computed context from the attention head
