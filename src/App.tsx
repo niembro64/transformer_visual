@@ -47,7 +47,7 @@ const ATTENTION_LR_MULTIPLIER = 5.0; // Increase this to make attention learn fa
 
 // Embedding strength multiplier - controls how far embedding values are from zero
 // Higher values create more distinct embeddings, lower values create more similar embeddings
-const EMBEDDING_STRENGTH_MULTIPLIER = 1.0; // Default 1.0, increase for stronger embeddings, decrease for weaker
+const EMBEDDING_STRENGTH_MULTIPLIER = 10.0; // Default 1.0, increase for stronger embeddings, decrease for weaker
 
 function App() {
   // Fixed dimension values
