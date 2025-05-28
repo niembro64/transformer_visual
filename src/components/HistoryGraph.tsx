@@ -35,7 +35,7 @@ const HistoryGraph: React.FC<HistoryGraphProps> = ({
 
   // SVG dimensions
   const width = 800;
-  const height = window.innerWidth >= 1024 ? 250 : 150;
+  const height = window.innerWidth >= 1024 ? 300 : 150;
   const padding = { top: 20, right: 20, bottom: 30, left: 45 };
   const graphWidth = width - padding.left - padding.right;
   const graphHeight = height - padding.top - padding.bottom;
