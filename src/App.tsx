@@ -36,14 +36,18 @@ export type HistorySoftMaxEntry = {
 // Use faster interval in development for easier debugging, slower in production for performance
 const TRAINING_INTERVAL_MS = process.env.NODE_ENV === 'development' ? 1 : 0.1;
 const EXPONENTIAL_DECIMALS = 4; // Number of decimal places for exponential values
-const DIM_EMBEDDING = isPortraitOrientation() ? 6 : 10; // Dimension of embeddings (d_model)
-const DIM_ATTENTION_HEAD = isPortraitOrientation() ? 2 : 4; // Dimension of attention heads (d_k = d_v = d_model / num_heads)
-const DIM_MLP_HIDDEN = isPortraitOrientation() ? 6 : 10; // Dimension of MLP hidden layer (d_ff = 8, typically 4x d_model)
+const DIM_EMBEDDING = isPortraitOrientation() ? 6 : 6; // Dimension of embeddings (d_model)
+const DIM_ATTENTION_HEAD = isPortraitOrientation() ? 2 : 6; // Dimension of attention heads (d_k = d_v = d_model / num_heads)
+const DIM_MLP_HIDDEN = isPortraitOrientation() ? 6 : 6; // Dimension of MLP hidden layer (d_ff = 8, typically 4x d_model)
 
 // Learning rate multiplier for attention weights (to make them learn faster relative to FFN)
 // Since FFN weights were learning too fast and attention weights too slow, this multiplier
 // helps balance the learning speeds. Attention weights will use: base_lr * ATTENTION_LR_MULTIPLIER
 const ATTENTION_LR_MULTIPLIER = 2.0; // Increase this to make attention learn faster, decrease to make it slower
+
+// Embedding strength multiplier - controls how far embedding values are from zero
+// Higher values create more distinct embeddings, lower values create more similar embeddings
+const EMBEDDING_STRENGTH_MULTIPLIER = 1.0; // Default 1.0, increase for stronger embeddings, decrease for weaker
 
 function App() {
   // Fixed dimension values
@@ -78,38 +82,59 @@ function App() {
   // Vocabulary of 25 common words
   // eslint-disable-next-line react-hooks/exhaustive-deps
 
-  let vocabularyWords: string[] = [];
-  if (isPortraitOrientation()) {
-    vocabularyWords = ['lore', 'ipsu', 'dolo', 'sit', 'amet', 'cons'];
-  } else {
-    vocabularyWords = [
-      'lore',
-      'ipsu',
-      'dolo',
-      'sit',
-      'amet',
-      'cons',
-      'adip',
-      'elit',
-      'sed',
-      'do',
-      'eius',
-      'temp',
-      'inci',
-      'ut',
-      'labo',
-    ];
-  }
+  const portrait = isPortraitOrientation();
 
-  // Generate vocabulary embeddings - mutable state
+  const vocabularyWords: string[] = useMemo(() => {
+    if (portrait) {
+      return [
+        'dog', // 0
+        'bot', // 1
+        'ok', // 2
+        'car', // 3
+        'yo', // 4
+        'big', // 5
+        'go', // 6
+        'zzz', // 7
+        'ai', // 8
+        'run', // 9
+        'brr', //10
+        'id', //11
+        'hi', //12
+        'cat', //13
+        'do', //14
+        'we', //15
+      ];
+    } else {
+      return [
+        'hi', // 0
+        'bot', // 1
+        'ai', // 2
+        'run', // 3
+        'car', // 4
+        'brr', // 5
+        'yo', // 6
+        'big', // 7
+        'dog', // 8
+        'go', // 9
+        'zzz', //10
+        'id', //11
+        'do', //12
+        'cat', //13
+        'up', //14
+        'lol', //15
+      ];
+    }
+  }, [portrait]);
+
   const [vocabularyEmbeddings, setVocabularyEmbeddings] = useState(() =>
-    generateSampleEmbeddings(vocabularyWords.length, DIM_EMBEDDING)
+    generateSampleEmbeddings(vocabularyWords.length, DIM_EMBEDDING, EMBEDDING_STRENGTH_MULTIPLIER)
   );
 
-  const initInputSequence: number[] = isPortraitOrientation()
-    ? [2, 3, 1]
-    : [3, 4, 2, 1, 0, 6, 7];
-
+  // Input sequence to say: "big AI bot go brr"
+  const initInputSequence: number[] = portrait
+    ? [5, 8, 1, 6] // 'big' + 'ai' + 'bot' + 'go' + 'brr'
+    : [7, 2, 1, 9];
+  // 'big' + 'ai' + 'bot' + 'go' + 'brr'
   // Track selected tokens (indices into vocabulary)
   const [selectedTokenIndices, setSelectedTokenIndices] =
     useState<number[]>(initInputSequence);
@@ -146,7 +171,7 @@ function App() {
   // Update vocabulary embeddings when dimension changes
   useEffect(() => {
     setVocabularyEmbeddings(
-      generateSampleEmbeddings(vocabularyWords.length, DIM_EMBEDDING)
+      generateSampleEmbeddings(vocabularyWords.length, DIM_EMBEDDING, EMBEDDING_STRENGTH_MULTIPLIER)
     );
   }, [vocabularyWords.length]);
 
@@ -154,14 +179,14 @@ function App() {
   const embeddings = useMemo(() => {
     try {
       const result = addPositionalEncodings(rawEmbeddings, positionalEncodings);
-      
+
       // Check for invalid values
       if (hasInvalidValues(result)) {
         const error = getMatrixErrorDetails(result, 'embeddings');
         setCalculationError(error || 'Invalid values detected in embeddings');
         return rawEmbeddings; // Return raw embeddings as fallback
       }
-      
+
       return result;
     } catch (error) {
       setCalculationError(`Error in positional encoding: ${error}`);
@@ -232,7 +257,9 @@ function App() {
 
           // Check for invalid values in the prediction
           if (hasInvalidValuesVector(predictedEmbedding)) {
-            setCalculationError('Invalid values detected in predicted embedding');
+            setCalculationError(
+              'Invalid values detected in predicted embedding'
+            );
             return;
           }
 
@@ -388,9 +415,10 @@ function App() {
             // This is a simplified version - proper gradients would require full backpropagation
             const avgError =
               outputGradient.reduce((a, b) => a + b, 0) / outputGradient.length;
-            
+
             // Use the multiplied learning rate for attention weights
-            const attentionLearningRate = learningRate * ATTENTION_LR_MULTIPLIER;
+            const attentionLearningRate =
+              learningRate * ATTENTION_LR_MULTIPLIER;
 
             // Update Q matrix with gradient descent (skip selected element)
             if (selectedElement?.matrixType === 'weightQ') {
@@ -398,14 +426,16 @@ function App() {
               for (let i = 0; i < newWeights.weightQ.length; i++) {
                 for (let j = 0; j < newWeights.weightQ[i].length; j++) {
                   if (i !== row || j !== col) {
-                    newWeights.weightQ[i][j] -= attentionLearningRate * avgError * 0.1; // Increased from 0.001
+                    newWeights.weightQ[i][j] -=
+                      attentionLearningRate * avgError * 0.1; // Increased from 0.001
                   }
                 }
               }
             } else {
               for (let i = 0; i < newWeights.weightQ.length; i++) {
                 for (let j = 0; j < newWeights.weightQ[i].length; j++) {
-                  newWeights.weightQ[i][j] -= attentionLearningRate * avgError * 0.1; // Increased from 0.001
+                  newWeights.weightQ[i][j] -=
+                    attentionLearningRate * avgError * 0.1; // Increased from 0.001
                 }
               }
             }
@@ -416,14 +446,16 @@ function App() {
               for (let i = 0; i < newWeights.weightK.length; i++) {
                 for (let j = 0; j < newWeights.weightK[i].length; j++) {
                   if (i !== row || j !== col) {
-                    newWeights.weightK[i][j] -= attentionLearningRate * avgError * 0.1; // Increased from 0.001
+                    newWeights.weightK[i][j] -=
+                      attentionLearningRate * avgError * 0.1; // Increased from 0.001
                   }
                 }
               }
             } else {
               for (let i = 0; i < newWeights.weightK.length; i++) {
                 for (let j = 0; j < newWeights.weightK[i].length; j++) {
-                  newWeights.weightK[i][j] -= attentionLearningRate * avgError * 0.1; // Increased from 0.001
+                  newWeights.weightK[i][j] -=
+                    attentionLearningRate * avgError * 0.1; // Increased from 0.001
                 }
               }
             }
@@ -434,14 +466,16 @@ function App() {
               for (let i = 0; i < newWeights.weightV.length; i++) {
                 for (let j = 0; j < newWeights.weightV[i].length; j++) {
                   if (i !== row || j !== col) {
-                    newWeights.weightV[i][j] -= attentionLearningRate * avgError * 0.5; // Increased from 0.01
+                    newWeights.weightV[i][j] -=
+                      attentionLearningRate * avgError * 0.5; // Increased from 0.01
                   }
                 }
               }
             } else {
               for (let i = 0; i < newWeights.weightV.length; i++) {
                 for (let j = 0; j < newWeights.weightV[i].length; j++) {
-                  newWeights.weightV[i][j] -= attentionLearningRate * avgError * 0.5; // Increased from 0.01
+                  newWeights.weightV[i][j] -=
+                    attentionLearningRate * avgError * 0.5; // Increased from 0.01
                 }
               }
             }
@@ -655,13 +689,15 @@ function App() {
                 ? r.map((v, j) => (j === col ? newValue : v))
                 : [...r]
             );
-            
+
             // Check if the updated embeddings have any invalid values
             if (hasInvalidValues(newVocabEmbeddings)) {
-              setCalculationError('Invalid values detected after embedding update');
+              setCalculationError(
+                'Invalid values detected after embedding update'
+              );
               return;
             }
-            
+
             setVocabularyEmbeddings(newVocabEmbeddings);
             // Clear any existing errors since the update was successful
             setCalculationError(null);
@@ -763,29 +799,53 @@ function App() {
           {calculationError && (
             <div className="bg-red-600 text-white px-4 py-2 rounded-t-lg flex justify-between items-center">
               <div className="flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
                 </svg>
-                <span className="font-medium">Calculation Error: {calculationError}</span>
+                <span className="font-medium">
+                  Calculation Error: {calculationError}
+                </span>
               </div>
               <button
                 onClick={() => setCalculationError(null)}
                 className="text-white hover:text-gray-200 focus:outline-none"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
           )}
-          
+
           {/* Main control panel */}
           <div
             className={`mb-4 ${
               trainingMode
                 ? 'bg-gradient-to-r from-green-50 to-emerald-50'
                 : 'bg-gradient-to-r from-blue-50 to-indigo-50'
-            } ${calculationError ? 'rounded-b-lg' : 'rounded-lg'} shadow-sm overflow-hidden`}
+            } ${
+              calculationError ? 'rounded-b-lg' : 'rounded-lg'
+            } shadow-sm overflow-hidden`}
           >
             {/* Header bar */}
             <div
@@ -1014,7 +1074,8 @@ function App() {
                       // Find which columns match the target token (if in training mode)
                       const highlightColumns: number[] = [];
                       if (trainingMode && targetTokenIndex !== null) {
-                        const targetTokenName = vocabularyWords[targetTokenIndex];
+                        const targetTokenName =
+                          vocabularyWords[targetTokenIndex];
                         sortedTokenLabels.forEach((label, idx) => {
                           if (label === targetTokenName) {
                             highlightColumns.push(idx);

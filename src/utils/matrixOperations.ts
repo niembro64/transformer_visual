@@ -284,14 +284,106 @@ export function randomNeuralVector(size: number, stdDev = 0.01): number[] {
  * using realistic values from a trained model
  * @param numTokens - Number of tokens
  * @param embeddingDim - Embedding dimension
+ * @param strengthMultiplier - Multiplier to adjust embedding strength (default 1.0)
  * @returns Matrix where each row is a token embedding
  */
 export function generateSampleEmbeddings(
   numTokens: number,
-  embeddingDim: number
+  embeddingDim: number,
+  strengthMultiplier: number = 1.0
 ): number[][] {
-  // Embeddings are typically drawn from a normal distribution with small standard deviation
-  return randomNeuralMatrix(numTokens, embeddingDim, 'scaled');
+  // Create a pool of embeddings that are equidistant from each other
+  const embeddingPool: number[][] = [];
+  
+  // We'll use a combination of orthogonal vectors and hypercube vertices
+  // to ensure equal distances between embeddings
+  
+  // Step 1: Generate embeddings on the vertices of a hypercube
+  // This ensures all embeddings are equidistant from the origin and from each other
+  const poolSize = Math.max(numTokens * 2, Math.pow(2, Math.min(embeddingDim, 8)));
+  
+  // Base value for the hypercube (controls overall magnitude)
+  const baseValue = 0.1 * strengthMultiplier;
+  
+  for (let i = 0; i < poolSize; i++) {
+    const embedding = new Array(embeddingDim).fill(0);
+    
+    // Create a pattern that distributes positive and negative values
+    // Use Gray code to ensure adjacent patterns differ by exactly one bit
+    const grayCode = i ^ (i >> 1);
+    
+    for (let j = 0; j < embeddingDim; j++) {
+      // Determine sign based on Gray code bit pattern
+      const isPositive = (grayCode >> (j % 32)) & 1;
+      
+      // Create a base value that alternates between positive and negative
+      let value = isPositive ? baseValue : -baseValue;
+      
+      // Add a dimension-specific scaling to create more variety
+      // Use prime numbers to avoid repetitive patterns
+      const primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37];
+      const prime = primes[j % primes.length];
+      const scale = 1 + 0.3 * Math.sin(i * prime * 0.1);
+      
+      value *= scale;
+      
+      // Add a small rotation to prevent exact alignment
+      // This maintains equal distances while adding variety
+      const rotation = 0.1 * Math.cos((i + j) * 0.5);
+      value += rotation * baseValue * 0.2;
+      
+      embedding[j] = value;
+    }
+    
+    // Normalize to ensure all embeddings have the same magnitude
+    // This maintains equal distances from the origin
+    let magnitude = 0;
+    for (let j = 0; j < embeddingDim; j++) {
+      magnitude += embedding[j] * embedding[j];
+    }
+    magnitude = Math.sqrt(magnitude);
+    
+    // Target magnitude that ensures good separation
+    const targetMagnitude = Math.sqrt(embeddingDim) * baseValue;
+    if (magnitude > 0) {
+      for (let j = 0; j < embeddingDim; j++) {
+        embedding[j] = (embedding[j] / magnitude) * targetMagnitude;
+      }
+    }
+    
+    embeddingPool.push(embedding);
+  }
+  
+  // Phase 2: Create a deterministic pseudo-random mapping from tokens to embeddings
+  // Use a simple hash function based on token index and embedding dimension
+  const tokenEmbeddings: number[][] = [];
+  const usedIndices = new Set<number>();
+  
+  for (let tokenIdx = 0; tokenIdx < numTokens; tokenIdx++) {
+    // Create a deterministic "random" index based on token index and embedding dimension
+    // This ensures the same token always gets the same embedding for given parameters
+    let hash = tokenIdx * 2654435761; // Large prime for better distribution
+    hash = hash ^ (embeddingDim * 1597); // Mix in embedding dimension
+    hash = (hash ^ (hash >>> 16)) * 0x85ebca6b;
+    hash = (hash ^ (hash >>> 13)) * 0xc2b2ae35;
+    hash = hash ^ (hash >>> 16);
+    
+    // Map hash to valid pool index
+    let poolIndex = Math.abs(hash) % embeddingPool.length;
+    
+    // If this embedding is already used, find the next available one
+    let attempts = 0;
+    while (usedIndices.has(poolIndex) && attempts < embeddingPool.length) {
+      poolIndex = (poolIndex + 1) % embeddingPool.length;
+      attempts++;
+    }
+    
+    // Mark as used and assign
+    usedIndices.add(poolIndex);
+    tokenEmbeddings.push([...embeddingPool[poolIndex]]); // Deep copy
+  }
+  
+  return tokenEmbeddings;
 }
 
 /**
