@@ -792,8 +792,8 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <main className="w-full p-0.5 md:p-2">
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
+      <main className="w-full p-0.5 md:p-2 max-w-full">
         <div className="bg-white rounded p-0.5 mb-0.5">
           {/* Error banner */}
           {calculationError && (
@@ -1171,7 +1171,7 @@ function App() {
             <div
               className={`flex ${
                 isMobile ? 'flex-col' : 'grid grid-cols-3'
-              } lg:grid-cols-3 xl:grid-cols-12 gap-2 sm:gap-4 lg:gap-1`}
+              } lg:grid-cols-3 xl:grid-cols-12 gap-2 sm:gap-4 lg:gap-1 max-w-full`}
             >
               {/* Left: Raw Embeddings */}
               <div
@@ -1182,7 +1182,7 @@ function App() {
                 <h4 className="text-[0.6rem] sm:text-[0.65rem] font-medium mb-1 sm:mb-0.5 text-center">
                   Raw Token Embeddings
                 </h4>
-                <div className="w-full overflow-x-auto pb-2">
+                <div className="w-full overflow-x-auto pb-2 max-w-full">
                   <MatrixDisplay
                     data={rawEmbeddings}
                     rowLabels={tokenLabels}
@@ -1217,7 +1217,7 @@ function App() {
                 <h4 className="text-[0.6rem] sm:text-[0.65rem] font-medium mb-1 sm:mb-0.5 text-center">
                   Positional Encodings
                 </h4>
-                <div className="w-full overflow-x-auto pb-2">
+                <div className="w-full overflow-x-auto pb-2 max-w-full">
                   <MatrixDisplay
                     data={positionalEncodings.slice(0, tokenLabels.length)}
                     rowLabels={Array.from(
@@ -1245,7 +1245,7 @@ function App() {
                 <h4 className="text-[0.6rem] sm:text-[0.65rem] font-medium mb-1 sm:mb-0.5 text-center">
                   Embeddings + Pos. Encoding
                 </h4>
-                <div className="w-full overflow-x-auto pb-2">
+                <div className="w-full overflow-x-auto pb-2 max-w-full">
                   <MatrixDisplay
                     data={embeddingsWithDropout}
                     rowLabels={tokenLabels}
@@ -1325,7 +1325,7 @@ function App() {
               <div
                 className={`flex ${
                   isMobile ? 'flex-col' : 'grid grid-cols-3'
-                } lg:grid-cols-3 xl:grid-cols-12 gap-2 sm:gap-3 lg:gap-1`}
+                } lg:grid-cols-3 xl:grid-cols-12 gap-2 sm:gap-3 lg:gap-1 max-w-full`}
               >
                 {/* Calculate token similarities and predictions */}
                 {(() => {
