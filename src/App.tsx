@@ -34,16 +34,16 @@ export type HistorySoftMaxEntry = {
 
 // Training configuration constants
 // Use faster interval in development for easier debugging, slower in production for performance
-const TRAINING_INTERVAL_MS = process.env.NODE_ENV === 'development' ? 1 : 0.1;
+const TRAINING_INTERVAL_MS = process.env.NODE_ENV === 'development' ? 1 : 0.3;
 const EXPONENTIAL_DECIMALS = 4; // Number of decimal places for exponential values
-const DIM_EMBEDDING = isPortraitOrientation() ? 6 : 6; // Dimension of embeddings (d_model)
+const DIM_EMBEDDING = isPortraitOrientation() ? 4 : 6; // Dimension of embeddings (d_model)
 const DIM_ATTENTION_HEAD = isPortraitOrientation() ? 2 : 6; // Dimension of attention heads (d_k = d_v = d_model / num_heads)
-const DIM_MLP_HIDDEN = isPortraitOrientation() ? 6 : 6; // Dimension of MLP hidden layer (d_ff = 8, typically 4x d_model)
+const DIM_MLP_HIDDEN = isPortraitOrientation() ? 2 : 6; // Dimension of MLP hidden layer (d_ff = 8, typically 4x d_model)
 
 // Learning rate multiplier for attention weights (to make them learn faster relative to FFN)
 // Since FFN weights were learning too fast and attention weights too slow, this multiplier
 // helps balance the learning speeds. Attention weights will use: base_lr * ATTENTION_LR_MULTIPLIER
-const ATTENTION_LR_MULTIPLIER = 2.0; // Increase this to make attention learn faster, decrease to make it slower
+const ATTENTION_LR_MULTIPLIER = 5.0; // Increase this to make attention learn faster, decrease to make it slower
 
 // Embedding strength multiplier - controls how far embedding values are from zero
 // Higher values create more distinct embeddings, lower values create more similar embeddings
@@ -51,7 +51,7 @@ const EMBEDDING_STRENGTH_MULTIPLIER = 1.0; // Default 1.0, increase for stronger
 
 function App() {
   // Fixed dimension values
-  const HISTORY_DISPLAY_STEPS = isPortraitOrientation() ? 300 : 300; // Number of training steps to show in history graph
+  const HISTORY_DISPLAY_STEPS = isPortraitOrientation() ? 200 : 300; // Number of training steps to show in history graph
 
   // Error state to track calculation errors
   const [calculationError, setCalculationError] = useState<string | null>(null);
