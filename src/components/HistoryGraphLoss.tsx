@@ -7,7 +7,7 @@ interface HistoryGraphProps {
   totalSteps: number;
 }
 
-const HistoryGraph: React.FC<HistoryGraphProps> = ({
+const HistoryGraphLoss: React.FC<HistoryGraphProps> = ({
   history,
   maxPoints = 100,
   totalSteps,
@@ -263,4 +263,4 @@ const HistoryGraph: React.FC<HistoryGraphProps> = ({
   );
 };
 
-export default HistoryGraph;
+export default HistoryGraphLoss;

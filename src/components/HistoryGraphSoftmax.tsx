@@ -8,7 +8,7 @@ interface SoftmaxHistoryGraphProps {
   totalSteps: number;
 }
 
-const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
+const HistoryGraphSoftmax: React.FC<SoftmaxHistoryGraphProps> = ({
   history,
   maxPoints = 100,
   vocabularyWords,
@@ -101,7 +101,7 @@ const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
       paths[token] = points
         .map((point, i) => `${i === 0 ? 'M' : 'L'} ${point.x} ${point.y}`)
         .join(' ');
-      
+
       // Store the last point for label positioning
       if (points.length > 0) {
         const lastPoint = points[points.length - 1];
@@ -230,7 +230,7 @@ const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
                   // Calculate adjusted y position to avoid overlaps
                   let adjustedY = position.y;
                   const minSpacing = 18;
-                  
+
                   // Check previous labels for overlap
                   for (let i = 0; i < idx; i++) {
                     const prevY = arr[i][1].y;
@@ -238,10 +238,13 @@ const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
                       adjustedY = prevY + minSpacing;
                     }
                   }
-                  
+
                   // Keep label within bounds
-                  adjustedY = Math.max(10, Math.min(graphHeight - 10, adjustedY));
-                  
+                  adjustedY = Math.max(
+                    10,
+                    Math.min(graphHeight - 10, adjustedY)
+                  );
+
                   return (
                     <g key={`label-${token}`}>
                       {/* Line connecting label to data point */}
@@ -304,4 +307,4 @@ const SoftmaxHistoryGraph: React.FC<SoftmaxHistoryGraphProps> = ({
   );
 };
 
-export default SoftmaxHistoryGraph;
+export default HistoryGraphSoftmax;

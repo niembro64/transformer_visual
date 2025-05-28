@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import './App.css';
 import AttentionHead from './components/AttentionHead';
 import FeedForward from './components/FeedForward';
-import HistoryGraph from './components/HistoryGraph';
+import HistoryGraphLoss from './components/HistoryGraphLoss';
 import MatrixDisplay from './components/MatrixDisplay';
-import SoftmaxHistoryGraph from './components/SoftmaxHistoryGraph';
+import HistoryGraphSoftmax from './components/HistoryGraphSoftmax';
 import Token from './components/Token';
 import {
   addPositionalEncodings,
@@ -34,7 +34,7 @@ export type HistorySoftMaxEntry = {
 
 // Training configuration constants
 // Use faster interval in development for easier debugging, slower in production for performance
-const TRAINING_INTERVAL_MS = process.env.NODE_ENV === 'development' ? 1 : 0.3;
+const TRAINING_INTERVAL_MS = process.env.NODE_ENV === 'development' ? 30 : 30;
 const EXPONENTIAL_DECIMALS = 4; // Number of decimal places for exponential values
 const DIM_EMBEDDING = isPortraitOrientation() ? 4 : 6; // Dimension of embeddings (d_model)
 const DIM_ATTENTION_HEAD = isPortraitOrientation() ? 2 : 6; // Dimension of attention heads (d_k = d_v = d_model / num_heads)
@@ -127,7 +127,11 @@ function App() {
   }, [portrait]);
 
   const [vocabularyEmbeddings, setVocabularyEmbeddings] = useState(() =>
-    generateSampleEmbeddings(vocabularyWords.length, DIM_EMBEDDING, EMBEDDING_STRENGTH_MULTIPLIER)
+    generateSampleEmbeddings(
+      vocabularyWords.length,
+      DIM_EMBEDDING,
+      EMBEDDING_STRENGTH_MULTIPLIER
+    )
   );
 
   // Input sequence to say: "big AI bot go brr"
@@ -171,7 +175,11 @@ function App() {
   // Update vocabulary embeddings when dimension changes
   useEffect(() => {
     setVocabularyEmbeddings(
-      generateSampleEmbeddings(vocabularyWords.length, DIM_EMBEDDING, EMBEDDING_STRENGTH_MULTIPLIER)
+      generateSampleEmbeddings(
+        vocabularyWords.length,
+        DIM_EMBEDDING,
+        EMBEDDING_STRENGTH_MULTIPLIER
+      )
     );
   }, [vocabularyWords.length]);
 
@@ -1147,7 +1155,7 @@ function App() {
           {trainingMode && (
             <div className="flex flex-col lg:flex-row lg:gap-4">
               <div className="lg:flex-1">
-                <SoftmaxHistoryGraph
+                <HistoryGraphSoftmax
                   history={historySoftMax}
                   maxPoints={HISTORY_DISPLAY_STEPS}
                   vocabularyWords={vocabularyWords}
@@ -1155,7 +1163,7 @@ function App() {
                 />
               </div>
               <div className="lg:flex-1">
-                <HistoryGraph
+                <HistoryGraphLoss
                   history={historyTraining}
                   maxPoints={HISTORY_DISPLAY_STEPS}
                   totalSteps={totalTrainingSteps}
