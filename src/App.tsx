@@ -85,46 +85,26 @@ function App() {
   const portrait = isPortraitOrientation();
 
   const vocabularyWords: string[] = useMemo(() => {
-    if (portrait) {
-      return [
-        'dog', // 0
-        'bot', // 1
-        'ok', // 2
-        'car', // 3
-        'yo', // 4
-        'big', // 5
-        'go', // 6
-        'zzz', // 7
-        'ai', // 8
-        'run', // 9
-        'brr', //10
-        'id', //11
-        // 'hi', //12
-        // 'cat', //13
-        // 'do', //14
-        // 'we', //15
-      ];
-    } else {
-      return [
-        'hi', // 0
-        'bot', // 1
-        'ai', // 2
-        'run', // 3
-        'car', // 4
-        'brr', // 5
-        'yo', // 6
-        'big', // 7
-        'dog', // 8
-        'go', // 9
-        'zzz', //10
-        'id', //11
-        'do', //12
-        'cat', //13
-        'up', //14
-        'lol', //15
-      ];
-    }
-  }, [portrait]);
+    return [
+      'hi', // 0
+      'bot', // 1
+      'ai', // 2
+      'run', // 3
+      'car', // 4
+      'brr', // 5
+      'yo', // 6
+      'big', // 7
+      'dog', // 8
+      'go', // 9
+      'zzz', //10
+      'id', //11
+      'do', //12
+      'cat', //13
+      'up', //14
+      'lol', //15
+      'the', //16
+    ];
+  }, []);
 
   const [vocabularyEmbeddings, setVocabularyEmbeddings] = useState(() =>
     generateSampleEmbeddings(
@@ -135,9 +115,7 @@ function App() {
   );
 
   // Input sequence to say: "big AI bot go brr"
-  const initInputSequence: number[] = portrait
-    ? [5, 8, 1, 6] // 'big' + 'ai' + 'bot' + 'go' + 'brr'
-    : [7, 2, 1, 9];
+  const initInputSequence: number[] = [15, 6, 8, 16, 7, 2, 1, 9];
   // 'big' + 'ai' + 'bot' + 'go' + 'brr'
   // Track selected tokens (indices into vocabulary)
   const [selectedTokenIndices, setSelectedTokenIndices] =
