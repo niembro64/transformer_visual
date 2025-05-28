@@ -1073,7 +1073,7 @@ function App() {
                         <div className="overflow-x-auto">
                           <MatrixDisplay
                             data={[sortedSoftmax.map((item) => item.value)]}
-                            rowLabels={['']}
+                            rowLabels={undefined}
                             columnLabels={sortedTokenLabels}
                             maxAbsValue={1.0}
                             cellSize="xs"
@@ -1372,7 +1372,7 @@ function App() {
                         {/* Use the last token's embedding as the prediction for the next token */}
                         <MatrixDisplay
                           data={[nextTokenPrediction]} // Use the last token's embedding
-                          rowLabels={['']}
+                          rowLabels={undefined}
                           columnLabels={Array.from(
                             { length: DIM_EMBEDDING },
                             (_, i) => `d_${i + 1}`
@@ -1402,7 +1402,7 @@ function App() {
                             <div className="overflow-x-auto">
                               <MatrixDisplay
                                 data={[dotProducts]}
-                                rowLabels={['']}
+                                rowLabels={undefined}
                                 columnLabels={vocabularyWords}
                                 maxAbsValue={
                                   Math.max(
@@ -1424,7 +1424,7 @@ function App() {
                             <div className="overflow-x-auto">
                               <MatrixDisplay
                                 data={[sortedSoftmax.map((item) => item.value)]}
-                                rowLabels={['']}
+                                rowLabels={undefined}
                                 columnLabels={sortedTokenLabels}
                                 maxAbsValue={1.0} // Softmax values are between 0 and 1
                                 cellSize="xs"
