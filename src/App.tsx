@@ -62,7 +62,7 @@ function App() {
   const [targetTokenIndex, setTargetTokenIndex] = useState<number | null>(null);
   // Learning rate for gradient descent
   const [learningRate, setLearningRate] = useState(
-    isPortraitOrientation() ? 0.001 : 0.001
+    isPortraitOrientation() ? 0.005 : 0.005
   );
 
   const [historyTraining, setHistoryTraining] = useState<
