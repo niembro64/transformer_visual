@@ -99,10 +99,10 @@ function App() {
         'run', // 9
         'brr', //10
         'id', //11
-        'hi', //12
-        'cat', //13
-        'do', //14
-        'we', //15
+        // 'hi', //12
+        // 'cat', //13
+        // 'do', //14
+        // 'we', //15
       ];
     } else {
       return [
@@ -967,7 +967,7 @@ function App() {
                         text={vocabularyWords[tokenIdx]}
                         onClick={() => handleSequenceTokenClick(seqIdx)}
                         tokenType="input"
-                        isTargetToken={tokenIdx === targetTokenIndex}
+                        isTargetToken={false}
                         isTrainingMode={trainingMode}
                         showEmbedding={true}
                         embedding={vocabularyEmbeddings[tokenIdx]}
