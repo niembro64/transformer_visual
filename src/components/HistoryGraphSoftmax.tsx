@@ -20,7 +20,7 @@ const HistoryGraphSoftmax: React.FC<SoftmaxHistoryGraphProps> = ({
   }, [history, maxPoints]);
 
   // SVG dimensions
-  const width = 800;
+  const width = window.innerWidth >= 1024 ? 600 : 300;
   const height = window.innerWidth >= 1024 ? 250 : 400;
   const padding = { top: 20, right: 100, bottom: 30, left: 45 }; // More right padding for labels
   const graphWidth = width - padding.left - padding.right;

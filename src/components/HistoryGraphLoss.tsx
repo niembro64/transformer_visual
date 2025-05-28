@@ -34,8 +34,8 @@ const HistoryGraphLoss: React.FC<HistoryGraphProps> = ({
   }, [displayHistory]);
 
   // SVG dimensions
-  const width = 800;
-  const height = window.innerWidth >= 1024 ? 300 : 150;
+  const width = window.innerWidth >= 1024 ? 600 : 300;
+  const height = window.innerWidth >= 1024 ? 300 : 200;
   const padding = { top: 20, right: 20, bottom: 30, left: 45 };
   const graphWidth = width - padding.left - padding.right;
   const graphHeight = height - padding.top - padding.bottom;
