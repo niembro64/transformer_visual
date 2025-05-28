@@ -458,11 +458,42 @@ export function generateSampleAttentionWeights(
   embeddingDim: number,
   headDim: number
 ) {
-  // Attention weights are typically initialized with scaled initialization
+  // Generate deterministic, distinct attention weights
+  const scaleFactor = 1.0 / Math.sqrt(headDim); // Scaled initialization
+  
+  // Helper function to create systematic weight patterns
+  const createSystematicMatrix = (rows: number, cols: number, seed: number): number[][] => {
+    const matrix: number[][] = [];
+    
+    for (let i = 0; i < rows; i++) {
+      const row: number[] = [];
+      for (let j = 0; j < cols; j++) {
+        // Create a deterministic pattern using trigonometric functions
+        // This ensures smooth variations and both positive/negative values
+        const angle1 = (i + seed) * Math.PI / rows;
+        const angle2 = (j + seed * 2) * Math.PI / cols;
+        
+        // Combine multiple frequencies for richness
+        let value = Math.sin(angle1) * Math.cos(angle2) * 0.7;
+        value += Math.sin(angle1 * 2) * Math.sin(angle2 * 3) * 0.3;
+        
+        // Add a unique offset based on position and seed
+        const offset = Math.cos((i * cols + j + seed * 10) * 0.1) * 0.2;
+        value += offset;
+        
+        // Scale by initialization factor
+        row.push(value * scaleFactor);
+      }
+      matrix.push(row);
+    }
+    
+    return matrix;
+  };
+  
   return {
-    weightQ: randomNeuralMatrix(embeddingDim, headDim, 'scaled'),
-    weightK: randomNeuralMatrix(embeddingDim, headDim, 'scaled'),
-    weightV: randomNeuralMatrix(embeddingDim, headDim, 'scaled'),
+    weightQ: createSystematicMatrix(embeddingDim, headDim, 1), // Seed 1 for Q
+    weightK: createSystematicMatrix(embeddingDim, headDim, 7), // Seed 7 for K  
+    weightV: createSystematicMatrix(embeddingDim, headDim, 13), // Seed 13 for V
   };
 }
 
@@ -483,12 +514,65 @@ export function generateSampleMLPWeights(
   // This ensures compatibility when the input comes from attention output
   const actualInputDim = attentionHeadDim || inputDim;
 
+  // Generate deterministic, distinct MLP weights
+  // He initialization scale factor for ReLU activation
+  const heScaleW1 = Math.sqrt(2.0 / actualInputDim) * 2.0;
+  const heScaleW2 = Math.sqrt(2.0 / hiddenDim) * 2.0;
+  
+  // Helper function to create systematic weight patterns
+  const createSystematicMatrix = (rows: number, cols: number, scale: number, seed: number): number[][] => {
+    const matrix: number[][] = [];
+    
+    for (let i = 0; i < rows; i++) {
+      const row: number[] = [];
+      for (let j = 0; j < cols; j++) {
+        // Create distinct patterns using a combination of techniques
+        // Use prime numbers to avoid repetitive patterns
+        const primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29];
+        const prime1 = primes[(i + seed) % primes.length];
+        const prime2 = primes[(j + seed * 2) % primes.length];
+        
+        // Create wave pattern with varying frequencies
+        const wave1 = Math.sin((i * prime1 + j) * 0.2 + seed);
+        const wave2 = Math.cos((i + j * prime2) * 0.15 + seed * 1.5);
+        
+        // Combine waves with different weights
+        let value = wave1 * 0.6 + wave2 * 0.4;
+        
+        // Add a diagonal gradient for additional variation
+        const diagonal = ((i / rows) - (j / cols)) * 0.3;
+        value += diagonal * Math.sin(seed * 0.7);
+        
+        // Scale by initialization factor
+        row.push(value * scale);
+      }
+      matrix.push(row);
+    }
+    
+    return matrix;
+  };
+  
+  // Helper function to create systematic bias vectors
+  const createSystematicVector = (size: number, seed: number): number[] => {
+    const vector: number[] = [];
+    const scale = 0.1; // Small bias initialization
+    
+    for (let i = 0; i < size; i++) {
+      // Create a smooth pattern across the bias vector
+      const angle = (i + seed * 3) * Math.PI / size;
+      const value = Math.sin(angle) * Math.cos(angle * 2 + seed) * scale;
+      vector.push(value);
+    }
+    
+    return vector;
+  };
+
   return {
-    // Feed-forward weights typically use He initialization because of ReLU
-    W1: randomNeuralMatrix(actualInputDim, hiddenDim, 'he'),
-    b1: randomNeuralVector(hiddenDim),
-    W2: randomNeuralMatrix(hiddenDim, inputDim, 'he'),
-    b2: randomNeuralVector(inputDim),
+    // Use different seeds for each weight matrix to ensure distinctness
+    W1: createSystematicMatrix(actualInputDim, hiddenDim, heScaleW1, 31),
+    b1: createSystematicVector(hiddenDim, 37),
+    W2: createSystematicMatrix(hiddenDim, inputDim, heScaleW2, 41),
+    b2: createSystematicVector(inputDim, 43),
   };
 }
 
