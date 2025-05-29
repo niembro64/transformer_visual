@@ -32,7 +32,7 @@ export type HistorySoftMaxEntry = {
   timestamp: number;
 };
 
-const TRAINING_INTERVAL_MS = process.env.NODE_ENV === 'development' ? 6 : 6;
+const TRAINING_INTERVAL_MS = process.env.NODE_ENV === 'development' ? 30 : 30;
 const EXPONENTIAL_DECIMALS = 4;
 
 const dimValDesktop = 8;
