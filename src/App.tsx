@@ -92,7 +92,7 @@ function App() {
         'ai', // 2
         'go', // 6
         'bot', // 'car', // 4
-        'big', // 7
+        'zzz', // 7
         // 'dog', // 8
         // 'run', //'go', // 9
         // 'zzz', //10
