@@ -37,13 +37,14 @@ const EXPONENTIAL_DECIMALS = 4;
 
 const dimValDesktop = 8;
 
-const dimValMobile = 4; // Reduced dimensions for mobile portrait mode
+const dimValMobile = 4;
+const dimValMobileSmall = 3
 
 const DIM_EMBEDDING = isPortraitOrientation() ? dimValMobile : dimValDesktop; // 6
 const DIM_ATTENTION_HEAD = isPortraitOrientation()
-  ? dimValMobile
+  ? dimValMobileSmall
   : dimValDesktop; // 6
-const DIM_MLP_HIDDEN = isPortraitOrientation() ? dimValMobile : dimValDesktop; // 6
+const DIM_MLP_HIDDEN = isPortraitOrientation() ? dimValMobileSmall : dimValDesktop; // 6
 const ATTENTION_LR_MULTIPLIER = 1.0;
 const EMBEDDING_STRENGTH_MULTIPLIER = 5;
 
@@ -94,12 +95,12 @@ function App() {
         'big', // 7
         // 'dog', // 8
         // 'run', //'go', // 9
-        'zzz', //10
+        // 'zzz', //10
         // 'id', //11
         // 'do', //12
         // 'cat', //13
         // 'up', //14
-        'lol', //15
+        // 'lol', //15
         // 'the', //16
       ];
     }
