@@ -35,11 +35,15 @@ export type HistorySoftMaxEntry = {
 const TRAINING_INTERVAL_MS = process.env.NODE_ENV === 'development' ? 6 : 6;
 const EXPONENTIAL_DECIMALS = 4;
 
-const dimVal = 8;
+const dimValDesktop = 8;
 
-const DIM_EMBEDDING = isPortraitOrientation() ? 4 : dimVal; // 6
-const DIM_ATTENTION_HEAD = isPortraitOrientation() ? 2 : dimVal; // 6
-const DIM_MLP_HIDDEN = isPortraitOrientation() ? 2 : dimVal; // 6
+const dimValMobile = 4; // Reduced dimensions for mobile portrait mode
+
+const DIM_EMBEDDING = isPortraitOrientation() ? dimValMobile : dimValDesktop; // 6
+const DIM_ATTENTION_HEAD = isPortraitOrientation()
+  ? dimValMobile
+  : dimValDesktop; // 6
+const DIM_MLP_HIDDEN = isPortraitOrientation() ? dimValMobile : dimValDesktop; // 6
 const ATTENTION_LR_MULTIPLIER = 1.0;
 const EMBEDDING_STRENGTH_MULTIPLIER = 5;
 
@@ -78,6 +82,27 @@ function App() {
   const [isMobile, setIsMobile] = useState(isPortraitOrientation);
 
   const vocabularyWords: string[] = useMemo(() => {
+    if (isMobile) {
+      return [
+        // 'hi', // 0
+        // 'car', // 'bot', // 1
+        'ai', // 2
+        'go', // 'run', // 3
+        'bot', // 'car', // 4
+        'brr', // 5
+        'yo', // 6
+        'big', // 7
+        // 'dog', // 8
+        // 'run', //'go', // 9
+        'zzz', //10
+        // 'id', //11
+        // 'do', //12
+        // 'cat', //13
+        // 'up', //14
+        'lol', //15
+        // 'the', //16
+      ];
+    }
     return [
       'hi', // 0
       'car', // 'bot', // 1
@@ -1090,14 +1115,14 @@ function App() {
                       className="w-20 sm:w-24 px-2 py-1 text-xs sm:text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     />
                   </div>
-                  {targetTokenIndex === null && (
+                  {/* {targetTokenIndex === null && (
                     <span className="text-xs sm:text-sm text-gray-500 italic">
                       {trainingMode === 'Train-One' &&
                         'Click a token to set next token target'}
                       {trainingMode === 'Train-All' &&
                         'Click a token to set sequence target'}
                     </span>
-                  )}
+                  )} */}
                 </div>
               )}
             </div>
