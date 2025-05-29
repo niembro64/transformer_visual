@@ -86,11 +86,11 @@ function App() {
       return [
         // 'hi', // 0
         // 'car', // 'bot', // 1
-        'ai', // 2
         'yo', // 'run', // 3
-        'bot', // 'car', // 4
         'brr', // 5
+        'ai', // 2
         'go', // 6
+        'bot', // 'car', // 4
         'big', // 7
         // 'dog', // 8
         // 'run', //'go', // 9
