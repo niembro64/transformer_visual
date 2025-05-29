@@ -32,7 +32,7 @@ export type HistorySoftMaxEntry = {
   timestamp: number;
 };
 
-const TRAINING_INTERVAL_MS = process.env.NODE_ENV === 'development' ? 30 : 30;
+const TRAINING_INTERVAL_MS = process.env.NODE_ENV === 'development' ? 6 : 6;
 const EXPONENTIAL_DECIMALS = 4;
 
 const dimVal = 6;
@@ -41,7 +41,7 @@ const DIM_EMBEDDING = isPortraitOrientation() ? 4 : dimVal; // 6
 const DIM_ATTENTION_HEAD = isPortraitOrientation() ? 2 : dimVal; // 6
 const DIM_MLP_HIDDEN = isPortraitOrientation() ? 2 : dimVal; // 6
 const ATTENTION_LR_MULTIPLIER = 5.0;
-const EMBEDDING_STRENGTH_MULTIPLIER = 10.0;
+const EMBEDDING_STRENGTH_MULTIPLIER = 20.0;
 
 function App() {
   // Fixed dimension values
@@ -77,11 +77,6 @@ function App() {
   // Track if device is in mobile mode (height > width)
   const [isMobile, setIsMobile] = useState(isPortraitOrientation);
 
-  // Vocabulary of 25 common words
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-
-  const portrait = isPortraitOrientation();
-
   const vocabularyWords: string[] = useMemo(() => {
     return [
       'hi', // 0
@@ -113,7 +108,7 @@ function App() {
   );
 
   // Input sequence to say: "big AI bot go brr"
-  const initInputSequence: number[] = [15, 6, 8, 16, 7, 2, 1, 9];
+  const initInputSequence: number[] = [2, 1, 9];
   // 'big' + 'ai' + 'bot' + 'go' + 'brr'
   // Track selected tokens (indices into vocabulary)
   const [selectedTokenIndices, setSelectedTokenIndices] =
@@ -1356,7 +1351,8 @@ function App() {
                   {trainingMode !== 'Inferencing' && (
                     <div className="flex-1">
                       <p className="text-[10px] sm:text-xs text-gray-600 mb-1">
-                        Desired Next Token:
+                        Desired Next Token
+                        {targetTokenIndex !== null && ' (click to remove)'}:
                       </p>
                       <div className="min-h-[40px] sm:min-h-[50px] border-2 border-dashed rounded-lg p-1 sm:p-2 transition-colors border-gray-300 bg-gray-50">
                         {targetTokenIndex !== null ? (
@@ -1367,6 +1363,7 @@ function App() {
                               showEmbedding={true}
                               embedding={vocabularyEmbeddings[targetTokenIndex]}
                               embeddingDimension={DIM_EMBEDDING}
+                              onClick={() => setTargetTokenIndex(null)}
                             />
                             {trainingLoss !== null && (
                               <span className="text-[10px] sm:text-xs text-gray-600 font-mono">

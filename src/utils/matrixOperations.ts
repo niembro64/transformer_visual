@@ -190,10 +190,12 @@ export function scaleMatrix(a: number[][], scalar: number): number[][] {
  */
 export function vectorDotProduct(a: number[], b: number[]): number {
   if (a.length !== b.length) {
-    throw new Error(`Vector dimensions don't match for dot product: ${a.length} != ${b.length}`);
+    throw new Error(
+      `Vector dimensions don't match for dot product: ${a.length} != ${b.length}`
+    );
   }
-  
-  return a.reduce((sum, val, i) => sum + (val * b[i]), 0);
+
+  return a.reduce((sum, val, i) => sum + val * b[i], 0);
 }
 
 /**
@@ -204,14 +206,14 @@ export function vectorDotProduct(a: number[], b: number[]): number {
  */
 export function cosineSimilarity(a: number[], b: number[]): number {
   const dotProduct = vectorDotProduct(a, b);
-  
+
   // Calculate magnitudes (L2 norms)
-  const magA = Math.sqrt(a.reduce((sum, val) => sum + (val * val), 0));
-  const magB = Math.sqrt(b.reduce((sum, val) => sum + (val * val), 0));
-  
+  const magA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0));
+  const magB = Math.sqrt(b.reduce((sum, val) => sum + val * val, 0));
+
   // Avoid division by zero
   if (magA === 0 || magB === 0) return 0;
-  
+
   return dotProduct / (magA * magB);
 }
 
@@ -281,7 +283,7 @@ export function randomNeuralVector(size: number, stdDev = 0.01): number[] {
 
 /**
  * Generate sample input embeddings (one embedding per token)
- * using realistic values from a trained model
+ * that are maximally distinct and equidistant from each other
  * @param numTokens - Number of tokens
  * @param embeddingDim - Embedding dimension
  * @param strengthMultiplier - Multiplier to adjust embedding strength (default 1.0)
@@ -292,98 +294,113 @@ export function generateSampleEmbeddings(
   embeddingDim: number,
   strengthMultiplier: number = 1.0
 ): number[][] {
-  // Create a pool of embeddings that are equidistant from each other
-  const embeddingPool: number[][] = [];
+  const embeddings: number[][] = [];
   
-  // We'll use a combination of orthogonal vectors and hypercube vertices
-  // to ensure equal distances between embeddings
+  // Base magnitude for all embeddings to ensure they're on the same hypersphere
+  const magnitude = 0.1 * strengthMultiplier;
   
-  // Step 1: Generate embeddings on the vertices of a hypercube
-  // This ensures all embeddings are equidistant from the origin and from each other
-  const poolSize = Math.max(numTokens * 2, Math.pow(2, Math.min(embeddingDim, 8)));
+  if (numTokens === 1) {
+    // Single token: place at a consistent point
+    const embedding = new Array(embeddingDim).fill(0);
+    embedding[0] = magnitude * Math.sqrt(embeddingDim);
+    embeddings.push(embedding);
+    return embeddings;
+  }
   
-  // Base value for the hypercube (controls overall magnitude)
-  const baseValue = 0.1 * strengthMultiplier;
+  // For multiple tokens, we'll use a deterministic algorithm that maximizes distances
+  // We'll place points on a hypersphere using a quasi-random sequence
   
-  for (let i = 0; i < poolSize; i++) {
+  // Generate points using a modified Fibonacci spiral in high dimensions
+  // This gives us well-distributed points that are procedurally generated
+  const goldenRatio = (1 + Math.sqrt(5)) / 2;
+  
+  for (let i = 0; i < numTokens; i++) {
     const embedding = new Array(embeddingDim).fill(0);
     
-    // Create a pattern that distributes positive and negative values
-    // Use Gray code to ensure adjacent patterns differ by exactly one bit
-    const grayCode = i ^ (i >> 1);
-    
-    for (let j = 0; j < embeddingDim; j++) {
-      // Determine sign based on Gray code bit pattern
-      const isPositive = (grayCode >> (j % 32)) & 1;
-      
-      // Create a base value that alternates between positive and negative
-      let value = isPositive ? baseValue : -baseValue;
-      
-      // Add a dimension-specific scaling to create more variety
+    // Use multiple golden ratio-based sequences for different dimensions
+    // This ensures good distribution in high-dimensional space
+    for (let d = 0; d < embeddingDim; d++) {
+      // Create a unique angle for this dimension and token
       // Use prime numbers to avoid repetitive patterns
-      const primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37];
-      const prime = primes[j % primes.length];
-      const scale = 1 + 0.3 * Math.sin(i * prime * 0.1);
+      const primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53];
+      const prime = primes[d % primes.length];
       
-      value *= scale;
+      // Combine multiple frequencies for better distribution
+      const angle1 = 2 * Math.PI * (i * goldenRatio) / prime;
+      const angle2 = 2 * Math.PI * (i * goldenRatio * goldenRatio) / (prime + 1);
+      const angle3 = 2 * Math.PI * i / numTokens + (d * Math.PI / embeddingDim);
       
-      // Add a small rotation to prevent exact alignment
-      // This maintains equal distances while adding variety
-      const rotation = 0.1 * Math.cos((i + j) * 0.5);
-      value += rotation * baseValue * 0.2;
+      // Create value using spherical coordinates generalized to high dimensions
+      if (d === 0) {
+        embedding[d] = Math.cos(angle1);
+      } else if (d === 1) {
+        embedding[d] = Math.sin(angle1) * Math.cos(angle2);
+      } else {
+        // For higher dimensions, use a combination of angles
+        const baseAngle = angle1 + angle2 * 0.3 + angle3 * 0.2;
+        embedding[d] = Math.sin(baseAngle + d * 0.5) * Math.cos(baseAngle * 1.3 + d);
+      }
       
-      embedding[j] = value;
+      // Add systematic variation based on token index and dimension
+      const variation = Math.sin((i + 1) * (d + 1) * 0.1) * 0.3;
+      embedding[d] += variation;
     }
     
-    // Normalize to ensure all embeddings have the same magnitude
-    // This maintains equal distances from the origin
-    let magnitude = 0;
-    for (let j = 0; j < embeddingDim; j++) {
-      magnitude += embedding[j] * embedding[j];
+    // Normalize to ensure all embeddings have exactly the same magnitude
+    // This places them on the surface of a hypersphere
+    let currentMagnitude = 0;
+    for (let d = 0; d < embeddingDim; d++) {
+      currentMagnitude += embedding[d] * embedding[d];
     }
-    magnitude = Math.sqrt(magnitude);
+    currentMagnitude = Math.sqrt(currentMagnitude);
     
-    // Target magnitude that ensures good separation
-    const targetMagnitude = Math.sqrt(embeddingDim) * baseValue;
-    if (magnitude > 0) {
-      for (let j = 0; j < embeddingDim; j++) {
-        embedding[j] = (embedding[j] / magnitude) * targetMagnitude;
+    // Scale to target magnitude
+    const targetMagnitude = magnitude * Math.sqrt(embeddingDim);
+    if (currentMagnitude > 0) {
+      for (let d = 0; d < embeddingDim; d++) {
+        embedding[d] = (embedding[d] / currentMagnitude) * targetMagnitude;
       }
     }
     
-    embeddingPool.push(embedding);
+    embeddings.push(embedding);
   }
   
-  // Phase 2: Create a deterministic pseudo-random mapping from tokens to embeddings
-  // Use a simple hash function based on token index and embedding dimension
-  const tokenEmbeddings: number[][] = [];
-  const usedIndices = new Set<number>();
-  
-  for (let tokenIdx = 0; tokenIdx < numTokens; tokenIdx++) {
-    // Create a deterministic "random" index based on token index and embedding dimension
-    // This ensures the same token always gets the same embedding for given parameters
-    let hash = tokenIdx * 2654435761; // Large prime for better distribution
-    hash = hash ^ (embeddingDim * 1597); // Mix in embedding dimension
-    hash = (hash ^ (hash >>> 16)) * 0x85ebca6b;
-    hash = (hash ^ (hash >>> 13)) * 0xc2b2ae35;
-    hash = hash ^ (hash >>> 16);
-    
-    // Map hash to valid pool index
-    let poolIndex = Math.abs(hash) % embeddingPool.length;
-    
-    // If this embedding is already used, find the next available one
-    let attempts = 0;
-    while (usedIndices.has(poolIndex) && attempts < embeddingPool.length) {
-      poolIndex = (poolIndex + 1) % embeddingPool.length;
-      attempts++;
+  // Apply a final orthogonalization step for small numbers of tokens
+  // This ensures maximum separation when possible
+  if (numTokens <= embeddingDim && numTokens <= 8) {
+    // Use Gram-Schmidt process to orthogonalize
+    for (let i = 1; i < numTokens; i++) {
+      // Make embedding[i] orthogonal to all previous embeddings
+      for (let j = 0; j < i; j++) {
+        // Calculate projection of embedding[i] onto embedding[j]
+        let dotProduct = 0;
+        for (let d = 0; d < embeddingDim; d++) {
+          dotProduct += embeddings[i][d] * embeddings[j][d];
+        }
+        
+        // Subtract the projection
+        for (let d = 0; d < embeddingDim; d++) {
+          embeddings[i][d] -= dotProduct * embeddings[j][d];
+        }
+      }
+      
+      // Renormalize to maintain magnitude
+      let currentMagnitude = 0;
+      for (let d = 0; d < embeddingDim; d++) {
+        currentMagnitude += embeddings[i][d] * embeddings[i][d];
+      }
+      currentMagnitude = Math.sqrt(currentMagnitude);
+      
+      const targetMagnitude = magnitude * Math.sqrt(embeddingDim);
+      if (currentMagnitude > 0) {
+        for (let d = 0; d < embeddingDim; d++) {
+          embeddings[i][d] = (embeddings[i][d] / currentMagnitude) * targetMagnitude;
+        }
+      }
     }
-    
-    // Mark as used and assign
-    usedIndices.add(poolIndex);
-    tokenEmbeddings.push([...embeddingPool[poolIndex]]); // Deep copy
   }
   
-  return tokenEmbeddings;
+  return embeddings;
 }
 
 /**
@@ -460,39 +477,43 @@ export function generateSampleAttentionWeights(
 ) {
   // Generate deterministic, distinct attention weights
   const scaleFactor = 1.0 / Math.sqrt(headDim); // Scaled initialization
-  
+
   // Helper function to create systematic weight patterns
-  const createSystematicMatrix = (rows: number, cols: number, seed: number): number[][] => {
+  const createSystematicMatrix = (
+    rows: number,
+    cols: number,
+    seed: number
+  ): number[][] => {
     const matrix: number[][] = [];
-    
+
     for (let i = 0; i < rows; i++) {
       const row: number[] = [];
       for (let j = 0; j < cols; j++) {
         // Create a deterministic pattern using trigonometric functions
         // This ensures smooth variations and both positive/negative values
-        const angle1 = (i + seed) * Math.PI / rows;
-        const angle2 = (j + seed * 2) * Math.PI / cols;
-        
+        const angle1 = ((i + seed) * Math.PI) / rows;
+        const angle2 = ((j + seed * 2) * Math.PI) / cols;
+
         // Combine multiple frequencies for richness
         let value = Math.sin(angle1) * Math.cos(angle2) * 0.7;
         value += Math.sin(angle1 * 2) * Math.sin(angle2 * 3) * 0.3;
-        
+
         // Add a unique offset based on position and seed
         const offset = Math.cos((i * cols + j + seed * 10) * 0.1) * 0.2;
         value += offset;
-        
+
         // Scale by initialization factor
         row.push(value * scaleFactor);
       }
       matrix.push(row);
     }
-    
+
     return matrix;
   };
-  
+
   return {
     weightQ: createSystematicMatrix(embeddingDim, headDim, 1), // Seed 1 for Q
-    weightK: createSystematicMatrix(embeddingDim, headDim, 7), // Seed 7 for K  
+    weightK: createSystematicMatrix(embeddingDim, headDim, 7), // Seed 7 for K
     weightV: createSystematicMatrix(embeddingDim, headDim, 13), // Seed 13 for V
   };
 }
@@ -518,11 +539,16 @@ export function generateSampleMLPWeights(
   // He initialization scale factor for ReLU activation
   const heScaleW1 = Math.sqrt(2.0 / actualInputDim) * 2.0;
   const heScaleW2 = Math.sqrt(2.0 / hiddenDim) * 2.0;
-  
+
   // Helper function to create systematic weight patterns
-  const createSystematicMatrix = (rows: number, cols: number, scale: number, seed: number): number[][] => {
+  const createSystematicMatrix = (
+    rows: number,
+    cols: number,
+    scale: number,
+    seed: number
+  ): number[][] => {
     const matrix: number[][] = [];
-    
+
     for (let i = 0; i < rows; i++) {
       const row: number[] = [];
       for (let j = 0; j < cols; j++) {
@@ -531,39 +557,39 @@ export function generateSampleMLPWeights(
         const primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29];
         const prime1 = primes[(i + seed) % primes.length];
         const prime2 = primes[(j + seed * 2) % primes.length];
-        
+
         // Create wave pattern with varying frequencies
         const wave1 = Math.sin((i * prime1 + j) * 0.2 + seed);
         const wave2 = Math.cos((i + j * prime2) * 0.15 + seed * 1.5);
-        
+
         // Combine waves with different weights
         let value = wave1 * 0.6 + wave2 * 0.4;
-        
+
         // Add a diagonal gradient for additional variation
-        const diagonal = ((i / rows) - (j / cols)) * 0.3;
+        const diagonal = (i / rows - j / cols) * 0.3;
         value += diagonal * Math.sin(seed * 0.7);
-        
+
         // Scale by initialization factor
         row.push(value * scale);
       }
       matrix.push(row);
     }
-    
+
     return matrix;
   };
-  
+
   // Helper function to create systematic bias vectors
   const createSystematicVector = (size: number, seed: number): number[] => {
     const vector: number[] = [];
     const scale = 0.1; // Small bias initialization
-    
+
     for (let i = 0; i < size; i++) {
       // Create a smooth pattern across the bias vector
-      const angle = (i + seed * 3) * Math.PI / size;
+      const angle = ((i + seed * 3) * Math.PI) / size;
       const value = Math.sin(angle) * Math.cos(angle * 2 + seed) * scale;
       vector.push(value);
     }
-    
+
     return vector;
   };
 
@@ -589,10 +615,10 @@ export function applyRandomWalk(
   walkId: string = 'default'
 ): number[][] {
   if (matrix.length === 0 || matrix[0].length === 0) return matrix;
-  
+
   // Create deep copy of the matrix to avoid mutating the original
   const result: number[][] = [];
-  
+
   // Apply small random changes to each element
   for (let i = 0; i < matrix.length; i++) {
     result[i] = [];
@@ -602,7 +628,7 @@ export function applyRandomWalk(
       result[i][j] = matrix[i][j] + change;
     }
   }
-  
+
   return result;
 }
 
@@ -619,17 +645,17 @@ export function applyRandomWalkToVector(
   walkId: string = 'default'
 ): number[] {
   if (vector.length === 0) return vector;
-  
+
   // Create a copy of the vector to avoid mutating the original
   const result: number[] = [];
-  
+
   // Apply small random changes to each element
   for (let i = 0; i < vector.length; i++) {
     // Use randomNormal to get a change value with mean 0
     const change = randomNormal(0, stepSize);
     result[i] = vector[i] + change;
   }
-  
+
   return result;
 }
 
@@ -670,7 +696,7 @@ export function mseGradient(predicted: number[], target: number[]): number[] {
   if (predicted.length !== target.length) {
     throw new Error('Predicted and target must have same length');
   }
-  return predicted.map((p, i) => 2 * (p - target[i]) / predicted.length);
+  return predicted.map((p, i) => (2 * (p - target[i])) / predicted.length);
 }
 
 /**
@@ -685,7 +711,10 @@ export function updateWeights(
   gradients: number[][],
   learningRate: number
 ): number[][] {
-  if (weights.length !== gradients.length || weights[0].length !== gradients[0].length) {
+  if (
+    weights.length !== gradients.length ||
+    weights[0].length !== gradients[0].length
+  ) {
     throw new Error('Weights and gradients must have same dimensions');
   }
   return weights.map((row, i) =>
@@ -742,7 +771,7 @@ export function hasInvalidValues(matrix: number[][]): boolean {
  * @returns true if vector contains invalid values, false otherwise
  */
 export function hasInvalidValuesVector(vector: number[]): boolean {
-  return vector.some(val => !isValidNumber(val));
+  return vector.some((val) => !isValidNumber(val));
 }
 
 /**
@@ -751,7 +780,10 @@ export function hasInvalidValuesVector(vector: number[]): boolean {
  * @param matrixName - Name of the matrix for error reporting
  * @returns Error details or null if no errors
  */
-export function getMatrixErrorDetails(matrix: number[][], matrixName: string): string | null {
+export function getMatrixErrorDetails(
+  matrix: number[][],
+  matrixName: string
+): string | null {
   for (let i = 0; i < matrix.length; i++) {
     for (let j = 0; j < matrix[i].length; j++) {
       if (!isValidNumber(matrix[i][j])) {
