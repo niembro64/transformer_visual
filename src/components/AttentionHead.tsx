@@ -37,6 +37,8 @@ interface AttentionHeadProps {
   valueLabel?: string;
   // Callback when calculation error occurs
   onCalculationError?: (error: string | null) => void;
+  // Whether to use masked attention (triangular mask for autoregressive training)
+  useMaskedAttention?: boolean;
 }
 
 /**
@@ -58,7 +60,8 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
   onElementClick,
   onValueChange,
   valueLabel,
-  onCalculationError
+  onCalculationError,
+  useMaskedAttention = false
 }) => {
   // Number of tokens and dimensionality
   const numTokens = embeddings.length;
@@ -119,19 +122,24 @@ const AttentionHead: React.FC<AttentionHeadProps> = ({
       const scores = matrixMultiply(Q, Kt);
       const scaledScores = scaleMatrix(scores, 1 / Math.sqrt(headDim));
       
-      if (hasInvalidValues(scaledScores)) {
-        const error = getMatrixErrorDetails(scaledScores, 'Attention scores');
+      // Apply triangular mask if enabled (for autoregressive training)
+      const maskedScores = useMaskedAttention ? scaledScores.map((row, i) => 
+        row.map((score, j) => j > i ? -Infinity : score)
+      ) : scaledScores;
+      
+      if (hasInvalidValues(maskedScores) && !maskedScores.some(row => row.some(val => val === -Infinity))) {
+        const error = getMatrixErrorDetails(maskedScores, 'Attention scores');
         onCalculationError?.(error || 'Invalid values in attention scores');
         // Return identity-like matrix as fallback
         return Q.map((_, i) => Q.map((_, j) => i === j ? 1 : 0));
       }
       
-      return scaledScores;
+      return maskedScores;
     } catch (error) {
       onCalculationError?.(`Error computing attention scores: ${error}`);
       return Q.map((_, i) => Q.map((_, j) => i === j ? 1 : 0));
     }
-  }, [Q, Kt, headDim, onCalculationError]);
+  }, [Q, Kt, headDim, onCalculationError, useMaskedAttention]);
 
   // Apply softmax to get attention weights
   const attentionWeights = useMemo(() => {

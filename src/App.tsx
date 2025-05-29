@@ -32,22 +32,16 @@ export type HistorySoftMaxEntry = {
   timestamp: number;
 };
 
-// Training configuration constants
-// Use faster interval in development for easier debugging, slower in production for performance
 const TRAINING_INTERVAL_MS = process.env.NODE_ENV === 'development' ? 30 : 30;
-const EXPONENTIAL_DECIMALS = 4; // Number of decimal places for exponential values
-const DIM_EMBEDDING = isPortraitOrientation() ? 4 : 6; // Dimension of embeddings (d_model)
-const DIM_ATTENTION_HEAD = isPortraitOrientation() ? 2 : 6; // Dimension of attention heads (d_k = d_v = d_model / num_heads)
-const DIM_MLP_HIDDEN = isPortraitOrientation() ? 2 : 6; // Dimension of MLP hidden layer (d_ff = 8, typically 4x d_model)
+const EXPONENTIAL_DECIMALS = 4;
 
-// Learning rate multiplier for attention weights (to make them learn faster relative to FFN)
-// Since FFN weights were learning too fast and attention weights too slow, this multiplier
-// helps balance the learning speeds. Attention weights will use: base_lr * ATTENTION_LR_MULTIPLIER
-const ATTENTION_LR_MULTIPLIER = 5.0; // Increase this to make attention learn faster, decrease to make it slower
+const dimVal = 6;
 
-// Embedding strength multiplier - controls how far embedding values are from zero
-// Higher values create more distinct embeddings, lower values create more similar embeddings
-const EMBEDDING_STRENGTH_MULTIPLIER = 10.0; // Default 1.0, increase for stronger embeddings, decrease for weaker
+const DIM_EMBEDDING = isPortraitOrientation() ? 4 : dimVal; // 6
+const DIM_ATTENTION_HEAD = isPortraitOrientation() ? 2 : dimVal; // 6
+const DIM_MLP_HIDDEN = isPortraitOrientation() ? 2 : dimVal; // 6
+const ATTENTION_LR_MULTIPLIER = 5.0;
+const EMBEDDING_STRENGTH_MULTIPLIER = 10.0;
 
 function App() {
   // Fixed dimension values
@@ -56,14 +50,18 @@ function App() {
   // Error state to track calculation errors
   const [calculationError, setCalculationError] = useState<string | null>(null);
 
-  // Training mode - determines if dropout is applied and weights are updated
-  const [trainingMode, setTrainingMode] = useState(true);
+  // Training mode - determines if weights are updated and which training method is used
+  type TrainingMode = 'Inferencing' | 'Train-One' | 'Train-All';
+  const [trainingMode, setTrainingMode] = useState<TrainingMode>('Train-One');
   // Target output token for training (what we're trying to predict)
   const [targetTokenIndex, setTargetTokenIndex] = useState<number | null>(null);
   // Learning rate for gradient descent
   const [learningRate, setLearningRate] = useState(
     isPortraitOrientation() ? 0.002 : 0.002
   );
+
+  // Whether Train-All mode is actively running
+  const [isTrainAllRunning, setIsTrainAllRunning] = useState(false);
 
   const [historyTraining, setHistoryTraining] = useState<
     HistoryTrainingEntry[]
@@ -233,11 +231,204 @@ function App() {
   useEffect(() => {
     let timerId: number | null = null;
 
-    if (trainingMode && targetTokenIndex !== null && ffnOutput.length > 0) {
+    const shouldRunTraining =
+      (trainingMode === 'Train-One' &&
+        targetTokenIndex !== null &&
+        ffnOutput.length > 0) ||
+      (trainingMode === 'Train-All' &&
+        isTrainAllRunning &&
+        ffnOutput.length > 1);
+
+    if (shouldRunTraining) {
       // Start a timer that updates every second
       timerId = window.setInterval(() => {
-        // Perform gradient-based weight updates when we have a target
-        if (trainingMode && targetTokenIndex !== null && ffnOutput.length > 0) {
+        // Train-All mode: train on entire sequence
+        if (
+          trainingMode === 'Train-All' &&
+          isTrainAllRunning &&
+          ffnOutput.length > 1
+        ) {
+          // For Train-All, each token predicts the next token in the sequence
+          const losses: number[] = [];
+          const allGradients: number[][] = [];
+
+          // Calculate loss and gradients for each position
+          for (let pos = 0; pos < ffnOutput.length - 1; pos++) {
+            const predictedEmbedding = ffnOutput[pos];
+            const actualNextTokenIdx = selectedTokenIndices[pos + 1];
+            const targetEmbedding = vocabularyEmbeddings[actualNextTokenIdx];
+
+            // Check for invalid values
+            if (hasInvalidValuesVector(predictedEmbedding)) {
+              continue;
+            }
+
+            // Calculate softmax probabilities for this position
+            const dotProducts = vocabularyEmbeddings.map((vocabEmbedding) =>
+              vectorDotProduct(predictedEmbedding, vocabEmbedding)
+            );
+
+            const maxDotProduct = Math.max(...dotProducts);
+            const expValues = dotProducts.map((dp) =>
+              Math.exp(dp - maxDotProduct)
+            );
+            const sumExp = expValues.reduce((a, b) => a + b, 0);
+            const probabilities = expValues.map((exp) => exp / sumExp);
+
+            // Cross-entropy loss for this position
+            const targetProb = probabilities[actualNextTokenIdx];
+            const loss = -Math.log(Math.max(targetProb, 1e-7));
+            losses.push(loss);
+
+            // Gradient for this position
+            const gradient = predictedEmbedding.map(
+              (val, i) => val - targetEmbedding[i]
+            );
+            allGradients.push(gradient);
+          }
+
+          // Average loss across all positions
+          const avgLoss =
+            losses.length > 0
+              ? losses.reduce((a, b) => a + b, 0) / losses.length
+              : 0;
+          setTrainingLoss(avgLoss);
+
+          // Average gradients across all positions
+          const avgGradient =
+            allGradients.length > 0
+              ? allGradients[0].map(
+                  (_, i) =>
+                    allGradients.reduce((sum, grad) => sum + grad[i], 0) /
+                    allGradients.length
+                )
+              : Array(DIM_EMBEDDING).fill(0);
+
+          // Apply gradient-based updates to all layers using averaged gradients
+          // Update MLP weights with gradient descent
+          setMlpWeights((prev) => {
+            const newWeights = {
+              W1: [...prev.W1.map((r) => [...r])],
+              b1: [...prev.b1],
+              W2: [...prev.W2.map((r) => [...r])],
+              b2: [...prev.b2],
+            };
+
+            // Apply gradient updates to W2 (output layer)
+            if (selectedElement?.matrixType === 'weightW2') {
+              const { row, col } = selectedElement;
+              for (let i = 0; i < newWeights.W2.length; i++) {
+                for (let j = 0; j < newWeights.W2[i].length; j++) {
+                  if (i !== row || j !== col) {
+                    const gradient = avgGradient[i] * 1.0;
+                    newWeights.W2[i][j] -= learningRate * gradient;
+                  }
+                }
+              }
+            } else {
+              for (let i = 0; i < newWeights.W2.length; i++) {
+                for (let j = 0; j < newWeights.W2[i].length; j++) {
+                  const gradient = avgGradient[i] * 1.0;
+                  newWeights.W2[i][j] -= learningRate * gradient;
+                }
+              }
+            }
+
+            // Apply gradient updates to biases
+            for (let i = 0; i < newWeights.b2.length; i++) {
+              newWeights.b2[i] -= learningRate * avgGradient[i] * 1.0;
+            }
+
+            // For W1 and b1, apply small gradient updates
+            const avgError =
+              avgGradient.reduce((a, b) => a + b, 0) / avgGradient.length;
+
+            if (selectedElement?.matrixType === 'weightW1') {
+              const { row, col } = selectedElement;
+              for (let i = 0; i < newWeights.W1.length; i++) {
+                for (let j = 0; j < newWeights.W1[i].length; j++) {
+                  if (i !== row || j !== col) {
+                    newWeights.W1[i][j] -= learningRate * avgError * 0.5;
+                  }
+                }
+              }
+            } else {
+              for (let i = 0; i < newWeights.W1.length; i++) {
+                for (let j = 0; j < newWeights.W1[i].length; j++) {
+                  newWeights.W1[i][j] -= learningRate * avgError * 0.5;
+                }
+              }
+            }
+
+            // Update b1 biases
+            for (let i = 0; i < newWeights.b1.length; i++) {
+              newWeights.b1[i] -= learningRate * avgError * 0.5;
+            }
+
+            return newWeights;
+          });
+
+          // Update attention weights with gradient descent
+          setAttentionWeights((prev) => {
+            const newWeights = {
+              weightQ: [...prev.weightQ.map((r) => [...r])],
+              weightK: [...prev.weightK.map((r) => [...r])],
+              weightV: [...prev.weightV.map((r) => [...r])],
+            };
+
+            const avgError =
+              avgGradient.reduce((a, b) => a + b, 0) / avgGradient.length;
+            const attentionLearningRate =
+              learningRate * ATTENTION_LR_MULTIPLIER;
+
+            // Update Q, K, V matrices
+            ['weightQ', 'weightK', 'weightV'].forEach((matrixType) => {
+              const matrix = matrixType as 'weightQ' | 'weightK' | 'weightV';
+              const scaleFactor = matrix === 'weightV' ? 0.5 : 0.1;
+
+              if (selectedElement?.matrixType === matrix) {
+                const { row, col } = selectedElement;
+                for (let i = 0; i < newWeights[matrix].length; i++) {
+                  for (let j = 0; j < newWeights[matrix][i].length; j++) {
+                    if (i !== row || j !== col) {
+                      newWeights[matrix][i][j] -=
+                        attentionLearningRate * avgError * scaleFactor;
+                    }
+                  }
+                }
+              } else {
+                for (let i = 0; i < newWeights[matrix].length; i++) {
+                  for (let j = 0; j < newWeights[matrix][i].length; j++) {
+                    newWeights[matrix][i][j] -=
+                      attentionLearningRate * avgError * scaleFactor;
+                  }
+                }
+              }
+            });
+
+            return newWeights;
+          });
+
+          // Update training history for Train-All mode
+          setTotalTrainingSteps((prev) => prev + 1);
+
+          // For Train-All, we show average loss
+          const historyItem: HistoryTrainingEntry = {
+            loss: avgLoss,
+            targetToken: 'all',
+            predictedToken: 'all',
+            targetProb: (1 / losses.length).toFixed(EXPONENTIAL_DECIMALS),
+          };
+
+          setHistoryTraining((prev: HistoryTrainingEntry[]) => {
+            const newHistory = [...prev, historyItem];
+            return newHistory.slice(-HISTORY_DISPLAY_STEPS);
+          });
+        } else if (
+          trainingMode === 'Train-One' &&
+          targetTokenIndex !== null &&
+          ffnOutput.length > 0
+        ) {
           // Get the predicted embedding (last token's output)
           const predictedEmbedding = ffnOutput[ffnOutput.length - 1];
 
@@ -489,6 +680,9 @@ function App() {
     learningRate,
     vocabularyEmbeddings,
     vocabularyWords,
+    isTrainAllRunning,
+    selectedTokenIndices,
+    DIM_EMBEDDING,
   ]);
 
   // Use embeddings directly (no dropout)
@@ -532,11 +726,11 @@ function App() {
   // Handler for tokenizer click - adds to sequence or sets target based on training mode
   const handleTokenizerClick = useCallback(
     (index: number) => {
-      if (trainingMode) {
-        // In training mode, set as target output
+      if (trainingMode === 'Train-One') {
+        // In Train-One mode, set as target output
         setTargetTokenIndex(index);
       } else {
-        // In inference mode, add to input sequence
+        // In Train-All or Inference mode, add to input sequence
         setSelectedTokenIndices((prev) => [...prev, index]);
         setRecentlyAddedIndex(index);
 
@@ -826,9 +1020,11 @@ function App() {
           {/* Main control panel */}
           <div
             className={`mb-4 ${
-              trainingMode
+              trainingMode === 'Inferencing'
+                ? 'bg-gradient-to-r from-blue-50 to-indigo-50'
+                : trainingMode === 'Train-One'
                 ? 'bg-gradient-to-r from-green-50 to-emerald-50'
-                : 'bg-gradient-to-r from-blue-50 to-indigo-50'
+                : 'bg-gradient-to-r from-purple-50 to-pink-50'
             } ${
               calculationError ? 'rounded-b-lg' : 'rounded-lg'
             } shadow-sm overflow-hidden`}
@@ -836,9 +1032,11 @@ function App() {
             {/* Header bar */}
             <div
               className={`${
-                trainingMode
+                trainingMode === 'Inferencing'
+                  ? 'bg-gradient-to-r from-blue-500 to-indigo-600'
+                  : trainingMode === 'Train-One'
                   ? 'bg-gradient-to-r from-green-500 to-emerald-600'
-                  : 'bg-gradient-to-r from-blue-500 to-indigo-600'
+                  : 'bg-gradient-to-r from-purple-500 to-pink-600'
               } text-white px-2 sm:px-4 py-2 flex justify-between items-center`}
             >
               <h2 className="text-base sm:text-lg font-bold">
@@ -853,20 +1051,30 @@ function App() {
                   Mode:
                 </span>
                 <button
-                  onClick={() => setTrainingMode(!trainingMode)}
+                  onClick={() => {
+                    // Cycle through modes: Inferencing -> Train-One -> Train-All -> Inferencing
+                    const nextMode: Record<TrainingMode, TrainingMode> = {
+                      Inferencing: 'Train-One',
+                      'Train-One': 'Train-All',
+                      'Train-All': 'Inferencing',
+                    };
+                    setTrainingMode(nextMode[trainingMode]);
+                    // Clear target token when switching modes
+                    setTargetTokenIndex(null);
+                  }}
                   className={`px-4 sm:px-6 h-8 flex items-center justify-center text-xs sm:text-sm font-medium transition-all duration-200 rounded-lg shadow-sm border ${
-                    trainingMode
+                    trainingMode === 'Inferencing'
+                      ? 'bg-blue-500 hover:bg-blue-600 text-white border-blue-600'
+                      : trainingMode === 'Train-One'
                       ? 'bg-green-500 hover:bg-green-600 text-white border-green-600'
-                      : 'bg-blue-500 hover:bg-blue-600 text-white border-blue-600'
+                      : 'bg-purple-500 hover:bg-purple-600 text-white border-purple-600'
                   }`}
                 >
-                  <span className="block">
-                    {trainingMode ? 'Training' : 'Inferencing'}
-                  </span>
+                  <span className="block">{trainingMode}</span>
                 </button>
               </div>
               {/* Training controls */}
-              {trainingMode && (
+              {trainingMode !== 'Inferencing' && (
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
                     <label
@@ -889,7 +1097,10 @@ function App() {
                   </div>
                   {targetTokenIndex === null && (
                     <span className="text-xs sm:text-sm text-gray-500 italic">
-                      Click a token to set target
+                      {trainingMode === 'Train-One' &&
+                        'Click a token to set next token target'}
+                      {trainingMode === 'Train-All' &&
+                        'Click a token to set sequence target'}
                     </span>
                   )}
                 </div>
@@ -904,11 +1115,24 @@ function App() {
             </h3>
             <div className="p-1 sm:p-2">
               <p className="text-[10px] sm:text-xs text-gray-600 mb-1 sm:mb-2">
-                Click tokens to{' '}
-                {trainingMode
-                  ? 'set as target output'
-                  : 'add to input sequence'}{' '}
-                (hover to see embeddings)
+                {trainingMode === 'Inferencing' && (
+                  <>
+                    Click tokens to add to input sequence (hover to see
+                    embeddings)
+                  </>
+                )}
+                {trainingMode === 'Train-One' && (
+                  <>
+                    Click tokens to set as target for next token prediction
+                    (hover to see embeddings)
+                  </>
+                )}
+                {trainingMode === 'Train-All' && (
+                  <>
+                    Click tokens to add to input sequence (hover to see
+                    embeddings)
+                  </>
+                )}
               </p>
               <div className="flex flex-wrap gap-1 sm:gap-2">
                 {vocabularyWords.map((word, idx) => (
@@ -920,7 +1144,7 @@ function App() {
                     isTargetToken={idx === targetTokenIndex}
                     isPredictedToken={false}
                     isRecentlyAdded={idx === recentlyAddedIndex}
-                    isTrainingMode={trainingMode}
+                    isTrainingMode={trainingMode !== 'Inferencing'}
                     showEmbedding={true}
                     embedding={vocabularyEmbeddings[idx]}
                     embeddingDimension={DIM_EMBEDDING}
@@ -954,7 +1178,7 @@ function App() {
                         onClick={() => handleSequenceTokenClick(seqIdx)}
                         tokenType="input"
                         isTargetToken={false}
-                        isTrainingMode={trainingMode}
+                        isTrainingMode={trainingMode !== 'Inferencing'}
                         showEmbedding={true}
                         embedding={vocabularyEmbeddings[tokenIdx]}
                         embeddingDimension={DIM_EMBEDDING}
@@ -970,158 +1194,202 @@ function App() {
           {/* Output Token section */}
           <div className="mb-0.5 bg-white rounded p-0.5">
             <h3 className="text-xs sm:text-sm font-semibold mb-0.5 border-b pb-0.5">
-              Output Token
+              {trainingMode === 'Train-All'
+                ? 'Training Control'
+                : 'Output Token'}
             </h3>
             <div className="p-1 sm:p-2">
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
-                {/* Next Token Prediction */}
-                <div className="flex-1">
-                  <p className="text-[10px] sm:text-xs text-gray-600 mb-1">
-                    Currently Predicted Next Token:
+              {trainingMode === 'Train-All' ? (
+                // Train-All mode: Start/Stop button and training status
+                <div className="flex flex-col items-center justify-center py-4">
+                  <button
+                    onClick={() => setIsTrainAllRunning(!isTrainAllRunning)}
+                    className={`px-6 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
+                      isTrainAllRunning
+                        ? 'bg-red-500 hover:bg-red-600 text-white'
+                        : 'bg-purple-500 hover:bg-purple-600 text-white'
+                    }`}
+                  >
+                    {isTrainAllRunning ? 'Stop Training' : 'Start Training'}
+                  </button>
+                  <p className="text-[10px] sm:text-xs text-gray-600 mt-3">
+                    {isTrainAllRunning
+                      ? 'Training entire sequence with masked attention...'
+                      : 'Click to start training on the entire input sequence'}
                   </p>
-                  {ffnOutput.length > 0 ? (
-                    (() => {
-                      const nextTokenPrediction =
-                        ffnOutput[ffnOutput.length - 1];
-                      const dotProducts = vocabularyEmbeddings.map(
-                        (vocabEmbedding) =>
-                          vectorDotProduct(nextTokenPrediction, vocabEmbedding)
-                      );
-                      const predictedTokenIndex = dotProducts.indexOf(
-                        Math.max(...dotProducts)
-                      );
-                      const maxDotProduct = Math.max(...dotProducts);
-                      const expValues = dotProducts.map((dp) =>
-                        Math.exp(dp - maxDotProduct)
-                      );
-                      const sumExp = expValues.reduce((a, b) => a + b, 0);
-                      const probabilities = expValues.map(
-                        (exp) => exp / sumExp
-                      );
-                      const predictedProb = probabilities[predictedTokenIndex];
-
-                      return (
-                        <div className="flex items-center gap-2">
-                          <Token
-                            text={vocabularyWords[predictedTokenIndex]}
-                            tokenType="output_prediction"
-                            showEmbedding={true}
-                            embedding={
-                              vocabularyEmbeddings[predictedTokenIndex]
-                            }
-                            embeddingDimension={DIM_EMBEDDING}
-                          />
-                          <span className="text-[10px] sm:text-xs text-gray-600 font-mono">
-                            p: {predictedProb >= 0 ? '+' : ''}
-                            {predictedProb.toExponential(EXPONENTIAL_DECIMALS)}
-                          </span>
-                        </div>
-                      );
-                    })()
-                  ) : (
-                    <Token text="computing..." tokenType="placeholder" />
+                  {isTrainAllRunning && selectedTokenIndices.length > 1 && (
+                    <div className="mt-4 text-[10px] sm:text-xs text-gray-700">
+                      Training {selectedTokenIndices.length - 1} predictions
+                      (tokens 1-{selectedTokenIndices.length - 1} predicting
+                      tokens 2-{selectedTokenIndices.length})
+                    </div>
                   )}
                 </div>
-
-                {/* Sorted Softmax Token Similarities */}
-                {ffnOutput.length > 0 && (
-                  <div className="mt-3 mb-3">
-                    <p className="text-[10px] sm:text-xs text-gray-600 mb-1">
-                      Token Probabilities (sorted):
-                    </p>
-                    {(() => {
-                      const nextTokenPrediction =
-                        ffnOutput[ffnOutput.length - 1];
-                      const dotProducts = vocabularyEmbeddings.map(
-                        (vocabEmbedding) =>
-                          vectorDotProduct(nextTokenPrediction, vocabEmbedding)
-                      );
-                      const maxDotProduct = Math.max(...dotProducts);
-                      const expValues = dotProducts.map((dp) =>
-                        Math.exp(dp - maxDotProduct)
-                      );
-                      const sumExp = expValues.reduce((a, b) => a + b, 0);
-                      const probabilities = expValues.map(
-                        (exp) => exp / sumExp
-                      );
-
-                      // Create indexed pairs and sort by value
-                      const indexed = probabilities.map((value, index) => ({
-                        index,
-                        value,
-                      }));
-                      const sortedSoftmax = indexed.sort(
-                        (a, b) => b.value - a.value
-                      );
-                      const sortedTokenLabels = sortedSoftmax.map(
-                        (item) => vocabularyWords[item.index]
-                      );
-
-                      // Find which columns match the target token (if in training mode)
-                      const highlightColumns: number[] = [];
-                      if (trainingMode && targetTokenIndex !== null) {
-                        const targetTokenName =
-                          vocabularyWords[targetTokenIndex];
-                        sortedTokenLabels.forEach((label, idx) => {
-                          if (label === targetTokenName) {
-                            highlightColumns.push(idx);
-                          }
-                        });
-                      }
-
-                      return (
-                        <div className="overflow-x-auto">
-                          <MatrixDisplay
-                            data={[sortedSoftmax.map((item) => item.value)]}
-                            rowLabels={undefined}
-                            columnLabels={sortedTokenLabels}
-                            maxAbsValue={1.0}
-                            cellSize="xs"
-                            selectable={false}
-                            matrixType="none"
-                            highlightColumns={highlightColumns}
-                          />
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
-
-                {/* Target Output (Training Mode Only) */}
-                {trainingMode && (
+              ) : (
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+                  {/* Next Token Prediction */}
                   <div className="flex-1">
                     <p className="text-[10px] sm:text-xs text-gray-600 mb-1">
-                      Desired Next Token:
+                      Currently Predicted Next Token:
                     </p>
-                    <div className="min-h-[40px] sm:min-h-[50px] border-2 border-dashed rounded-lg p-1 sm:p-2 transition-colors border-gray-300 bg-gray-50">
-                      {targetTokenIndex !== null ? (
-                        <div className="flex items-center gap-2">
-                          <Token
-                            text={vocabularyWords[targetTokenIndex]}
-                            tokenType="output_target"
-                            showEmbedding={true}
-                            embedding={vocabularyEmbeddings[targetTokenIndex]}
-                            embeddingDimension={DIM_EMBEDDING}
-                          />
-                          {trainingLoss !== null && (
+                    {ffnOutput.length > 0 ? (
+                      (() => {
+                        const nextTokenPrediction =
+                          ffnOutput[ffnOutput.length - 1];
+                        const dotProducts = vocabularyEmbeddings.map(
+                          (vocabEmbedding) =>
+                            vectorDotProduct(
+                              nextTokenPrediction,
+                              vocabEmbedding
+                            )
+                        );
+                        const predictedTokenIndex = dotProducts.indexOf(
+                          Math.max(...dotProducts)
+                        );
+                        const maxDotProduct = Math.max(...dotProducts);
+                        const expValues = dotProducts.map((dp) =>
+                          Math.exp(dp - maxDotProduct)
+                        );
+                        const sumExp = expValues.reduce((a, b) => a + b, 0);
+                        const probabilities = expValues.map(
+                          (exp) => exp / sumExp
+                        );
+                        const predictedProb =
+                          probabilities[predictedTokenIndex];
+
+                        return (
+                          <div className="flex items-center gap-2">
+                            <Token
+                              text={vocabularyWords[predictedTokenIndex]}
+                              tokenType="output_prediction"
+                              showEmbedding={true}
+                              embedding={
+                                vocabularyEmbeddings[predictedTokenIndex]
+                              }
+                              embeddingDimension={DIM_EMBEDDING}
+                            />
                             <span className="text-[10px] sm:text-xs text-gray-600 font-mono">
-                              Loss: {trainingLoss >= 0 ? '+' : ''}
-                              {trainingLoss.toExponential(EXPONENTIAL_DECIMALS)}
+                              p: {predictedProb >= 0 ? '+' : ''}
+                              {predictedProb.toExponential(
+                                EXPONENTIAL_DECIMALS
+                              )}
                             </span>
-                          )}
-                        </div>
-                      ) : (
-                        <p className="text-gray-400 text-center text-xs sm:text-sm italic">
-                          Click a token in tokenizer to set target
-                        </p>
-                      )}
-                    </div>
+                          </div>
+                        );
+                      })()
+                    ) : (
+                      <Token text="computing..." tokenType="placeholder" />
+                    )}
                   </div>
-                )}
-              </div>
+
+                  {/* Sorted Softmax Token Similarities */}
+                  {ffnOutput.length > 0 && (
+                    <div className="mt-3 mb-3">
+                      <p className="text-[10px] sm:text-xs text-gray-600 mb-1">
+                        Token Probabilities (sorted):
+                      </p>
+                      {(() => {
+                        const nextTokenPrediction =
+                          ffnOutput[ffnOutput.length - 1];
+                        const dotProducts = vocabularyEmbeddings.map(
+                          (vocabEmbedding) =>
+                            vectorDotProduct(
+                              nextTokenPrediction,
+                              vocabEmbedding
+                            )
+                        );
+                        const maxDotProduct = Math.max(...dotProducts);
+                        const expValues = dotProducts.map((dp) =>
+                          Math.exp(dp - maxDotProduct)
+                        );
+                        const sumExp = expValues.reduce((a, b) => a + b, 0);
+                        const probabilities = expValues.map(
+                          (exp) => exp / sumExp
+                        );
+
+                        // Create indexed pairs and sort by value
+                        const indexed = probabilities.map((value, index) => ({
+                          index,
+                          value,
+                        }));
+                        const sortedSoftmax = indexed.sort(
+                          (a, b) => b.value - a.value
+                        );
+                        const sortedTokenLabels = sortedSoftmax.map(
+                          (item) => vocabularyWords[item.index]
+                        );
+
+                        // Find which columns match the target token (if in training mode)
+                        const highlightColumns: number[] = [];
+                        if (
+                          trainingMode !== 'Inferencing' &&
+                          targetTokenIndex !== null
+                        ) {
+                          const targetTokenName =
+                            vocabularyWords[targetTokenIndex];
+                          sortedTokenLabels.forEach((label, idx) => {
+                            if (label === targetTokenName) {
+                              highlightColumns.push(idx);
+                            }
+                          });
+                        }
+
+                        return (
+                          <div className="overflow-x-auto">
+                            <MatrixDisplay
+                              data={[sortedSoftmax.map((item) => item.value)]}
+                              rowLabels={undefined}
+                              columnLabels={sortedTokenLabels}
+                              maxAbsValue={1.0}
+                              cellSize="xs"
+                              selectable={false}
+                              matrixType="none"
+                              highlightColumns={highlightColumns}
+                            />
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  {/* Target Output (Training Mode Only) */}
+                  {trainingMode !== 'Inferencing' && (
+                    <div className="flex-1">
+                      <p className="text-[10px] sm:text-xs text-gray-600 mb-1">
+                        Desired Next Token:
+                      </p>
+                      <div className="min-h-[40px] sm:min-h-[50px] border-2 border-dashed rounded-lg p-1 sm:p-2 transition-colors border-gray-300 bg-gray-50">
+                        {targetTokenIndex !== null ? (
+                          <div className="flex items-center gap-2">
+                            <Token
+                              text={vocabularyWords[targetTokenIndex]}
+                              tokenType="output_target"
+                              showEmbedding={true}
+                              embedding={vocabularyEmbeddings[targetTokenIndex]}
+                              embeddingDimension={DIM_EMBEDDING}
+                            />
+                            {trainingLoss !== null && (
+                              <span className="text-[10px] sm:text-xs text-gray-600 font-mono">
+                                Loss: {trainingLoss >= 0 ? '+' : ''}
+                                {trainingLoss.toExponential(
+                                  EXPONENTIAL_DECIMALS
+                                )}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-gray-400 text-center text-xs sm:text-sm italic">
+                            Click a token in tokenizer to set target
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Training Status Message */}
-              {trainingMode && targetTokenIndex === null && (
+              {trainingMode === 'Train-One' && targetTokenIndex === null && (
                 <p className="text-[10px] sm:text-xs text-gray-500 italic mt-2">
                   Click a token in the tokenizer to set as target output
                 </p>
@@ -1130,7 +1398,7 @@ function App() {
           </div>
 
           {/* History Graphs */}
-          {trainingMode && (
+          {trainingMode === 'Train-One' && (
             <div className="flex flex-col lg:flex-row lg:gap-4">
               <div className="lg:flex-1">
                 <HistoryGraphSoftmax
@@ -1146,6 +1414,28 @@ function App() {
                   maxPoints={HISTORY_DISPLAY_STEPS}
                   totalSteps={totalTrainingSteps}
                 />
+              </div>
+            </div>
+          )}
+
+          {/* Train-All History Graph */}
+          {trainingMode === 'Train-All' && (
+            <div className="mb-0.5 bg-white rounded p-0.5">
+              <h3 className="text-xs sm:text-sm font-semibold mb-0.5 border-b pb-0.5">
+                Training Progress
+              </h3>
+              <div className="p-2">
+                <HistoryGraphLoss
+                  history={historyTraining}
+                  maxPoints={HISTORY_DISPLAY_STEPS}
+                  totalSteps={totalTrainingSteps}
+                />
+                {isTrainAllRunning && selectedTokenIndices.length > 1 && (
+                  <div className="mt-2 text-[10px] sm:text-xs text-gray-600">
+                    Training {selectedTokenIndices.length - 1} token predictions
+                    in parallel. Loss shown is the average across all positions.
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1189,7 +1479,7 @@ function App() {
                     onValueChange={handleValueChange}
                     valueLabel={valueLabel}
                     autoOscillate={false}
-                    isTrainingMode={trainingMode}
+                    isTrainingMode={trainingMode !== 'Inferencing'}
                   />
                 </div>
               </div>
@@ -1251,7 +1541,7 @@ function App() {
 
           <div className="mb-0.5">
             <h3 className="text-xs sm:text-sm font-semibold mb-0.5 border-b pb-0.5">
-              Self-Attention
+              Self-Attention {trainingMode === 'Train-All' && '(Masked)'}
             </h3>
 
             <AttentionHead
@@ -1266,6 +1556,7 @@ function App() {
               onElementClick={handleElementClick}
               onValueChange={handleValueChange}
               onCalculationError={setCalculationError}
+              useMaskedAttention={trainingMode === 'Train-All'}
             />
           </div>
 
@@ -1302,194 +1593,199 @@ function App() {
         </div>
 
         {/* Next Token Prediction Section */}
-        {ffnOutput.length > 0 && (
-          <div className="mt-0.5 mb-0.5">
-            <h3 className="text-xs sm:text-sm font-semibold mb-0.5 border-b pb-0.5">
-              Next Token Prediction
-            </h3>
-            <div className="bg-white rounded p-0.5">
-              <div
-                className={`flex ${
-                  isMobile ? 'flex-col' : 'grid grid-cols-3'
-                } lg:grid-cols-3 xl:grid-cols-12 gap-2 sm:gap-3 lg:gap-1 max-w-full`}
-              >
-                {/* Calculate token similarities and predictions */}
-                {(() => {
-                  // Get the next token prediction vector (last token's embedding)
-                  const nextTokenPrediction = ffnOutput[ffnOutput.length - 1];
+        {ffnOutput.length > 0 &&
+          (trainingMode !== 'Train-All' || !isTrainAllRunning) && (
+            <div className="mt-0.5 mb-0.5">
+              <h3 className="text-xs sm:text-sm font-semibold mb-0.5 border-b pb-0.5">
+                Next Token Prediction
+              </h3>
+              <div className="bg-white rounded p-0.5">
+                <div
+                  className={`flex ${
+                    isMobile ? 'flex-col' : 'grid grid-cols-3'
+                  } lg:grid-cols-3 xl:grid-cols-12 gap-2 sm:gap-3 lg:gap-1 max-w-full`}
+                >
+                  {/* Calculate token similarities and predictions */}
+                  {(() => {
+                    // Get the next token prediction vector (last token's embedding)
+                    const nextTokenPrediction = ffnOutput[ffnOutput.length - 1];
 
-                  // Calculate dot product similarity with each vocabulary token
-                  const dotProducts = vocabularyEmbeddings.map(
-                    (vocabEmbedding) =>
-                      vectorDotProduct(nextTokenPrediction, vocabEmbedding)
-                  );
+                    // Calculate dot product similarity with each vocabulary token
+                    const dotProducts = vocabularyEmbeddings.map(
+                      (vocabEmbedding) =>
+                        vectorDotProduct(nextTokenPrediction, vocabEmbedding)
+                    );
 
-                  // Apply softmax to the dot products to get probability-like values
-                  // First find the maximum for numerical stability
-                  const maxDotProduct = Math.max(...dotProducts);
-                  // Calculate exp(x - max) for each dot product
-                  const expValues = dotProducts.map((dp) =>
-                    Math.exp(dp - maxDotProduct)
-                  );
-                  // Sum of all exp values
-                  const sumExp = expValues.reduce((a, b) => a + b, 0);
-                  // Normalize to get softmax values
-                  const softmaxValues = expValues.map((exp) => exp / sumExp);
+                    // Apply softmax to the dot products to get probability-like values
+                    // First find the maximum for numerical stability
+                    const maxDotProduct = Math.max(...dotProducts);
+                    // Calculate exp(x - max) for each dot product
+                    const expValues = dotProducts.map((dp) =>
+                      Math.exp(dp - maxDotProduct)
+                    );
+                    // Sum of all exp values
+                    const sumExp = expValues.reduce((a, b) => a + b, 0);
+                    // Normalize to get softmax values
+                    const softmaxValues = expValues.map((exp) => exp / sumExp);
 
-                  // Create pairs of [index, softmax value] so we can sort them while keeping the original indices
-                  const indexedSoftmax = softmaxValues.map((value, index) => ({
-                    index,
-                    value,
-                  }));
-                  // Sort by softmax value in descending order
-                  const sortedSoftmax = [...indexedSoftmax].sort(
-                    (a, b) => b.value - a.value
-                  );
+                    // Create pairs of [index, softmax value] so we can sort them while keeping the original indices
+                    const indexedSoftmax = softmaxValues.map(
+                      (value, index) => ({
+                        index,
+                        value,
+                      })
+                    );
+                    // Sort by softmax value in descending order
+                    const sortedSoftmax = [...indexedSoftmax].sort(
+                      (a, b) => b.value - a.value
+                    );
 
-                  // Get corresponding token labels in the sorted order
-                  const sortedTokenLabels = sortedSoftmax.map(
-                    (item) => vocabularyWords[item.index]
-                  );
+                    // Get corresponding token labels in the sorted order
+                    const sortedTokenLabels = sortedSoftmax.map(
+                      (item) => vocabularyWords[item.index]
+                    );
 
-                  // Get the highest probability token (first one in sorted list)
-                  const topPredictedTokenIndex = sortedSoftmax[0].index;
-                  const topPredictedToken =
-                    vocabularyWords[topPredictedTokenIndex];
-                  const topPredictedTokenEmbedding =
-                    vocabularyEmbeddings[topPredictedTokenIndex];
+                    // Get the highest probability token (first one in sorted list)
+                    const topPredictedTokenIndex = sortedSoftmax[0].index;
+                    const topPredictedToken =
+                      vocabularyWords[topPredictedTokenIndex];
+                    const topPredictedTokenEmbedding =
+                      vocabularyEmbeddings[topPredictedTokenIndex];
 
-                  return (
-                    <>
-                      {/* Next Token Prediction Vector */}
-                      <div
-                        className={`${
-                          isMobile ? 'w-full' : 'col-span-1'
-                        } xl:col-span-3 flex flex-col items-center`}
-                      >
-                        <h4 className="text-[0.6rem] sm:text-[0.65rem] font-medium mb-0.5 text-center">
-                          Next Token Vector
-                        </h4>
-                        {/* Use the last token's embedding as the prediction for the next token */}
-                        <MatrixDisplay
-                          data={[nextTokenPrediction]} // Use the last token's embedding
-                          rowLabels={undefined}
-                          columnLabels={Array.from(
-                            { length: DIM_EMBEDDING },
-                            (_, i) => `d_${i + 1}`
-                          )}
-                          maxAbsValue={0.3}
-                          cellSize="xs"
-                          selectable={false}
-                          matrixType="none"
-                        />
-                      </div>
-
-                      {/* Similarity Scores */}
-                      <div
-                        className={`${
-                          isMobile ? 'w-full' : 'col-span-1'
-                        } xl:col-span-6 flex flex-col items-center`}
-                      >
-                        <h4 className="text-[0.6rem] sm:text-[0.65rem] font-medium mb-0.5 text-center">
-                          Token Similarities
-                        </h4>
-                        <div className="w-full">
-                          {/* Dot Products */}
-                          <div className="mb-2">
-                            <h5 className="text-[0.55rem] sm:text-[0.6rem] font-medium mb-0.5 text-center">
-                              Dot Product
-                            </h5>
-                            <div className="overflow-x-auto">
-                              <MatrixDisplay
-                                data={[dotProducts]}
-                                rowLabels={undefined}
-                                columnLabels={vocabularyWords}
-                                maxAbsValue={
-                                  Math.max(
-                                    ...dotProducts.map((dp) => Math.abs(dp))
-                                  ) || 0.3
-                                }
-                                cellSize="xs"
-                                selectable={false}
-                                matrixType="none"
-                              />
-                            </div>
-                          </div>
-
-                          {/* Softmax Values (sorted by value, largest first) */}
-                          <div>
-                            <h5 className="text-[0.55rem] sm:text-[0.6rem] font-medium mb-0.5 text-center">
-                              Softmax
-                            </h5>
-                            <div className="overflow-x-auto">
-                              <MatrixDisplay
-                                data={[sortedSoftmax.map((item) => item.value)]}
-                                rowLabels={undefined}
-                                columnLabels={sortedTokenLabels}
-                                maxAbsValue={1.0} // Softmax values are between 0 and 1
-                                cellSize="xs"
-                                selectable={false}
-                                matrixType="none"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Most Likely Token */}
-                      <div
-                        className={`${
-                          isMobile ? 'w-full' : 'col-span-1'
-                        } xl:col-span-3 flex flex-col items-center`}
-                      >
-                        <h4 className="text-[0.6rem] sm:text-[0.65rem] font-medium mb-1 sm:mb-2 text-center">
-                          Most Likely Next Token
-                        </h4>
-                        <div className="w-full flex flex-col items-center">
-                          <div className="flex justify-center">
-                            <Token
-                              text={topPredictedToken}
-                              tokenType="output_prediction"
-                              showEmbedding={true}
-                              embedding={topPredictedTokenEmbedding}
-                              embeddingDimension={DIM_EMBEDDING}
-                            />
-                          </div>
-                          <div className="text-[0.6rem] sm:text-[0.65rem] font-mono text-gray-600 px-2 sm:px-3 py-0.5 min-w-[55px] sm:min-w-[60px] text-center">
-                            p:{' '}
-                            {sortedSoftmax[0]?.value
-                              ? (sortedSoftmax[0].value >= 0 ? '+' : '') +
-                                sortedSoftmax[0].value.toExponential(2)
-                              : '+0.00e+0'}
-                          </div>
-
-                          {/* Raw embedding for the predicted token */}
-                          <h5 className="text-[0.6rem] sm:text-[0.65rem] font-medium mt-1 sm:mt-2 mb-1 text-center text-gray-700 pt-1 sm:pt-1.5 w-full">
-                            Raw Token Embedding
-                          </h5>
+                    return (
+                      <>
+                        {/* Next Token Prediction Vector */}
+                        <div
+                          className={`${
+                            isMobile ? 'w-full' : 'col-span-1'
+                          } xl:col-span-3 flex flex-col items-center`}
+                        >
+                          <h4 className="text-[0.6rem] sm:text-[0.65rem] font-medium mb-0.5 text-center">
+                            Next Token Vector
+                          </h4>
+                          {/* Use the last token's embedding as the prediction for the next token */}
                           <MatrixDisplay
-                            data={[
-                              vocabularyEmbeddings[topPredictedTokenIndex],
-                            ]}
-                            rowLabels={[topPredictedToken]}
+                            data={[nextTokenPrediction]} // Use the last token's embedding
+                            rowLabels={undefined}
                             columnLabels={Array.from(
                               { length: DIM_EMBEDDING },
                               (_, i) => `d_${i + 1}`
                             )}
-                            maxAbsValue={0.2}
+                            maxAbsValue={0.3}
                             cellSize="xs"
                             selectable={false}
                             matrixType="none"
                           />
                         </div>
-                      </div>
-                    </>
-                  );
-                })()}
+
+                        {/* Similarity Scores */}
+                        <div
+                          className={`${
+                            isMobile ? 'w-full' : 'col-span-1'
+                          } xl:col-span-6 flex flex-col items-center`}
+                        >
+                          <h4 className="text-[0.6rem] sm:text-[0.65rem] font-medium mb-0.5 text-center">
+                            Token Similarities
+                          </h4>
+                          <div className="w-full">
+                            {/* Dot Products */}
+                            <div className="mb-2">
+                              <h5 className="text-[0.55rem] sm:text-[0.6rem] font-medium mb-0.5 text-center">
+                                Dot Product
+                              </h5>
+                              <div className="overflow-x-auto">
+                                <MatrixDisplay
+                                  data={[dotProducts]}
+                                  rowLabels={undefined}
+                                  columnLabels={vocabularyWords}
+                                  maxAbsValue={
+                                    Math.max(
+                                      ...dotProducts.map((dp) => Math.abs(dp))
+                                    ) || 0.3
+                                  }
+                                  cellSize="xs"
+                                  selectable={false}
+                                  matrixType="none"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Softmax Values (sorted by value, largest first) */}
+                            <div>
+                              <h5 className="text-[0.55rem] sm:text-[0.6rem] font-medium mb-0.5 text-center">
+                                Softmax
+                              </h5>
+                              <div className="overflow-x-auto">
+                                <MatrixDisplay
+                                  data={[
+                                    sortedSoftmax.map((item) => item.value),
+                                  ]}
+                                  rowLabels={undefined}
+                                  columnLabels={sortedTokenLabels}
+                                  maxAbsValue={1.0} // Softmax values are between 0 and 1
+                                  cellSize="xs"
+                                  selectable={false}
+                                  matrixType="none"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Most Likely Token */}
+                        <div
+                          className={`${
+                            isMobile ? 'w-full' : 'col-span-1'
+                          } xl:col-span-3 flex flex-col items-center`}
+                        >
+                          <h4 className="text-[0.6rem] sm:text-[0.65rem] font-medium mb-1 sm:mb-2 text-center">
+                            Most Likely Next Token
+                          </h4>
+                          <div className="w-full flex flex-col items-center">
+                            <div className="flex justify-center">
+                              <Token
+                                text={topPredictedToken}
+                                tokenType="output_prediction"
+                                showEmbedding={true}
+                                embedding={topPredictedTokenEmbedding}
+                                embeddingDimension={DIM_EMBEDDING}
+                              />
+                            </div>
+                            <div className="text-[0.6rem] sm:text-[0.65rem] font-mono text-gray-600 px-2 sm:px-3 py-0.5 min-w-[55px] sm:min-w-[60px] text-center">
+                              p:{' '}
+                              {sortedSoftmax[0]?.value
+                                ? (sortedSoftmax[0].value >= 0 ? '+' : '') +
+                                  sortedSoftmax[0].value.toExponential(2)
+                                : '+0.00e+0'}
+                            </div>
+
+                            {/* Raw embedding for the predicted token */}
+                            <h5 className="text-[0.6rem] sm:text-[0.65rem] font-medium mt-1 sm:mt-2 mb-1 text-center text-gray-700 pt-1 sm:pt-1.5 w-full">
+                              Raw Token Embedding
+                            </h5>
+                            <MatrixDisplay
+                              data={[
+                                vocabularyEmbeddings[topPredictedTokenIndex],
+                              ]}
+                              rowLabels={[topPredictedToken]}
+                              columnLabels={Array.from(
+                                { length: DIM_EMBEDDING },
+                                (_, i) => `d_${i + 1}`
+                              )}
+                              maxAbsValue={0.2}
+                              cellSize="xs"
+                              selectable={false}
+                              matrixType="none"
+                            />
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
         <div className="bg-white rounded p-0.5 mt-4 sm:mt-8 text-[0.55rem] sm:text-[0.6rem]">
           <div className="flex flex-col gap-1">
