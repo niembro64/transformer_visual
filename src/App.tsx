@@ -35,13 +35,13 @@ export type HistorySoftMaxEntry = {
 const TRAINING_INTERVAL_MS = process.env.NODE_ENV === 'development' ? 6 : 6;
 const EXPONENTIAL_DECIMALS = 4;
 
-const dimVal = 6;
+const dimVal = 8;
 
 const DIM_EMBEDDING = isPortraitOrientation() ? 4 : dimVal; // 6
 const DIM_ATTENTION_HEAD = isPortraitOrientation() ? 2 : dimVal; // 6
 const DIM_MLP_HIDDEN = isPortraitOrientation() ? 2 : dimVal; // 6
-const ATTENTION_LR_MULTIPLIER = 5.0;
-const EMBEDDING_STRENGTH_MULTIPLIER = 20.0;
+const ATTENTION_LR_MULTIPLIER = 1.0;
+const EMBEDDING_STRENGTH_MULTIPLIER = 5;
 
 function App() {
   // Fixed dimension values
@@ -57,7 +57,7 @@ function App() {
   const [targetTokenIndex, setTargetTokenIndex] = useState<number | null>(null);
   // Learning rate for gradient descent
   const [learningRate, setLearningRate] = useState(
-    isPortraitOrientation() ? 0.002 : 0.002
+    isPortraitOrientation() ? 0.002 : 0.005
   );
 
   // Whether Train-All mode is actively running
@@ -80,15 +80,15 @@ function App() {
   const vocabularyWords: string[] = useMemo(() => {
     return [
       'hi', // 0
-      'bot', // 1
+      'car', // 'bot', // 1
       'ai', // 2
-      'run', // 3
-      'car', // 4
+      'go', // 'run', // 3
+      'bot', // 'car', // 4
       'brr', // 5
       'yo', // 6
       'big', // 7
       'dog', // 8
-      'go', // 9
+      'run', //'go', // 9
       'zzz', //10
       'id', //11
       'do', //12
@@ -108,7 +108,7 @@ function App() {
   );
 
   // Input sequence to say: "big AI bot go brr"
-  const initInputSequence: number[] = [2, 1, 9];
+  const initInputSequence: number[] = [2, 4, 3];
   // 'big' + 'ai' + 'bot' + 'go' + 'brr'
   // Track selected tokens (indices into vocabulary)
   const [selectedTokenIndices, setSelectedTokenIndices] =
