@@ -41,7 +41,7 @@ const DIM_EMBEDDING = isPortraitOrientation() ? 4 : dimVal; // 6
 const DIM_ATTENTION_HEAD = isPortraitOrientation() ? 2 : dimVal; // 6
 const DIM_MLP_HIDDEN = isPortraitOrientation() ? 2 : dimVal; // 6
 const ATTENTION_LR_MULTIPLIER = 5.0;
-const EMBEDDING_STRENGTH_MULTIPLIER = 20.0;
+const EMBEDDING_STRENGTH_MULTIPLIER = 4.0;
 
 function App() {
   // Fixed dimension values
@@ -79,37 +79,45 @@ function App() {
 
   const vocabularyWords: string[] = useMemo(() => {
     return [
-      'hi', // 0
-      'bot', // 1
-      'ai', // 2
-      'run', // 3
-      'car', // 4
-      'brr', // 5
-      'yo', // 6
-      'big', // 7
-      'dog', // 8
-      'go', // 9
-      'zzz', //10
-      'id', //11
-      'do', //12
-      'cat', //13
-      'up', //14
-      'lol', //15
-      'the', //16
+      'king', // 0
+      'queen', // 1
+      'apple', // 2
+      'fruit', // 3
+      'big', // 4
+      'large', // 5
+      'happy', // 6
+      'joyful', // 7
+      'run', // 8
+      'jog', // 9
+      'eat', // 10
+      'drink', // 11
     ];
   }, []);
 
-  const [vocabularyEmbeddings, setVocabularyEmbeddings] = useState(() =>
-    generateSampleEmbeddings(
-      vocabularyWords.length,
-      DIM_EMBEDDING,
-      EMBEDDING_STRENGTH_MULTIPLIER
-    )
-  );
+  const [vocabularyEmbeddings, setVocabularyEmbeddings] = useState(() => {
+    const baseEmbeddings = [
+      [ 0.58, 0.31, -0.27, 0.44, 0.02, -0.19 ], // king
+      [ 0.55, 0.36, -0.24, 0.40, 0.06, -0.17 ], // queen
+      [ 0.25, 0.55, 0.38, 0.09, 0.42, 0.10 ], // apple
+      [ 0.26, 0.53, 0.37, 0.08, 0.40, 0.11 ], // orange
+      [ 0.50, -0.05, 0.55, -0.22, 0.10, 0.35 ], // big
+      [ 0.48, -0.04, 0.54, -0.21, 0.11, 0.34 ], // large
+      [ 0.05, 0.65, -0.10, 0.15, 0.45, 0.05 ], // happy
+      [ 0.06, 0.64, -0.12, 0.14, 0.44, 0.04 ], // joyful
+      [ 0.11, 0.62, 0.13, 0.26, -0.07, 0.34 ], // run
+      [ 0.10, 0.61, 0.12, 0.25, -0.06, 0.32 ], // jog
+      [ 0.09, 0.57, 0.05, 0.18, 0.02, 0.25 ], // eat
+      [ 0.08, 0.56, 0.04, 0.17, 0.03, 0.24 ], // drink
+    ];
+    
+    // Apply the embedding strength multiplier to amplify the embeddings
+    return baseEmbeddings.map(embedding => 
+      embedding.map(value => value * EMBEDDING_STRENGTH_MULTIPLIER)
+    );
+  });
 
-  // Input sequence to say: "big AI bot go brr"
-  const initInputSequence: number[] = [2, 1, 9];
-  // 'big' + 'ai' + 'bot' + 'go' + 'brr'
+  // Initial input sequence: "king eat apple"
+  const initInputSequence: number[] = [0, 10, 2];
   // Track selected tokens (indices into vocabulary)
   const [selectedTokenIndices, setSelectedTokenIndices] =
     useState<number[]>(initInputSequence);
@@ -143,16 +151,7 @@ function App() {
     return selectedTokenIndices.map((idx) => [...vocabularyEmbeddings[idx]]);
   }, [selectedTokenIndices, vocabularyEmbeddings]);
 
-  // Update vocabulary embeddings when dimension changes
-  useEffect(() => {
-    setVocabularyEmbeddings(
-      generateSampleEmbeddings(
-        vocabularyWords.length,
-        DIM_EMBEDDING,
-        EMBEDDING_STRENGTH_MULTIPLIER
-      )
-    );
-  }, [vocabularyWords.length]);
+  // Vocabulary embeddings are now fixed, no need to regenerate
 
   // Apply positional encodings to embeddings
   const embeddings = useMemo(() => {
@@ -1463,7 +1462,7 @@ function App() {
                       { length: DIM_EMBEDDING },
                       (_, i) => `d_${i + 1}`
                     )}
-                    maxAbsValue={0.2}
+                    maxAbsValue={0.2 * EMBEDDING_STRENGTH_MULTIPLIER}
                     cellSize="xs"
                     selectable={true}
                     selectedElement={
@@ -1526,7 +1525,7 @@ function App() {
                       { length: DIM_EMBEDDING },
                       (_, i) => `d_${i + 1}`
                     )}
-                    maxAbsValue={0.2}
+                    maxAbsValue={0.2 * EMBEDDING_STRENGTH_MULTIPLIER}
                     cellSize="xs"
                     selectable={false}
                     matrixType="none"
@@ -1668,7 +1667,7 @@ function App() {
                               { length: DIM_EMBEDDING },
                               (_, i) => `d_${i + 1}`
                             )}
-                            maxAbsValue={0.3}
+                            maxAbsValue={0.3 * EMBEDDING_STRENGTH_MULTIPLIER}
                             cellSize="xs"
                             selectable={false}
                             matrixType="none"
@@ -1769,7 +1768,7 @@ function App() {
                                 { length: DIM_EMBEDDING },
                                 (_, i) => `d_${i + 1}`
                               )}
-                              maxAbsValue={0.2}
+                              maxAbsValue={0.2 * EMBEDDING_STRENGTH_MULTIPLIER}
                               cellSize="xs"
                               selectable={false}
                               matrixType="none"
